@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Wash and Care Label</title>
+
+    <style>
+        @page {
+            size: 1240px 790px;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #222;
+        }
+
+        .page-container {
+            width: 1200px;
+            height: 750px;
+            margin: 20px;
+            border: 3px solid #000;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* HEADER TABLE LAYOUT */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-bottom: 2px solid #000;
+            table-layout: fixed;
+        }
+
+        .header-table > tbody > tr > td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .header-left {
+            width: 30%;
+            border-right: 1px solid #000;
+        }
+
+        .header-center {
+            width: 40%;
+            border-right: 1px solid #000;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .header-right {
+            width: 30%;
+        }
+
+        .header-title-container {
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .header-center h1 {
+            font-size: 26px;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: rgb(71, 71, 70);
+            text-align: center;
+            margin: 0;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .category {
+            border-top: 1px solid #000;
+            text-align: center;
+            padding: 5px;
+            font-size: 13px;
+            height: 26px;
+        }
+
+        .brand-row-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .brand-info-td {
+            width: 60%;
+            vertical-align: top;
+        }
+
+        .brand-logo-td {
+            width: 40%;
+            vertical-align: middle;
+            text-align: center;
+            border-left: 1px solid #000;
+            padding: 2px 5px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: bold;
+            font-family: serif;
+            display: block;
+            line-height: 1.1;
+        }
+
+        .logo-sub {
+            font-size: 9px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .info-row {
+            border-top: 1px solid #000;
+            padding: 4px 8px;
+            font-size: 12px;
+            height: 26px;
+            line-height: 18px;
+        }
+
+        .info-row.desc {
+            height: 52px;
+            border-bottom: none;
+            overflow: hidden;
+        }
+
+        .brand-label {
+            padding: 4px 8px;
+            font-size: 12px;
+            height: 26px;
+            line-height: 18px;
+        }
+
+        /* ================= LABEL SECTION ================= */
+
+        .label-section {
+            width: 96%;
+            margin: 15px auto;
+            font-size: 12px;
+        }
+
+        .label-row {
+            display: flex;
+            width: 100%;
+            border: 1.5px solid #333;
+            margin-bottom: 12px;
+        }
+
+        .label-box {
+            width: 50%;
+            padding: 12px 18px;
+        }
+
+        .label-box + .label-box {
+            border-left: 1.5px solid #333;
+        }
+
+        .box-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .wash-content p {
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .care-label-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 15px;
+        }
+
+        .care-label-wrapper img {
+            max-width: 120px;
+            max-height: 155px;
+            object-fit: contain;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .instruction-list {
+            padding-left: 18px;
+            line-height: 1.5;
+        }
+
+        .instruction-list li {
+            margin-bottom: 4px;
+        }
+
+        .standards-content p {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page-container">
+
+        <!-- ================= HEADER TABLE ================= -->
+        <table class="header-table">
+            <tr>
+                <td class="header-left">
+                    <div class="info-row">Date: {{ header.date }}</div>
+                    <div class="info-row">Season: {{ header.season }}</div>
+                    <div class="info-row">Collection: {{ header.collection }}</div>
+                    <div class="info-row">Style Name: {{ header.style_name }}</div>
+                    <div class="info-row desc">Description: {{ header.description }}</div>
+                </td>
+
+                <td class="header-center">
+                    <div class="header-title-container">
+                        <h1>Wash and Care Label</h1>
+                    </div>
+                    <div class="category">{{ header.category }}</div>
+                </td>
+
+                <td class="header-right">
+                    <table class="brand-row-table">
+                        <tr>
+                            <td class="brand-info-td">
+                                <div class="brand-label">Brand: {{ header.brand }}</div>
+                                <div class="info-row">Size Range: {{ header.size_range }}</div>
+                                <div class="info-row">Total order quantity: {{ header.total_order_quantity or '' }}</div>
+                            </td>
+
+                            <td class="brand-logo-td">
+                                <span class="logo-text">{{ header.brand }}</span>
+                                <span class="logo-sub">By {{ header.collection }}</span>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="info-row">Sample Size 1st-Approval: {{ header.sample_size_1st or '' }}</div>
+                    <div class="info-row">Sample Size Pre-Production: {{ header.sample_pre_production or '' }}</div>
+                    <div class="info-row">Sample Size Production Sample: {{ header.sample_production or '' }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- ================= WASH & CARE ================= -->
+        <div class="label-section">
+            <!-- TOP -->
+            <div class="label-row" style="border: none; margin-bottom: 2px;">
+                <div style="width: 50%; padding-left: 5px;" class="box-title">WASH LABEL</div>
+                <div style="width: 50%; text-align: right; padding-right: 5px;" class="box-title">CARE LABEL</div>
+            </div>
+            <div class="label-row">
+
+                <!-- WASH LABEL -->
+                <div class="label-box">
+                    <div class="wash-content">
+                        <p><strong>Composition:</strong> <em>{{ page_9.wash_label.composition }}</em></p>
+                        <p><strong>Washing Instructions:</strong> <em>{{ page_9.wash_label.washing_instructions }}</em></p>
+                        <p><strong>Bleaching:</strong> <em>{{ page_9.wash_label.bleaching }}</em></p>
+                        <p><strong>Drying Instructions:</strong> <em>{{ page_9.wash_label.drying_instructions }}</em></p>
+                        <p><strong>Ironing Instructions:</strong> <em>{{ page_9.wash_label.ironing_instructions }}</em></p>
+                        <p>
+                            <strong>Dry Cleaning:</strong>
+                            <em>{{ page_9.wash_label.dry_cleaning.line_1 }}<br>{{ page_9.wash_label.dry_cleaning.line_2 }}</em>
+                        </p>
+                        <p style="margin-top: 5px;">The carelabel colors: <strong>white with black text</strong></p>
+                    </div>
+                </div>
+
+                <!-- CARE LABEL IMAGE -->
+                <div class="label-box">
+                    <div class="care-label-wrapper">
+                        <img src="{{ page_9.wash_care_label_img }}" alt="Care Label">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- BOTTOM -->
+            <div class="label-row">
+                <!-- CARE INSTRUCTIONS -->
+                <div class="label-box">
+                    <div class="box-title">CARE LABEL INSTRUCTIONS</div>
+                    <ul class="instruction-list">
+                        {% for instruction in page_9.care_label_instructions %}
+                        <li>{{ instruction | safe }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- OTHER STANDARDS -->
+                <div class="label-box">
+                    <div class="box-title">OTHER STANDARDS</div>
+                    <div class="standards-content">
+                        {% for standard in page_9.other_standards %}
+                        <p><strong>{{ standard.title }}</strong> – {{ standard.description }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

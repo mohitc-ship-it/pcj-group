@@ -1,0 +1,52 @@
+# Environment & Secrets
+.env
+*.key
+credentials*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Generated PDFs (large binary files)
+*.pdf
+
+# Generated images (large, regeneratable)
+swanky_women/assets/
+swanky_women/temp/
+swanky_women/output_grids/
+swanky_women/output_grids_80/
+
+# Rendered page images
+swanky_women/final_page_*.png
+swanky_women/final.png
+swanky_women/page_*_render.png
+swanky_women/page_*_new_test.png
+swanky_women/crop_*.png
+swanky_women/sketch_crop_*.png
+swanky_women/debug_sketch.pdf
+
+# Node
+node_modules/
+.pnp.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Archive (old iterations)
+swanky_women/archive/

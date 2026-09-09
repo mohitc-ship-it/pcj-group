@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swanky Tech Pack - Cover Page</title>
+
+    <style>
+       
+        @page {
+            size: 1240px 790px;
+            margin: 0;
+        }   
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .page-container {
+            width: 1200px;
+            height: 750px;
+            background-color: #fff;
+            position: relative;
+            overflow: hidden;
+            /* No outer border for the cover page to match the image style */
+        }
+
+        /* Image Placements */
+        .garment-back {
+            position: absolute;
+            top: 10px;
+            left: 120px;
+            width: 380px;
+            z-index: 1;
+        }
+
+        .garment-front {
+            position: absolute;
+            bottom: 0px;
+            left: 380px;
+            width: 380px;
+            z-index: 2;
+        }
+
+        /* Dark Info Box */
+        .info-box {
+            position: absolute;
+            top: 230px;
+            right: 0;
+            width: 450px;
+            background-color: #6d6363; /* Muted brown/grey from image */
+            color: #fff;
+            padding: 30px 40px;
+            text-align: right;
+            z-index: 12;
+        }
+
+        .info-box h1 {
+            font-size: 42px;
+            font-weight: 300;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .info-box .details {
+            font-size: 20px;
+            line-height: 1.6;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Logo Branding */
+        .brand-branding {
+            position: absolute;
+            bottom: 180px;
+            left: 30%;
+            text-align: right;
+         
+        }
+
+        .logo-main {
+            font-size: 80px;
+            font-family: 'Times New Roman', serif;
+            font-weight: bold;
+            color: #000;
+            display: block;
+        }
+
+        .logo-subtext {
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            display: block;
+            margin-top: -15px;
+            margin-right: 5px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="page-container">
+
+    <img src="{{ page_1.garment_back_view_url }}" alt="Back View" class="garment-back">
+    <img src="{{ page_1.garment_front_view_url }}" alt="Front View" class="garment-front">
+    <!-- <img src="../assets/a.png" alt="Back View" class="garment-back">
+    <img src="../assets/b.png" alt="Front View" class="garment-front"> -->
+
+    <div class="info-box">
+        <h1>Technical Package</h1>
+        <div class="details">
+            <p>{{ page_1.style_number }}</p>
+            <p>{{ page_1.date }}</p>
+            <p>{{ page_1.brand_name }}</p>
+        </div>
+    </div>
+
+    <div class="brand-branding">
+        <img src="{{page_1.brand_logo}}" style="width: 250px; position: absolute; left: 450px; bottom: 20px;" alt="logo" >
+        <!-- <img style="width: 250px; position: absolute; left: 450px; bottom: 20px;" src="../assets/brand_logo.png" alt="Logo" > -->
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+.DS_Store
+Tech_Pack.pdf.DS_Store
+.env
+__pycache__
+*.pdf
+public/uploads/*.png
+temp/*pdf
+output_grids/*png
+output_grids_80/*png

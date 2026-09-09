@@ -1,0 +1,901 @@
+{
+    "pages": {
+        "page_1": "intro_page",
+        "page_2": "technical_sketch_page",
+        "page_3": "3d_cad_design_page",
+        "page_4": "accessories_page",
+        "page_5": "product_construction",
+        "page_6": "measurements",
+        "page_7": "fabrics_quality_standards",
+        "page_8": "size_chart_page",
+        "page_9": "wash_and_care_label"
+    },
+    "header": {
+        "date": "26/08/2026",
+        "season": "Fall/Winter 25",
+        "collection": "Grandiose",
+        "style_name": "JCC-GRD-FW25-WCD",
+        "description": "Women's wrap coat dress",
+        "category": "Outerwear",
+        "brand": "JC & Co",
+        "size_range": "S\u2013XL",
+        "total_order_quantity": null,
+        "sample_size_1st": "S",
+        "sample_pre_production": null,
+        "sample_production": null
+    },
+    "page_1": {
+        "garment_back_view_url": "assets/back.png",
+        "garment_front_view_url": "assets/front.png",
+        "style_number": "JCC-GRD-FW25-WCD",
+        "date": "26/08/2026",
+        "brand_name": "JC & Co",
+        "collection_name": "Grandiose",
+        "brand_logo": "assets/first_page_logo_current.png",
+        "season": "Fall/Winter 25"
+    },
+    "page_2": {
+        "front_image_url": "assets/front.png",
+        "back_image_url": "assets/back.png",
+        "detail_image_1_url": "assets/grid_0.png",
+        "detail_image_2_url": "assets/grid_1.png",
+        "detail_image_3_url": "assets/grid_2.png",
+        "detail_image_4_url": "assets/front.png",
+        "color_name": "Golden Yellow",
+        "color_hex": "#e0b34c",
+        "details": "Silhouette: Wrap coat with fitted bodice and A-line flared skirt, asymmetrical maxi length\nSleeves: Long fitted sleeves with raglan-style ease and finished cuffs\nOther Features:\nWide notched collar with structured lapels\nSelf-fabric tie belt at natural waist\nFunctional side seam pockets at hip level\nCenter front wrap closure with overlap construction",
+        "optional_colors": [
+            {
+                "color_name": "Golden Yellow",
+                "color_hex": "#e0b34c",
+                "pantone_tcx": "14-1318 TCX"
+            },
+            {
+                "color_name": "Mustard Gold",
+                "color_hex": "#e0b34c",
+                "pantone_tcx": "15-1246 TCX"
+            },
+            {
+                "color_name": "Honey Gold",
+                "color_hex": "#e0b34c",
+                "pantone_tcx": "13-1023 TCX"
+            },
+            {
+                "color_name": "Amber Yellow",
+                "color_hex": "#cda138",
+                "pantone_tcx": "14-1220 TCX"
+            },
+            {
+                "color_name": "Deep Gold",
+                "color_hex": "#b1851d",
+                "pantone_tcx": "18-1546 TCX"
+            }
+        ],
+        "pantone_tcx": "14-1318 TCX",
+        "optional_image_urls": [
+            "assets/grid_0.png",
+            "assets/grid_1.png",
+            "assets/grid_2.png"
+        ]
+    },
+    "page_3": {
+        "technical_sketch_img": "assets/technical_sketch.png",
+        "brand_label": {
+            "image_url": "assets/labels/brand_label.png",
+            "size": "Approx 5 cm (W) \u00d7 3 cm (H)",
+            "placement": "Inner back neck seam"
+        },
+        "size_label": {
+            "image_url": "assets/labels/size_label.png",
+            "size": "Approx 2.5 cm \u00d7 2.5 cm",
+            "placement": "Below or beside the brand label"
+        },
+        "care_label": {
+            "image_url": "assets/care_label.png",
+            "size": "Approx 5 cm \u00d7 8 cm",
+            "placement": "Inner left side seam, above 10\u201315 cm from the hem"
+        },
+        "care_label_img": "assets/care_label_final.png",
+        "label_notes": "The color of the labels is white. Type of: 100% Recycled polyester woven label.",
+        "brand_label_img": "assets/brand_label_final.png"
+    },
+    "page_4": {
+        "accessories": [
+            {
+                "item_description": "Sewing Thread",
+                "quantity": "1 spool (1000m minimum)",
+                "material": "100% Polyester core spun (recycled polyester preferred)",
+                "dimensions": null,
+                "color": "Mustard Yellow",
+                "placement": "All seams throughout garment",
+                "justification": "Standard thread for wool gabardine construction. Polyester core spun provides strength and durability for high-stress seams (shoulders, sides, waist, pockets). Color matches fabric. Used for all lockstitch and overlock seaming.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "description": "Sewing Thread - 100% Polyester core spun (recycled polyester preferred)",
+                "qty": "1 spool (1000m minimum)",
+                "position": "All seams throughout garment"
+            },
+            {
+                "item_description": "Brand Label",
+                "quantity": "1 pc",
+                "material": "Woven label",
+                "dimensions": "1\" \u00d7 1.5\"",
+                "color": "Brand standard",
+                "placement": "Inside back neck seam (centered at neckline)",
+                "justification": "Mandatory brand identification. Positioned at interior neckline for visibility and standard placement in outerwear.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "description": "Brand Label - Woven label - 1\" \u00d7 1.5\"",
+                "qty": "1 pc",
+                "position": "Inside back neck seam (centered at neckline)"
+            },
+            {
+                "item_description": "Size Label",
+                "quantity": "1 pc",
+                "material": "Woven label",
+                "dimensions": "0.75\" \u00d7 1\"",
+                "color": "Brand standard",
+                "placement": "Inside left side seam, below waist seam",
+                "justification": "Size designation label (S, M, L, XL). Standard placement in side seam for easy visibility during fitting. Woven label ensures durability through washing and dry cleaning.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "description": "Size Label - Woven label - 0.75\" \u00d7 1\"",
+                "qty": "1 pc",
+                "position": "Inside left side seam, below waist seam"
+            },
+            {
+                "item_description": "Care Label",
+                "quantity": "1 pc",
+                "material": "Woven label with printed care instructions",
+                "dimensions": "1\" \u00d7 1.5\"",
+                "color": "Black text on white background",
+                "placement": "Inside left side seam, above size label",
+                "justification": "Care and fiber content instructions required by FTC and international standards. Positioned in side seam for standard placement. Woven label with printed instructions ensures durability and legibility.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "description": "Care Label - Woven label with printed care instructions - 1\" \u00d7 1.5\"",
+                "qty": "1 pc",
+                "position": "Inside left side seam, above size label"
+            }
+        ]
+    },
+    "page_5": {
+        "seams": [
+            {
+                "seam_location": "Shoulder seam",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSa-1",
+                "seam_allowance_mm": "10",
+                "description": "Structural, load-bearing shoulder seam",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Shoulder seams carry garment weight and support sleeve cap. Wool gabardine is stable and non-stretch; seam must be strong and visually clean. High QC strictness requires precise symmetry and tight stitching. Reinforced structural seam with clean finish.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSa-1",
+                "allowance": "10",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Side seams",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSb-2",
+                "seam_allowance_mm": "10",
+                "description": "Structural, high stress from maxi length and A-line flare",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Side seams experience significant stress from garment weight (maxi-length coat) and body movement. Visible on fitted silhouette. Wool gabardine requires strong seaming but does not need stretch accommodation. A-line flare from waist increases load on lower side seams. Reinforced structural seam with clean edge finish.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSb-2",
+                "allowance": "10",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Center back seam",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSc-3",
+                "seam_allowance_mm": "10",
+                "description": "Structural, visible, asymmetrical hemline alignment",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Center back seam is visible and load-bearing in maxi coat. Asymmetrical hemline (back 2\u20134 inches longer than front) requires precise seam alignment to maintain hem symmetry and garment balance. Wool gabardine is stable; no stretch needed. Reinforced structural seam with clean finish.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSc-3",
+                "allowance": "10",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Center front seam with wrap overlap",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSd-4",
+                "seam_allowance_mm": "8",
+                "description": "Structural, precision closure for wrap-front construction",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Wrap-front construction requires precise overlap alignment for aesthetic and functional closure. Center front seam is visible and must maintain wrap integrity. Wool gabardine is stable; no stretch required. High QC strictness demands tight tolerance on overlap positioning. Clean structural seam with precise overlap alignment.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSd-4",
+                "allowance": "8",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Armhole seam",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSe-5",
+                "seam_allowance_mm": "10",
+                "description": "Structural, high stress, curved armhole",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Armhole experiences high stress from arm movement and sleeve weight. Fitted sleeve cap requires precise ease distribution. Wool gabardine is stable but requires careful seaming to prevent puckering at curve. No stretch needed due to semi-fitted design and stable fabric. Reinforced structural seam with controlled ease.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSe-5",
+                "allowance": "10",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Sleeve seam",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSf-6",
+                "seam_allowance_mm": "8",
+                "description": "Structural, fitted, visible sleeve seam",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Long fitted sleeves are visible and require clean seaming for professional appearance. Wool gabardine is stable; no stretch needed. Fitted construction demands precise sleeve cap and seam line alignment. Clean structural seam with precise alignment.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSf-6",
+                "allowance": "8",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Waist seam",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSg-7",
+                "seam_allowance_mm": "10",
+                "description": "Load-bearing, supports tie belt and A-line flare",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Waist seam is load-bearing: supports self-fabric tie belt weight and anchors A-line flare from waist. High stress from garment weight and belt tension. Wool gabardine is stable; no stretch needed. Reinforcement required to prevent seam slippage or distortion. Reinforced structural seam with stable positioning.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSg-7",
+                "allowance": "10",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Pocket opening seams",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSh-8",
+                "seam_allowance_mm": "10",
+                "description": "Structural, high stress from hand insertion",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3.0",
+                "machine_type": "Single needle machine",
+                "justification": "Functional side pockets experience high stress from repeated hand insertion and potential weight loading. Pocket openings must be reinforced to prevent tearing or distortion. Wool gabardine is stable; no stretch needed. Clean finish required for visible pocket edges. Reinforced structural seam with clean edge finish.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSh-8",
+                "allowance": "10",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Slit opening edges",
+                "seam_type": "Superimposed Seam",
+                "seam_symbol": "SSi-9",
+                "seam_allowance_mm": "6",
+                "description": "Wrap-front construction, reinforced slit edges",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "2.5",
+                "machine_type": "Single needle machine",
+                "justification": "Wrap-front construction creates slit opening at center front. Slit edges must be reinforced to prevent fraying and maintain wrap integrity. Visible design feature requires clean, precise edge finish. Wool gabardine is stable; no stretch needed. Clean finish seam with reinforced slit edges.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Superimposed Seam",
+                "symbol": "SSi-9",
+                "allowance": "6",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Neckline finish",
+                "seam_type": "Edge Finish",
+                "seam_symbol": "EFa-10",
+                "seam_allowance_mm": "12",
+                "description": "Notched collar and structured lapels",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "2.5",
+                "machine_type": "Single needle machine",
+                "justification": "Notched collar with structured lapels is a design-critical feature visible at neckline. Requires clean, precise edge finish and stable seaming. Wool gabardine supports structured collar without stretch. High QC strictness requires sharp collar points and even lapel width. Clean finish seam with structured collar and lapel support.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Edge Finish",
+                "symbol": "EFa-10",
+                "allowance": "12",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Cuff opening finish",
+                "seam_type": "Edge Finish",
+                "seam_symbol": "EFb-11",
+                "seam_allowance_mm": "10",
+                "description": "Sleeve hem, clean edge finish",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "2.5",
+                "machine_type": "Single needle machine",
+                "justification": "Cuff openings are visible and experience moderate stress from hand movement. Wool gabardine is stable; no stretch required. Clean finish prioritized for professional outerwear aesthetic. Clean finish seam with precise edge definition.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Edge Finish",
+                "symbol": "EFb-11",
+                "allowance": "10",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Hem stitching",
+                "seam_type": "Edge Finish",
+                "seam_symbol": "EFc-12",
+                "seam_allowance_mm": "15",
+                "description": "Asymmetrical maxi hemline, front and back",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "2.0",
+                "machine_type": "Single needle machine",
+                "justification": "Maxi-length coat with asymmetrical hemline (back 2\u20134 inches longer than front) requires precise hem length control and clean finish. Visible from multiple angles. High QC strictness demands tight tolerance on hem length differential. Wool gabardine is stable; no stretch accommodation needed. Clean finish hem with precise length control.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Edge Finish",
+                "symbol": "EFc-12",
+                "allowance": "15",
+                "machine": "Single needle machine"
+            },
+            {
+                "seam_location": "Interior seam allowances",
+                "seam_type": "Overlock Seam",
+                "seam_symbol": "OLa-13",
+                "seam_allowance_mm": "6",
+                "description": "Raw edge finish on all structural seams",
+                "stitch_type": "Overlock (504)",
+                "stitch_symbol": "504",
+                "stitch_size": "3.5",
+                "machine_type": "4-thread Overlock",
+                "justification": "Wool gabardine (280\u2013320 GSM) is prone to fraying at cut edges. Overlock finish on all interior seam allowances prevents fraying and extends garment durability. Applied after primary seaming to seal raw edges. Standard practice for premium outerwear construction.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "type": "Overlock Seam",
+                "symbol": "OLa-13",
+                "allowance": "6",
+                "machine": "4-thread Overlock"
+            }
+        ]
+    },
+    "page_6": {
+        "measurement_image_url": "assets/measurement_diagram.png",
+        "measurements": [
+            {
+                "point_of_measurement": "Bust",
+                "pom_code": "A",
+                "description": "1/2 circumference, primary fit control for wrap coat silhouette",
+                "sample_size_value_cm": 46.0,
+                "tolerance_cm": "\u00b11.27",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Primary fit control for wrap coat silhouette. Semi-fitted construction requires precise bust measurement to ensure wrap overlap alignment and proper drape across chest. Tight tolerance prevents gaping at wrap closure.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "A",
+                "measurement_cm": 46.0
+            },
+            {
+                "point_of_measurement": "Natural Waist",
+                "pom_code": "B",
+                "description": "1/2 circumference, tie-belt closure position",
+                "sample_size_value_cm": 36.0,
+                "tolerance_cm": "\u00b11.27",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Defines tie-belt closure position and wrap overlap point. Critical for wrap coat construction where waist definition controls silhouette and closure functionality. Precise waist measurement ensures belt sits at correct anatomical position.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "B",
+                "measurement_cm": 36.0
+            },
+            {
+                "point_of_measurement": "Hip",
+                "pom_code": "C",
+                "description": "1/2 circumference, A-line flare control",
+                "sample_size_value_cm": 48.0,
+                "tolerance_cm": "\u00b11.27",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Controls A-line flared skirt portion and overall silhouette. Maxi wrap coat requires precise hip measurement to maintain intended flare and drape from waist. Hip measurement determines hem sweep and silhouette proportion.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "C",
+                "measurement_cm": 48.0
+            },
+            {
+                "point_of_measurement": "Across Shoulder",
+                "pom_code": "D",
+                "description": "Shoulder-to-shoulder width, structured collar and sleeve cap placement",
+                "sample_size_value_cm": 38.5,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Fit-critical measurement for structured collar, notched lapels, and sleeve cap placement. Tight tolerance required as variation affects collar alignment and shoulder seam position. Precise shoulder width ensures collar symmetry and lapel proportion.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "D",
+                "measurement_cm": 38.5
+            },
+            {
+                "point_of_measurement": "Armhole Depth",
+                "pom_code": "E",
+                "description": "Sleeve cap fit and comfort control",
+                "sample_size_value_cm": 20.5,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Controls sleeve cap fit and comfort. Semi-fitted wrap coat with set-in sleeve requires precise armhole depth to prevent binding or excess fabric. Tight tolerance ensures consistent arm movement and sleeve cap ease distribution.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "E",
+                "measurement_cm": 20.5
+            },
+            {
+                "point_of_measurement": "Sleeve Length",
+                "pom_code": "F",
+                "description": "Shoulder seam to cuff opening, long sleeve proportion",
+                "sample_size_value_cm": 60.0,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Long sleeve construction requires precise length for proper wrist coverage and proportion. Maxi coat silhouette demands consistent sleeve-to-hem ratio. Sleeve length affects overall garment proportion and visual balance.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "F",
+                "measurement_cm": 60.0
+            },
+            {
+                "point_of_measurement": "Shoulder to Hem Front",
+                "pom_code": "G",
+                "description": "Front maxi length, primary reference for asymmetrical hemline",
+                "sample_size_value_cm": 130.0,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Defines maxi length and wrap coat proportions. Asymmetrical hemline (front shorter than back) requires strict front length control for design intent. Front hem length is primary reference for maxi silhouette.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "G",
+                "measurement_cm": 130.0
+            },
+            {
+                "point_of_measurement": "Shoulder to Hem Back",
+                "pom_code": "H",
+                "description": "Back maxi length, 2\u20134 inches longer than front",
+                "sample_size_value_cm": 135.0,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Back length is 2\u20134 inches (5\u201310 cm) longer than front per design specification. Asymmetrical hemline is signature design feature requiring strict tolerance to maintain intended silhouette. Back hem length differential is critical design element.",
+                "confidence": 0.9,
+                "requires_confirmation": true,
+                "code": "H",
+                "measurement_cm": 135.0
+            },
+            {
+                "point_of_measurement": "Wrap Overlap Width",
+                "pom_code": "I",
+                "description": "Center front closure area, wrap integrity control",
+                "sample_size_value_cm": 12.0,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Wrap front construction requires precise overlap measurement to ensure proper closure alignment and tie-belt functionality. Tight tolerance prevents gaping or excess overlap. Overlap width determines wrap integrity and visual closure appearance.",
+                "confidence": 0.85,
+                "requires_confirmation": true,
+                "code": "I",
+                "measurement_cm": 12.0
+            },
+            {
+                "point_of_measurement": "Neck Opening",
+                "pom_code": "J",
+                "description": "1/2 circumference, notched collar fit",
+                "sample_size_value_cm": 18.5,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Notched collar with structured lapels requires precise neck opening for proper collar stand and lapel lay. Fit-critical for structured neckline. Neck opening measurement ensures collar sits correctly at base of neck.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "J",
+                "measurement_cm": 18.5
+            },
+            {
+                "point_of_measurement": "Collar Height",
+                "pom_code": "K",
+                "description": "Notched collar stand height, design-critical",
+                "sample_size_value_cm": 3.5,
+                "tolerance_cm": "\u00b10.32",
+                "grading": "Not Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Structured collar component requires tight tolerance to maintain notched collar design intent and lapel proportion. Not graded across sizes to preserve collar structure consistency. Collar height is design-critical and must remain constant.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "K",
+                "measurement_cm": 3.5
+            },
+            {
+                "point_of_measurement": "Sleeve Opening",
+                "pom_code": "L",
+                "description": "1/2 circumference at cuff, wrist fit",
+                "sample_size_value_cm": 16.0,
+                "tolerance_cm": "\u00b11.02",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Long sleeve opening must accommodate wrist and hand movement. Standard tolerance allows for comfort while maintaining sleeve proportion. Sleeve opening circumference ensures functional wrist fit without excess fabric.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "L",
+                "measurement_cm": 16.0
+            },
+            {
+                "point_of_measurement": "Hem Sweep Front",
+                "pom_code": "M",
+                "description": "1/2 circumference at hem, front A-line flare",
+                "sample_size_value_cm": 52.0,
+                "tolerance_cm": "\u00b11.27",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "A-line flared skirt requires controlled hem sweep for intended silhouette. Front hem sweep must coordinate with back hem for asymmetrical design. Front hem sweep determines A-line flare proportion and silhouette volume.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "M",
+                "measurement_cm": 52.0
+            },
+            {
+                "point_of_measurement": "Hem Sweep Back",
+                "pom_code": "N",
+                "description": "1/2 circumference at hem, back A-line flare",
+                "sample_size_value_cm": 56.0,
+                "tolerance_cm": "\u00b11.27",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Back hem sweep is larger than front due to A-line flare and longer back length. Maxi coat requires controlled sweep for proper drape and movement. Back hem sweep is larger to accommodate longer back length and A-line flare.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "N",
+                "measurement_cm": 56.0
+            },
+            {
+                "point_of_measurement": "Pocket Opening Width",
+                "pom_code": "O",
+                "description": "Side seam pocket opening width, functional design",
+                "sample_size_value_cm": 6.5,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Not Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Functional side pockets require consistent opening width for usability and design proportion. Not graded to maintain pocket functionality across sizes. Pocket opening width ensures hand access and functional pocket design.",
+                "confidence": 0.85,
+                "requires_confirmation": true,
+                "code": "O",
+                "measurement_cm": 6.5
+            },
+            {
+                "point_of_measurement": "Pocket Depth",
+                "pom_code": "P",
+                "description": "Side seam pocket depth, hand placement",
+                "sample_size_value_cm": 18.0,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Not Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Functional side pockets require adequate depth for hand placement. Not graded to ensure consistent pocket functionality. Pocket depth ensures adequate hand storage capacity.",
+                "confidence": 0.85,
+                "requires_confirmation": true,
+                "code": "P",
+                "measurement_cm": 18.0
+            },
+            {
+                "point_of_measurement": "Tie Belt Length",
+                "pom_code": "Q",
+                "description": "Self-fabric belt full length, wrap and tie functionality",
+                "sample_size_value_cm": 180.0,
+                "tolerance_cm": "\u00b11.27",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Self-fabric tie belt must be long enough to wrap and tie at waist. Slightly larger tolerance allows for tie adjustment and styling flexibility. Tie belt length must accommodate wrapping around waist and tying at front.",
+                "confidence": 0.85,
+                "requires_confirmation": true,
+                "code": "Q",
+                "measurement_cm": 180.0
+            },
+            {
+                "point_of_measurement": "Center Back Seam Length",
+                "pom_code": "R",
+                "description": "Reference measurement for pattern alignment and seam placement",
+                "sample_size_value_cm": 135.0,
+                "tolerance_cm": "\u00b10.64",
+                "grading": "Graded",
+                "value_source": "Brand Standard Fit Block",
+                "justification": "Center back seam with fitted sleeve cap requires measurement for pattern alignment and seam placement. Reference measurement for construction verification. Center back seam length ensures proper back bodice proportion and sleeve cap alignment.",
+                "confidence": 0.95,
+                "requires_confirmation": false,
+                "code": "R",
+                "measurement_cm": 135.0
+            }
+        ]
+    },
+    "page_7": {
+        "fabrics": [
+            {
+                "usage": "Shell",
+                "description": "100% Wool Gabardine",
+                "composition": "100% Wool",
+                "construction": "Woven",
+                "weight_gsm": "280\u2013320",
+                "stretch": "None",
+                "finish": "Matte",
+                "color": "Mustard Yellow",
+                "position": "Outer body, sleeves, collar, lapels, tie belt",
+                "justification": "Pure wool gabardine selected as primary outerwear fabric per brand specification. Structured, non-stretch composition supports wrap-front construction, notched collar with lapels, and A-line silhouette. High GSM appropriate for winter maxi coat. Matte finish suits professional outerwear aesthetic. Dimensional stability critical for precise hem alignment and wrap overlap tolerance control mandated by high QC strictness.",
+                "confidence": 0.95,
+                "requires_confirmation": false
+            }
+        ],
+        "quality_standards": [
+            {
+                "test": "Dimensional Stability (Shrinkage)",
+                "method": "ISO 5077",
+                "requirements": "Max \u00b12% shrinkage in length and width",
+                "comments": "100% wool gabardine requires strict dimensional stability control. Maxi-length wrap coat with asymmetrical hemline (back 2-4 inches longer than front) demands precise shrinkage tolerance to maintain hem alignment and wrap overlap positioning. High QC strictness requires tight control."
+            },
+            {
+                "test": "Color Fastness to Washing",
+                "method": "ISO 105-C06",
+                "requirements": "\u2265 Grade 4",
+                "comments": "Wool gabardine outerwear requires color stability during laundering or dry cleaning. Prevents dye bleeding that could compromise garment appearance or stain lining/undergarments."
+            },
+            {
+                "test": "Color Fastness to Rubbing (Dry & Wet)",
+                "method": "ISO 105-X12",
+                "requirements": "Dry \u2265 Grade 4, Wet \u2265 Grade 3.5",
+                "comments": "Dyed wool gabardine must resist color transfer during wear, particularly at contact points (wrap overlap, belt, sleeves). Wet rubbing critical for winter outerwear exposed to moisture and perspiration."
+            },
+            {
+                "test": "Seam Strength",
+                "method": "ISO 13017",
+                "requirements": "\u2265 80 N (minimum)",
+                "comments": "Complex construction with multiple high-stress seams: reinforced shoulder, side, center back, waist (load-bearing for tie belt), and pocket openings. Heavy wool gabardine (280-320 GSM) requires strong seaming to prevent seam slippage under garment weight and wear stress."
+            },
+            {
+                "test": "Appearance After Washing",
+                "method": "ISO 105-A02",
+                "requirements": "No visible shrinkage, color change, or seam distortion",
+                "comments": "Maxi-length wrap coat with structured collar and lapels must maintain shape, hem alignment, and closure integrity after care. Asymmetrical hemline and wrap overlap require visual inspection for dimensional changes."
+            },
+            {
+                "test": "Abrasion Resistance",
+                "method": "ISO 12947-2 (Martindale)",
+                "requirements": "\u2265 20,000 cycles to visible wear",
+                "comments": "Winter outerwear experiences high abrasion at contact points: wrap overlap, belt friction at waist, sleeve cuffs, and pocket openings. Wool gabardine must resist pilling and surface wear from repeated friction and body movement."
+            },
+            {
+                "test": "Seam Slippage",
+                "method": "ISO 13936-2",
+                "requirements": "Max 5 mm at 60 N load",
+                "comments": "Wool gabardine is a smooth, tightly woven fabric prone to seam slippage under stress. Critical for high-stress seams: side seams (support maxi-length coat weight), waist seam (supports tie belt), and pocket openings (hand insertion stress). High QC strictness requires tight tolerance."
+            },
+            {
+                "test": "Tensile Strength (Grab Method)",
+                "method": "ASTM D6775",
+                "requirements": "\u2265 200 N (warp and weft)",
+                "comments": "Heavy wool gabardine (280-320 GSM) must demonstrate adequate fabric strength to support garment weight and construction stress. Ensures fabric integrity throughout maxi-length coat with complex seaming and load-bearing waist seam."
+            }
+        ]
+    },
+    "page_8": {
+        "size_chart": [
+            {
+                "pom": "Bust",
+                "s": 94.0,
+                "m": 100.0,
+                "l": 106.0,
+                "xl": 112.0
+            },
+            {
+                "pom": "Natural Waist",
+                "s": 76.0,
+                "m": 82.0,
+                "l": 88.0,
+                "xl": 94.0
+            },
+            {
+                "pom": "Hip",
+                "s": 104.0,
+                "m": 110.0,
+                "l": 116.0,
+                "xl": 122.0
+            },
+            {
+                "pom": "Across Shoulder",
+                "s": 38.0,
+                "m": 39.5,
+                "l": 41.0,
+                "xl": 42.5
+            },
+            {
+                "pom": "Armhole Depth",
+                "s": 21.0,
+                "m": 21.8,
+                "l": 22.6,
+                "xl": 23.4
+            },
+            {
+                "pom": "Sleeve Length",
+                "s": 61.0,
+                "m": 62.0,
+                "l": 63.0,
+                "xl": 64.0
+            },
+            {
+                "pom": "Shoulder to Hem Front",
+                "s": 110.0,
+                "m": 112.0,
+                "l": 114.0,
+                "xl": 116.0
+            },
+            {
+                "pom": "Shoulder to Hem Back",
+                "s": 116.0,
+                "m": 118.0,
+                "l": 120.0,
+                "xl": 122.0
+            },
+            {
+                "pom": "Wrap Overlap Width",
+                "s": 12.0,
+                "m": 12.5,
+                "l": 13.0,
+                "xl": 13.5
+            },
+            {
+                "pom": "Neck Opening",
+                "s": 38.0,
+                "m": 39.5,
+                "l": 41.0,
+                "xl": 42.5
+            },
+            {
+                "pom": "Collar Height",
+                "s": 7.5,
+                "m": 7.5,
+                "l": 7.5,
+                "xl": 7.5
+            },
+            {
+                "pom": "Sleeve Opening",
+                "s": 20.0,
+                "m": 21.0,
+                "l": 22.0,
+                "xl": 23.0
+            },
+            {
+                "pom": "Hem Sweep Front",
+                "s": 130.0,
+                "m": 138.0,
+                "l": 146.0,
+                "xl": 154.0
+            },
+            {
+                "pom": "Hem Sweep Back",
+                "s": 148.0,
+                "m": 156.0,
+                "l": 164.0,
+                "xl": 172.0
+            },
+            {
+                "pom": "Pocket Opening Width",
+                "s": 8.0,
+                "m": 8.0,
+                "l": 8.0,
+                "xl": 8.0
+            },
+            {
+                "pom": "Pocket Depth",
+                "s": 18.0,
+                "m": 18.0,
+                "l": 18.0,
+                "xl": 18.0
+            },
+            {
+                "pom": "Tie Belt Length",
+                "s": 180.0,
+                "m": 190.0,
+                "l": 200.0,
+                "xl": 210.0
+            },
+            {
+                "pom": "Center Back Seam Length",
+                "s": 116.0,
+                "m": 118.0,
+                "l": 120.0,
+                "xl": 122.0
+            }
+        ]
+    },
+    "page_9": {
+        "wash_label": {
+            "composition": "100% Wool",
+            "washing_instructions": "Dry clean only. Do not wash.",
+            "bleaching": "Do not bleach.",
+            "drying_instructions": "Lay flat to dry. Do not tumble dry.",
+            "ironing_instructions": "Warm iron on wool setting. Use pressing cloth. Do not iron directly on fabric.",
+            "dry_cleaning": {
+                "line_1": "Dry clean only.",
+                "line_2": "Use mild solvent. Avoid excessive agitation."
+            },
+            "standards": [
+                "FTC Care Labeling Rule (16 CFR Part 423)",
+                "ISO 3758:2012 (Textile care labeling)",
+                "ASTM D5489 (Standard practice for care labeling of consumer textiles)"
+            ],
+            "justification": "100% wool gabardine outerwear requires dry cleaning only to preserve fabric structure, color, and finish. Wool is sensitive to water and agitation. Matte finish and structured construction (collar, lapels) require professional care. Care label must comply with FTC and ISO standards for consumer protection.",
+            "confidence": 0.95,
+            "requires_confirmation": false
+        },
+        "care_label": {
+            "image": "assets/care_label.png"
+        },
+        "care_label_instructions": [
+            "The care label must contain <strong>carelabel symbols</strong> and those only.",
+            "Care label must be made in recycled polyester.",
+            "Care labels must contain origin: made in India.",
+            "Care labels must be given the same size, font and style.",
+            "Care instructions should follow <strong>ISO 3758 standard</strong>."
+        ],
+        "other_standards": [
+            {
+                "title": "Standard 100 by Oekotex",
+                "description": "Label that ensures consumers that all materials used in a garment are tested for harmful substances."
+            },
+            {
+                "title": "EU Ecolabel",
+                "description": "Label that ensures consumers that textiles are made using less harmful substances, energy and water."
+            },
+            {
+                "title": "Bluesign",
+                "description": "The Bluesign System reduces impact on people and the environment in the entire textile supply chain, based on input stream management."
+            }
+        ],
+        "wash_care_label_img": "assets/care_label_final.png"
+    }
+}

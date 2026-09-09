@@ -1,0 +1,68 @@
+{  
+    "date": "30/08/2025",
+    "season": "Fall 25",
+    "collection": "JC & CO",
+    "style_name": "JCC-S-FA25-DRS",
+    "description": "Women's Asymmetrical Dress",
+    "category": "Womenswear",
+    "brand": "Swanky",
+    "size_range": "S-XL",
+    "total_order_quantity": "",
+    "sample_size_1st": "S",
+    "sample_pre_production": "",
+    "sample_production": "",
+
+
+    "size_chart": [
+        {
+          "pom": "Chest (1\" below armhole)",
+          "m": 88,
+          "l": 94,
+          "xl": 100
+        },
+        {
+          "pom": "Waist",
+          "m": 72,
+          "l": 78,
+          "xl": 84
+        },
+        {
+          "pom": "Shoulder to Shoulder",
+          "m": 38,
+          "l": 39,
+          "xl": 40
+        },
+        {
+          "pom": "Dress Length(back)",
+          "m": 137,
+          "l": 139,
+          "xl": 141
+        },
+        {
+          "pom": "Dress Length(front)",
+          "m": 134,
+          "l": 136,
+          "xl": 138
+        },
+        {
+          "pom": "Hips",
+          "m": 96,
+          "l": 100,
+          "xl": 104
+        },
+        {
+          "pom": "Armhole Depth",
+          "m": 20,
+          "l": 21,
+          "xl": 22
+        },
+        {
+          "pom": "Sleeve Length",
+          "m": 62,
+          "l": 63,
+          "xl": 64
+        }
+      ]
+    
+  }
+  

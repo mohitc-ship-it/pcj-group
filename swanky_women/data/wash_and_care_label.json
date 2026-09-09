@@ -1,0 +1,57 @@
+{
+    "date": "30/08/2025",
+    "season": "Fall 25",
+    "collection": "JC & CO",
+    "style_name": "JCC-S-FA25-DRS",
+    "description": "Women’s Asymmetrical Dress",
+    "category": "Womenswear",
+  
+    "brand": "Swanky",
+    "size_range": "S-XL",
+    "total_order_quantity": "",
+    "sample_size_1st": "S",
+    "sample_pre_production": "",
+    "sample_production": "",
+  
+    "wash_label": {
+      "composition": "90% Cotton and 10% Spandex",
+      "washing_instructions": "Dry Clean Only",
+      "bleaching": "Do Not Bleach",
+      "drying_instructions": "Do Not Tumble Dry, Hang Dry in Shade",
+      "ironing_instructions": "Cool Iron if Needed",
+      "dry_cleaning": {
+        "line_1": "Dry Clean with Any Solvent",
+        "line_2": "Except Trichloroethylene"
+      },
+      "label_colors": "Black on White"
+    },
+  
+    "care_label": {
+      "image": "assets/labels/care_label.png"
+    },
+  
+    "care_label_instructions": [
+      "The care label must contain <strong>carelabel symbols</strong> and those only.",
+      "Care label must be made in recycled polyester.",
+      "Care labels must contain origin: made in India.",
+      "Care labels must be given the same size, font and style.",
+      "Care instructions should follow <strong>ISO 3758 standard</strong>."
+    ],
+  
+    "other_standards":  [
+        {
+          "title": "Standard 100 by Oekotex",
+          "description": "Label that ensures consumers that all materials used in a garment are tested for harmful substances."
+        },
+        {
+          "title": "EU Ecolabel",
+          "description": "Label that ensures consumers that textiles are made using less harmful substances, energy and water."
+        },
+        {
+          "title": "Bluesign",
+          "description": "The Bluesign System reduces impact on people and the environment in the entire textile supply chain, based on input stream management."
+        }
+    ]
+    
+  }
+  

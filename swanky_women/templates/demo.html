@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swanky Tech Pack - 3D CAD</title>
+
+    <style>
+        @page {
+         size: 1240px 790px; /* +20px bleed on all sides */
+         margin: 0;
+        }   
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page-container {
+          width: 1200px;
+          min-height: 750px;
+          max-height: 790px;
+          margin: 20px;
+          border: 3px solid #000;
+        }
+
+
+        .main-header {
+            display: flex;
+            border-bottom: 1px solid #000;
+        }
+
+        .header-left, .header-right {
+            width: 30%;
+        }
+
+        .header-center {
+            width: 40%;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-row {
+            border-top: 1px solid #000;
+            padding: 5px 10px;
+            font-size: 13px;
+            height: 30px;
+        }
+
+        .info-row.desc {
+            height: 60px;
+            border-bottom: none;
+        }
+
+        .header-center h1 {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: rgb(71, 71, 70);
+        }
+
+        .category {
+            border-top: 1px solid #000;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .brand-row {
+            display: flex;
+            height: 50%;
+        }
+
+        .brand-label {
+            padding: 5px 10px;
+            font-size: 13px;
+        }
+
+        .brand-logo {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-left: 1px solid #000;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: serif;
+        }
+
+        .logo-sub {
+            font-size: 8px;
+            margin-top: -5px;
+        }
+
+        .sketch-container {
+            width: 100%;
+            height: 370px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 2px solid #000;
+        }
+
+        .sketch-image {
+            max-width: 90%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+
+        .labels-section {
+            display: flex;
+            width: 100%;
+            padding: 10px;
+            justify-content: space-between;
+        }
+
+        .label-card {
+            width: 18%;
+    
+        }
+
+        .label-title {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            color: #444;
+        }
+
+        .label-img-wrapper {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+
+        .label-img-wrapper img {
+            max-height: 100%;
+            max-width: 100%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .label-specs {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .label-specs strong {
+            display: block;
+            margin-top: 5px;
+        }
+
+        .notes-area {
+            width: 35%;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-bottom: 20px;
+            line-height: 1.8;
+        }
+        
+
+        .fabrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1.5px solid #333;
+            font-size: 12px;
+            color: #222;
+        }
+
+        .fabrics-table th, .seam-table td {
+            border: 1px solid #333;
+            padding: 5px 5px;
+            text-align: left;
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+
+        .fabrics-table thead th {
+            font-weight: 500;
+            background-color: #f9f9f9;
+            color: #555;
+        }
+
+        /* Numerical columns alignment */
+        .text-center {
+            text-align: center;
+        }
+
+
+
+       
+    </style>
+</head>
+
+<body>
+
+<div class="page-container">
+
+    <!-- ================= HEADER ================= -->
+
+    <header class="main-header">
+        <div class="header-left">
+            <div class="info-row">Date: {{ date }}</div>
+            <div class="info-row">Season: {{ season }}</div>
+            <div class="info-row">Collection: {{ collection }}</div>
+            <div class="info-row">Style Name: {{ style_name }}</div>
+            <div class="info-row desc">Description: {{ description }}</div>
+        </div>
+
+        <div class="header-center">
+            <h1>Measurements</h1>
+            <div class="category">{{ category }}</div>
+        </div>
+
+        <div class="header-right">
+            <div class="brand-row">
+                <div style="width: 55%;">
+                    <div class="brand-label">Brand: {{ brand }}</div>
+                    <div class="info-row">Size Range: {{ size_range }}</div>
+                    <div class="info-row">Total order quantity: {{ total_order_quantity }}</div>
+                </div>
+
+                <div class="brand-logo">
+                    <span class="logo-text">{{ brand }}</span>
+                    <span class="logo-sub">By {{ collection }}</span>
+                </div>
+            </div>
+
+            <div class="info-row">Sample Size 1st-Approval: {{ sample_size_1st }}</div>
+            <div class="info-row">Sample Size Pre-Production: {{ sample_pre_production }}</div>
+            <div class="info-row">Sample Size Production Sample: {{ sample_production }}</div>
+        </div>
+    </header>
+
+    <!-- ================= QUALITY STANDARDS ================= -->
+
+    <div style="padding: 40px;">
+
+    
+    <table class="fabrics-table">
+        <thead>
+            <tr>
+                <th>POM</th>
+                <th>M</th>
+                <th>L</th>
+                <th>XL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test in size_chart %}
+            <tr>
+                <td class="text-center" >{{ test.pom }}</td>
+                <td class="text-center" >{{ test.m }}</td>
+                <td class="text-center" >{{ test.l }}</td>
+                <td class="text-center" >{{ test.xl }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+
+</div>
+    
+</div>
+</body>
+</html>

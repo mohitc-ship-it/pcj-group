@@ -1,0 +1,38 @@
+{
+    "date": "30/08/2025",
+    "season": "Fall 25",
+    "collection": "JC & CO",
+    "style_name": "JCC-S-FA25-DRS",
+    "description": "Women’s Asymmetrical Dress",
+    "category": "Womenswear",
+    "brand": "Swanky",
+    "size_range": "S-XL",
+    "total_order_quantity": "",
+    "sample_size_1st": "S",
+    "sample_pre_production": "",
+    "sample_production": "",
+  
+    "technical_sketch_img": "assets/sketches/front.png",
+   
+  
+    "brand_label": {
+      "image_url": "assets/labels/brand_label.png",
+      "size": "Approx 5 cm (W) × 3 cm (H)",
+      "placement": "Inner back neck seam"
+    },
+  
+    "size_label": {
+      "image_url": "assets/labels/size_label.png",
+      "size": "Approx 2.5 cm × 2.5 cm",
+      "placement": "Below or beside the brand label"
+    },
+  
+    "care_label": {
+      "image_url": "assets/labels/care_label.png",
+      "size": "Approx 5 cm × 8 cm",
+      "placement": "Inner left side seam, above 10–15 cm from the hem"
+    },
+  
+    "label_notes": "The color of the labels is white. Type of: 100% Recycled polyester woven label."
+  }
+  

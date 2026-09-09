@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swanky Tech Pack - Measurements</title>
+
+    <style>
+        @page {
+            size: 1240px 790px;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page-container {
+            width: 1200px;
+            height: 750px;
+            margin: 20px;
+            border: 3px solid #000;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* HEADER TABLE LAYOUT */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-bottom: 2px solid #000;
+            table-layout: fixed;
+        }
+
+        .header-table > tbody > tr > td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .header-left {
+            width: 30%;
+            border-right: 1px solid #000;
+        }
+
+        .header-center {
+            width: 40%;
+            border-right: 1px solid #000;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .header-right {
+            width: 30%;
+        }
+
+        .header-title-container {
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .header-center h1 {
+            font-size: 26px;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: rgb(71, 71, 70);
+            text-align: center;
+            margin: 0;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .category {
+            border-top: 1px solid #000;
+            text-align: center;
+            padding: 5px;
+            font-size: 13px;
+            height: 26px;
+        }
+
+        .brand-row-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .brand-info-td {
+            width: 60%;
+            vertical-align: top;
+        }
+
+        .brand-logo-td {
+            width: 40%;
+            vertical-align: middle;
+            text-align: center;
+            border-left: 1px solid #000;
+            padding: 2px 5px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: bold;
+            font-family: serif;
+            display: block;
+            line-height: 1.1;
+        }
+
+        .logo-sub {
+            font-size: 9px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .info-row {
+            border-top: 1px solid #000;
+            padding: 4px 8px;
+            font-size: 12px;
+            height: 26px;
+            line-height: 18px;
+        }
+
+        .info-row.desc {
+            height: 52px;
+            border-bottom: none;
+            overflow: hidden;
+        }
+
+        .brand-label {
+            padding: 4px 8px;
+            font-size: 12px;
+            height: 26px;
+            line-height: 18px;
+        }
+
+        .two-image-section {
+            width: 100%;
+            height: 230px;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .two-image-section img {
+            max-height: 210px;
+            max-width: 90%;
+            object-fit: contain;
+        }
+
+        .seam-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1.5px solid #333;
+            font-size: 12px;
+            color: #222;
+        }
+
+        .seam-table th, .seam-table td {
+            border: 1px solid #333;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: middle;
+            line-height: 1.35;
+        }
+
+        .seam-table thead th {
+            font-weight: 500;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="page-container">
+
+    <!-- ================= HEADER TABLE ================= -->
+    <table class="header-table">
+        <tr>
+            <td class="header-left">
+                <div class="info-row">Date: {{ header.date }}</div>
+                <div class="info-row">Season: {{ header.season }}</div>
+                <div class="info-row">Collection: {{ header.collection }}</div>
+                <div class="info-row">Style Name: {{ header.style_name }}</div>
+                <div class="info-row desc">Description: {{ header.description }}</div>
+            </td>
+
+            <td class="header-center">
+                <div class="header-title-container">
+                    <h1>Measurements</h1>
+                </div>
+                <div class="category">{{ header.category }}</div>
+            </td>
+
+            <td class="header-right">
+                <table class="brand-row-table">
+                    <tr>
+                        <td class="brand-info-td">
+                            <div class="brand-label">Brand: {{ header.brand }}</div>
+                            <div class="info-row">Size Range: {{ header.size_range }}</div>
+                            <div class="info-row">Total order quantity: {{ header.total_order_quantity or '' }}</div>
+                        </td>
+
+                        <td class="brand-logo-td">
+                            <span class="logo-text">{{ header.brand }}</span>
+                            <span class="logo-sub">By {{ header.collection }}</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="info-row">Sample Size 1st-Approval: {{ header.sample_size_1st or '' }}</div>
+                <div class="info-row">Sample Size Pre-Production: {{ header.sample_pre_production or '' }}</div>
+                <div class="info-row">Sample Size Production Sample: {{ header.sample_production or '' }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="two-image-section">
+        <img src="{{ page_6.measurement_image_url }}" alt="Measurement Image">
+    </div>
+
+    <div style="width: 100%; padding: 10px 30px 10px 30px;">
+        <table class="seam-table">
+            <thead>
+                <tr>
+                    <th>Point of Measurement</th>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th>Measurement</th>
+                    <th>Tolerance (cm)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in page_6.measurements %}
+                <tr>
+                    <td class="text-center">{{ item.point_of_measurement }}</td>
+                    <td class="text-center">{{ item.code }}</td>
+                    <td class="text-center">{{ item.description }}</td>
+                    <td class="text-center">{{ item.measurement_cm }}</td>
+                    <td class="text-center">{{ item.tolerance_cm }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>
+

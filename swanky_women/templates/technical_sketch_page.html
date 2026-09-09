@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swanky Tech Pack - Technical Sketch</title>
+
+    <style>
+        @page {
+            size: 1240px 790px;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page-container {
+            width: 1200px;
+            height: 750px;
+            margin: 20px;
+            border: 3px solid #000;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* HEADER TABLE LAYOUT */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-bottom: 2px solid #000;
+            table-layout: fixed;
+        }
+
+        .header-table > tbody > tr > td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .header-left {
+            width: 30%;
+            border-right: 1px solid #000;
+        }
+
+        .header-center {
+            width: 40%;
+            border-right: 1px solid #000;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .header-right {
+            width: 30%;
+        }
+
+        .header-title-container {
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .header-center h1 {
+            font-size: 26px;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: rgb(71, 71, 70);
+            text-align: center;
+            margin: 0;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .category {
+            border-top: 1px solid #000;
+            text-align: center;
+            padding: 5px;
+            font-size: 13px;
+            height: 26px;
+        }
+
+        .brand-row-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .brand-info-td {
+            width: 60%;
+            vertical-align: top;
+        }
+
+        .brand-logo-td {
+            width: 40%;
+            vertical-align: middle;
+            text-align: center;
+            border-left: 1px solid #000;
+            padding: 2px 5px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: bold;
+            font-family: serif;
+            display: block;
+            line-height: 1.1;
+        }
+
+        .logo-sub {
+            font-size: 9px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .info-row {
+            border-top: 1px solid #000;
+            padding: 4px 8px;
+            font-size: 12px;
+            height: 26px;
+            line-height: 18px;
+        }
+
+        .info-row.desc {
+            height: 52px;
+            border-bottom: none;
+            overflow: hidden;
+        }
+
+        .brand-label {
+            padding: 4px 8px;
+            font-size: 12px;
+            height: 26px;
+            line-height: 18px;
+        }
+
+        /* SKETCH CONTAINER */
+        .sketch-container {
+            width: 100%;
+            height: 310px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 2px solid #000;
+        }
+
+        .sketch-image {
+            max-width: 90%;
+            max-height: 290px;
+            object-fit: contain;
+        }
+
+        /* LABELS TABLE */
+        .labels-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .label-card-td {
+            width: 22%;
+            padding: 18px 10px 8px 10px;
+            vertical-align: top;
+        }
+
+        .notes-area-td {
+            width: 34%;
+            padding: 18px 10px 8px 10px;
+            vertical-align: middle;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .label-title {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            color: #444;
+        }
+
+        .label-img-wrapper {
+            width: 100%;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            background: #fff;
+            margin-bottom: 5px;
+        }
+
+        .label-img-wrapper img {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .label-specs {
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .label-specs strong {
+            display: block;
+            margin-top: 3px;
+        }
+
+        .size_card {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="page-container">
+
+    <!-- ================= HEADER TABLE ================= -->
+    <table class="header-table">
+        <tr>
+            <td class="header-left">
+                <div class="info-row">Date: {{ header.date }}</div>
+                <div class="info-row">Season: {{ header.season }}</div>
+                <div class="info-row">Collection: {{ header.collection }}</div>
+                <div class="info-row">Style Name: {{ header.style_name }}</div>
+                <div class="info-row desc">Description: {{ header.description }}</div>
+            </td>
+
+            <td class="header-center">
+                <div class="header-title-container">
+                    <h1>Technical Sketch</h1>
+                </div>
+                <div class="category">{{ header.category }}</div>
+            </td>
+
+            <td class="header-right">
+                <table class="brand-row-table">
+                    <tr>
+                        <td class="brand-info-td">
+                            <div class="brand-label">Brand: {{ header.brand }}</div>
+                            <div class="info-row">Size Range: {{ header.size_range }}</div>
+                            <div class="info-row">Total order quantity: {{ header.total_order_quantity or '' }}</div>
+                        </td>
+
+                        <td class="brand-logo-td">
+                            <span class="logo-text">{{ header.brand }}</span>
+                            <span class="logo-sub">By {{ header.collection }}</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="info-row">Sample Size 1st-Approval: {{ header.sample_size_1st or '' }}</div>
+                <div class="info-row">Sample Size Pre-Production: {{ header.sample_pre_production or '' }}</div>
+                <div class="info-row">Sample Size Production Sample: {{ header.sample_production or '' }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="sketch-container">
+        <img src="{{ page_3.technical_sketch_img }}" alt="Technical Sketch Front and Back" class="sketch-image">
+    </div>
+
+    <div style="padding: 10px;">
+        <table class="labels-table">
+            <tr>
+                <td class="label-card-td">
+                    <div class="label-title">Brand Label</div>
+                    <div class="label-img-wrapper">
+                        <img style="width: 140px" src="{{ page_3.brand_label_img }}" alt="Brand Label">
+                    </div>
+                    <div class="label-specs">
+                        <strong>Approx 5 cm (W) x 3 cm (H)</strong>
+                        <i>PLACEMENT: Inner back neck seam</i>
+                    </div>
+                </td>
+
+                <td class="label-card-td">
+                    <div class="label-title">Size Label</div>
+                    <div class="label-img-wrapper">
+                        <div class="size_card">
+                            <div class="brand-name" style="font-size: 32px; font-weight: bold;">S</div>
+                        </div>
+                    </div>
+                    <div class="label-specs">
+                        <strong>Approx 2.5 cm x 2.5 cm</strong>
+                        <i>PLACEMENT: Below or beside the brand label</i>
+                    </div>
+                </td>
+
+                <td class="label-card-td">
+                    <div class="label-title">Care Label</div>
+                    <div class="label-img-wrapper">
+                        <img style="width: 50px;" src="{{ page_3.care_label_img }}" alt="Care Label">
+                    </div>
+                    <div class="label-specs">
+                        <strong>Approx 5 cm x 8 cm</strong>
+                        <i>PLACEMENT: Inner left side seam, below the brand label</i>
+                    </div>
+                </td>
+
+                <td class="notes-area-td">
+                    <p>The color of the labels is white.</p>
+                    <p>Type of : 100% Recycled polyester woven label</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>
+

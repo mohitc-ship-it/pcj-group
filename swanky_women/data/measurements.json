@@ -1,0 +1,84 @@
+{  
+    "date": "30/08/2025",
+    "season": "Fall 25",
+    "collection": "JC & CO",
+    "style_name": "JCC-S-FA25-DRS",
+    "description": "Women's Asymmetrical Dress",
+    "category": "Womenswear",
+    "brand": "Swanky",
+    "size_range": "S-XL",
+    "total_order_quantity": "",
+    "sample_size_1st": "S",
+    "sample_pre_production": "",
+    "sample_production": "",
+
+    "front_measurement_image_url" : "",
+    "back_measurement_image_url" : "",
+
+    "measurements": [
+      {
+        "point_of_measurement": "Chest",
+        "code": "A",
+        "description": "1\" below armhole, across front & back",
+        "measurement_cm": 84,
+        "tolerance_cm": "±1.27"
+      },
+      {
+        "point_of_measurement": "Waist",
+        "code": "B",
+        "description": "Narrowest part of the body",
+        "measurement_cm": 68,
+        "tolerance_cm": "±1.27"
+      },
+      {
+        "point_of_measurement": "Shoulder to Shoulder",
+        "code": "C",
+        "description": "Across back shoulder seam to seam",
+        "measurement_cm": 37,
+        "tolerance_cm": "±0.64"
+      },
+      {
+        "point_of_measurement": "Dress Length (back)",
+        "code": "D",
+        "description": "Front (deep V)",
+        "measurement_cm": 135,
+        "tolerance_cm": "±0.67"
+      },
+      {
+        "point_of_measurement": "Dress Length (front)",
+        "code": "E",
+        "description": "High Point Shoulder to bottom hem",
+        "measurement_cm": 132,
+        "tolerance_cm": "±1.27"
+      },
+      {
+        "point_of_measurement": "Hips",
+        "code": "F",
+        "description": "18 cm below natural waist (widest part)",
+        "measurement_cm": 92,
+        "tolerance_cm": "±1.27"
+      },
+      {
+        "point_of_measurement": "Armhole depth",
+        "code": "G",
+        "description": "Armhole depth",
+        "measurement_cm": 19,
+        "tolerance_cm": "±0.64"
+      },
+      {
+        "point_of_measurement": "Sleeve Length",
+        "code": "H",
+        "description": "From shoulder seam",
+        "measurement_cm": 61,
+        "tolerance_cm": "±0.27"
+      },
+      {
+        "point_of_measurement": "Slit Length",
+        "code": "I",
+        "description": "From high point to hem",
+        "measurement_cm": 80,
+        "tolerance_cm": ""
+      }
+    ]
+  }
+  

@@ -1,0 +1,568 @@
+{
+  "pages": {
+    "page_1": "intro_page",
+    "page_2": "technical_sketch_page",
+    "page_3": "3d_cad_design_page",
+    "page_4": "accessories_page",
+    "page_5": "product_construction",
+    "page_6": "measurements",
+    "page_7": "fabrics_quality_standards",
+    "page_8": "size_chart_page",
+    "page_9": "wash_and_care_label"
+  },
+  "header": {
+    "date": "12/01/2026",
+    "season": "Fall/Winter 25",
+    "collection": "JC Private Collection- JPC",
+    "style_name": "Discrete-JPC-FW25-JKT",
+    "description": "Women's tailored wool jacket",
+    "category": "Outerwear",
+    "brand": "Discrete",
+    "size_range": "Small to Extra Large",
+    "total_order_quantity": null,
+    "sample_size_1st": "Small",
+    "sample_pre_production": null,
+    "sample_production": null
+  },
+  "page_1": {
+    "garment_back_view_url": "assets/20260112_205046_1_Women_Light_Jacket_Discrete_Front.png",
+    "garment_front_view_url": "assets/20260112_205046_0_Women_Light_Jacket_Discrete_Back.png",
+    "style_number": "Discrete-JPC-FW25-JKT",
+    "date": "12/01/2026",
+    "brand_name": "Discrete",
+    "collection_name": "JC Private Collection- JPC",
+    "brand_logo": "assets/first_page_logo_current.png",
+    "season": "Fall/Winter 25"
+  },
+  "page_2": {
+    "front_image_url": "assets/20260112_205046_0_Women_Light_Jacket_Discrete_Back.png",
+    "back_image_url": "assets/20260112_205046_1_Women_Light_Jacket_Discrete_Front.png",
+    "detail_image_1_url": "assets/grid_0.png",
+    "detail_image_2_url": "assets/grid_1.png",
+    "detail_image_3_url": "assets/grid_2.png",
+    "detail_image_4_url": "assets/Women Light Jacket Discrete Front.png",
+    "color_name": "Dark Blue",
+    "color_hex": "#3e5472",
+    "details": "Silhouette: Fitted hip-length jacket with a straight hem  \nSleeves: Long sleeves with decorative chain edging  \nOther Features: Decorative chain edging along hems and front, flap pockets with buttons, high complexity with no visible front closures",
+    "optional_colors": [
+      {
+        "color_name": "Dark Blue",
+        "color_hex": "#3e5472",
+        "pantone_tcx": "19-4027 TCX"
+      }
+    ],
+    "pantone_tcx": "19-4027 TCX",
+    "optional_image_urls": [
+      "assets/grid_0.png",
+      "assets/grid_1.png",
+      "assets/grid_2.png"
+    ]
+  },
+  "page_3": {
+    "technical_sketch_img": "assets/technical_sketch.png",
+    "brand_label": {
+      "image_url": "assets/labels/brand_label.png",
+      "size": "Approx 5 cm (W) \u00d7 3 cm (H)",
+      "placement": "Inner back neck seam"
+    },
+    "size_label": {
+      "image_url": "assets/labels/size_label.png",
+      "size": "Approx 2.5 cm \u00d7 2.5 cm",
+      "placement": "Below or beside the brand label"
+    },
+    "care_label": {
+      "image_url": "assets/care_label.png",
+      "size": "Approx 5 cm \u00d7 8 cm",
+      "placement": "Inner left side seam, above 10\u201315 cm from the hem"
+    },
+    "care_label_img": "assets/care_label_final.png",
+    "label_notes": "The color of the labels is white. Type of: 100% Recycled polyester woven label.",
+    "brand_label_img": "assets/brand_label_final.png"
+  },
+  "page_4": {
+    "accessories": [
+      {
+        "item_description": "Decorative Chain",
+        "quantity": "1",
+        "material": "Metal",
+        "dimensions": "N/A",
+        "color": "Gold-tone, Pantone 872 C",
+        "placement": "Front",
+        "justification": "Ensures accessories complement the fabric and maintain brand aesthetics.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "description": "Decorative Chain - Metal - N/A",
+        "qty": "1",
+        "position": "Front"
+      },
+      {
+        "item_description": "Buttons",
+        "quantity": "5",
+        "material": "Metal",
+        "dimensions": "15 mm",
+        "color": "Gold-tone, Pantone 872 C",
+        "placement": "Front and Cuffs",
+        "justification": "Ensures accessories complement the fabric and maintain brand aesthetics.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "description": "Buttons - Metal - 15 mm",
+        "qty": "5",
+        "position": "Front and Cuffs"
+      },
+      {
+        "item_description": "Interlining",
+        "quantity": "As required",
+        "material": "Fusible",
+        "dimensions": "N/A",
+        "color": "White",
+        "placement": "Collar and Cuffs",
+        "justification": "Reinforcement for structure and durability.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "description": "Interlining - Fusible - N/A",
+        "qty": "As required",
+        "position": "Collar and Cuffs"
+      },
+      {
+        "item_description": "Labels",
+        "quantity": "3",
+        "material": "Fabric",
+        "dimensions": "Standard",
+        "color": "Black with White Text",
+        "placement": "Inside Neck and Side Seam",
+        "justification": "Branding and care instructions.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "description": "Labels - Fabric - Standard",
+        "qty": "3",
+        "position": "Inside Neck and Side Seam"
+      },
+      {
+        "item_description": "Thread",
+        "quantity": "As required",
+        "material": "Polyester",
+        "dimensions": "N/A",
+        "color": "Black, Pantone Black C",
+        "placement": "All seams",
+        "justification": "Ensures durability and complements fabric color.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "description": "Thread - Polyester - N/A",
+        "qty": "As required",
+        "position": "All seams"
+      }
+    ]
+  },
+  "page_5": {
+    "seams": [
+      {
+        "seam_location": "Shoulder Seam",
+        "seam_type": "Superimposed",
+        "seam_symbol": "SSa-1",
+        "seam_allowance_mm": "10",
+        "description": "Shoulder Seam",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301",
+        "stitch_size": "3 mm",
+        "machine_type": "Single needle machine",
+        "justification": "Ensures stability for weight transmission and a clean appearance.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "type": "Superimposed",
+        "symbol": "SSa-1",
+        "allowance": "10",
+        "machine": "Single needle machine"
+      },
+      {
+        "seam_location": "Side Seam",
+        "seam_type": "Overlocked",
+        "seam_symbol": "SSa-1",
+        "seam_allowance_mm": "12",
+        "description": "Side Seam",
+        "stitch_type": "Overlock (504)",
+        "stitch_symbol": "504",
+        "stitch_size": "4 mm",
+        "machine_type": "4-thread overlock",
+        "justification": "Handles high movement stress, durability, and clean look.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "type": "Overlocked",
+        "symbol": "SSa-1",
+        "allowance": "12",
+        "machine": "4-thread overlock"
+      },
+      {
+        "seam_location": "Armhole Seam",
+        "seam_type": "Superimposed",
+        "seam_symbol": "SSa-1",
+        "seam_allowance_mm": "10",
+        "description": "Armhole Seam",
+        "stitch_type": "Chainstitch (401)",
+        "stitch_symbol": "401",
+        "stitch_size": "3 mm",
+        "machine_type": "Chainstitch machine",
+        "justification": "Prioritizes mobility with reinforcement.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "type": "Superimposed",
+        "symbol": "SSa-1",
+        "allowance": "10",
+        "machine": "Chainstitch machine"
+      },
+      {
+        "seam_location": "Sleeve Seam",
+        "seam_type": "Superimposed",
+        "seam_symbol": "SSa-1",
+        "seam_allowance_mm": "10",
+        "description": "Sleeve Seam",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301",
+        "stitch_size": "3 mm",
+        "machine_type": "Single needle machine",
+        "justification": "Reinforced for elbow flexion and underarm stress.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "type": "Superimposed",
+        "symbol": "SSa-1",
+        "allowance": "10",
+        "machine": "Single needle machine"
+      },
+      {
+        "seam_location": "Hem",
+        "seam_type": "Coverstitched",
+        "seam_symbol": "SSa-2",
+        "seam_allowance_mm": "15",
+        "description": "Hem",
+        "stitch_type": "Coverstitch (605)",
+        "stitch_symbol": "605",
+        "stitch_size": "4 mm",
+        "machine_type": "Coverstitch machine",
+        "justification": "Supports decorative chain weight and maintains precision finish.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "type": "Coverstitched",
+        "symbol": "SSa-2",
+        "allowance": "15",
+        "machine": "Coverstitch machine"
+      },
+      {
+        "seam_location": "Center Front",
+        "seam_type": "Bound",
+        "seam_symbol": "BP",
+        "seam_allowance_mm": "10",
+        "description": "Center Front Edge",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301 + Decorative",
+        "stitch_size": "3 mm",
+        "machine_type": "Single needle machine",
+        "justification": "Stabilizes edge with decorative elements.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "type": "Bound",
+        "symbol": "BP",
+        "allowance": "10",
+        "machine": "Single needle machine"
+      },
+      {
+        "seam_location": "Pocket Opening",
+        "seam_type": "Bound",
+        "seam_symbol": "BP",
+        "seam_allowance_mm": "10",
+        "description": "Pocket Edges",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301",
+        "stitch_size": "3 mm",
+        "machine_type": "Single needle machine",
+        "justification": "Reinforced for stress and crisp edge control.",
+        "confidence": 0.9,
+        "requires_confirmation": false,
+        "type": "Bound",
+        "symbol": "BP",
+        "allowance": "10",
+        "machine": "Single needle machine"
+      }
+    ]
+  },
+  "page_6": {
+    "measurement_image_url": "assets/measurement_diagram.png",
+    "measurements": [
+      {
+        "point_of_measurement": "Chest Circumference",
+        "pom_code": "A",
+        "description": "Chest Circumference",
+        "sample_size_value_cm": 100.0,
+        "tolerance_cm": "\u00b11.0\u20131.5",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "A",
+        "measurement_cm": 100.0
+      },
+      {
+        "point_of_measurement": "Waist Circumference",
+        "pom_code": "B",
+        "description": "Waist Circumference",
+        "sample_size_value_cm": 90.0,
+        "tolerance_cm": "\u00b11.0\u20131.5",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "B",
+        "measurement_cm": 90.0
+      },
+      {
+        "point_of_measurement": "Hip Circumference",
+        "pom_code": "C",
+        "description": "Hip Circumference",
+        "sample_size_value_cm": 98.0,
+        "tolerance_cm": "\u00b11.0\u20131.5",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "C",
+        "measurement_cm": 98.0
+      },
+      {
+        "point_of_measurement": "Body Length",
+        "pom_code": "D",
+        "description": "Body Length",
+        "sample_size_value_cm": 76.0,
+        "tolerance_cm": "\u00b10.5\u20131.0",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "D",
+        "measurement_cm": 76.0
+      },
+      {
+        "point_of_measurement": "Sleeve Length",
+        "pom_code": "E",
+        "description": "Sleeve Length",
+        "sample_size_value_cm": 64.0,
+        "tolerance_cm": "\u00b10.5\u20131.0",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "E",
+        "measurement_cm": 64.0
+      },
+      {
+        "point_of_measurement": "Across Shoulder",
+        "pom_code": "F",
+        "description": "Across Shoulder",
+        "sample_size_value_cm": 44.0,
+        "tolerance_cm": "\u00b10.5\u20131.0",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "F",
+        "measurement_cm": 44.0
+      },
+      {
+        "point_of_measurement": "Armhole Circumference",
+        "pom_code": "G",
+        "description": "Armhole Circumference",
+        "sample_size_value_cm": 50.0,
+        "tolerance_cm": "\u00b10.5\u20131.0",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "G",
+        "measurement_cm": 50.0
+      },
+      {
+        "point_of_measurement": "Pocket Opening Width",
+        "pom_code": "H",
+        "description": "Pocket Opening Width",
+        "sample_size_value_cm": 12.0,
+        "tolerance_cm": "\u00b10.5\u20131.0",
+        "grading": "Graded",
+        "value_source": "Sample",
+        "justification": "Maintains the fitted silhouette and accommodates the garment's complexity.",
+        "confidence": 0.95,
+        "requires_confirmation": false,
+        "code": "H",
+        "measurement_cm": 12.0
+      }
+    ]
+  },
+  "page_7": {
+    "fabrics": [
+      {
+        "usage": "Shell",
+        "description": "Shell Fabric, 40% Wool / 30% Cotton / 30% Silk, 260+ GSM, Low stretch, Matte surface",
+        "composition": "40% Wool / 30% Cotton / 30% Silk",
+        "construction": "Woven",
+        "weight_gsm": "260+",
+        "stretch": "Low",
+        "finish": "Matte surface",
+        "color": "Black with subtle Blue Weaving",
+        "position": "Outer body and sleeves",
+        "justification": "The composition ensures warmth, durability, and luxury, suitable for winter and aligning with the brand's high standards and aesthetic.",
+        "confidence": 0.95,
+        "requires_confirmation": false
+      }
+    ],
+    "quality_standards": [
+      {
+        "test": "Dimensional Stability",
+        "method": "ISO 5077",
+        "requirements": "Max Shrinkage \u00b12%",
+        "comments": "Ensures garment retains correct sizing after washing or dry cleaning, crucial for a fitted jacket made from a heavy woven fabric."
+      },
+      {
+        "test": "Color Fastness to Washing",
+        "method": "ISO 105-C06",
+        "requirements": "\u2265 Grade 4",
+        "comments": "Prevents dyed fabric from bleeding or fading during laundering, important for maintaining the appearance of the wool, cotton, and silk blend."
+      },
+      {
+        "test": "Color Fastness to Rubbing",
+        "method": "ISO 105-X12",
+        "requirements": "Dry \u2265 4, Wet \u2265 3.5",
+        "comments": "Critical for dark or saturated colors to avoid staining, especially with the high opacity requirement."
+      },
+      {
+        "test": "Seam Strength",
+        "method": "ISO 13935-2",
+        "requirements": "\u2265 200 N",
+        "comments": "Ensures structural integrity of seams under stress, vital for high-stress areas like armholes and side seams in a fitted outerwear jacket."
+      },
+      {
+        "test": "Appearance After Washing",
+        "method": "ISO 7768",
+        "requirements": "\u2265 Grade 4",
+        "comments": "Ensures the garment maintains its appearance post-laundering, important for the complex construction and decorative elements."
+      },
+      {
+        "test": "Abrasion Resistance",
+        "method": "ISO 12947-2",
+        "requirements": "\u2265 20,000 rubs",
+        "comments": "Essential for outerwear to withstand wear and tear, especially given the heavy-use nature of jackets."
+      },
+      {
+        "test": "Button Pull Strength",
+        "method": "ISO 13935-1",
+        "requirements": "\u2265 70 N",
+        "comments": "Ensures buttons on pockets withstand stress, crucial for maintaining functionality and appearance."
+      },
+      {
+        "test": "Seam Slippage",
+        "method": "ISO 13936-2",
+        "requirements": "Max 5 mm @ 60 N",
+        "comments": "Required for the woven fabric to prevent seams from pulling apart, especially in high-stress areas."
+      }
+    ]
+  },
+  "page_8": {
+    "size_chart": [
+      {
+        "pom": "Chest Circumference",
+        "s": 96.0,
+        "m": 100.0,
+        "l": 104.0,
+        "xl": 108.0
+      },
+      {
+        "pom": "Waist Circumference",
+        "s": 88.0,
+        "m": 92.0,
+        "l": 96.0,
+        "xl": 100.0
+      },
+      {
+        "pom": "Hip Circumference",
+        "s": 98.0,
+        "m": 102.0,
+        "l": 106.0,
+        "xl": 110.0
+      },
+      {
+        "pom": "Body Length",
+        "s": 70.0,
+        "m": 72.0,
+        "l": 74.0,
+        "xl": 76.0
+      },
+      {
+        "pom": "Sleeve Length",
+        "s": 63.0,
+        "m": 64.0,
+        "l": 65.0,
+        "xl": 66.0
+      },
+      {
+        "pom": "Across Shoulder",
+        "s": 44.0,
+        "m": 46.0,
+        "l": 48.0,
+        "xl": 50.0
+      },
+      {
+        "pom": "Armhole Circumference",
+        "s": 48.0,
+        "m": 50.0,
+        "l": 52.0,
+        "xl": 54.0
+      }
+    ]
+  },
+  "page_9": {
+    "wash_label": {
+      "composition": "40% Wool, 30% Cotton, 30% Silk",
+      "washing_instructions": "Professional dry clean only",
+      "bleaching": "Do not bleach",
+      "drying_instructions": "Line dry in shade",
+      "ironing_instructions": "Cool iron",
+      "dry_cleaning": {
+        "line_1": "Professional dry clean only",
+        "line_2": null
+      },
+      "standards": [
+        "ISO 3758"
+      ],
+      "justification": "Based on fabric properties and the jacket's construction, ensuring compliance with care standards and quality maintenance.",
+      "confidence": 0.95,
+      "requires_confirmation": false
+    },
+    "care_label": {
+      "image": "assets/care_label.png"
+    },
+    "care_label_instructions": [
+      "The care label must contain <strong>carelabel symbols</strong> and those only.",
+      "Care label must be made in recycled polyester.",
+      "Care labels must contain origin: made in India.",
+      "Care labels must be given the same size, font and style.",
+      "Care instructions should follow <strong>ISO 3758 standard</strong>."
+    ],
+    "other_standards": [
+      {
+        "title": "Standard 100 by Oekotex",
+        "description": "Label that ensures consumers that all materials used in a garment are tested for harmful substances."
+      },
+      {
+        "title": "EU Ecolabel",
+        "description": "Label that ensures consumers that textiles are made using less harmful substances, energy and water."
+      },
+      {
+        "title": "Bluesign",
+        "description": "The Bluesign System reduces impact on people and the environment in the entire textile supply chain, based on input stream management."
+      }
+    ],
+    "wash_care_label_img": "assets/care_label_final.png"
+  }
+}

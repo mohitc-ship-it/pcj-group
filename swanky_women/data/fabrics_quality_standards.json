@@ -1,0 +1,79 @@
+{   
+    "date": "30/08/2025",
+    "season": "Fall 25",
+    "collection": "JC & CO",
+    "style_name": "JCC-S-FA25-DRS",
+    "description": "Women's Asymmetrical Dress",
+    "category": "Womenswear",
+    "brand": "Swanky",
+    "size_range": "S-XL",
+    "total_order_quantity": "",
+    "sample_size_1st": "S",
+    "sample_pre_production": "",
+    "sample_production": "",
+ 
+
+    "fabrics": [
+      {
+        "description": "Shell Fabric, 90% Cotton / 10% Spandex, 220–260 GSM, 2-way stretch, Matte surface",
+        "color": "Black",
+        "position": "Outer body and one sleeve"
+      },
+      {
+        "description": "",
+        "color": "",
+        "position": ""
+      },
+      {
+        "description": "",
+        "color": "",
+        "position": ""
+      }
+    ],
+  
+    "quality_standards": [
+      {
+        "test": "Dimensional Stability",
+        "method": "ISO 5077",
+        "requirements": "Max Shrinkage: ±2%",
+        "comments": "Ensures consistent sizing after garment is washed or dry cleaned"
+      },
+      {
+        "test": "Color Fastness to Washing",
+        "method": "ISO 105-C06",
+        "requirements": "≥ Grade 4",
+        "comments": "Color does not bleed or fade"
+      },
+      {
+        "test": "Color Fastness to Rubbing",
+        "method": "ISO 105-X12",
+        "requirements": "Dry: ≥ 4, Wet: ≥ 3.5",
+        "comments": "Critical for deep colors like 1815 C, prevents staining or color transfer"
+      },
+      {
+        "test": "Flammability (optional)",
+        "method": "ISO 15025 (Procedure A)",
+        "requirements": "Edge ignition test",
+        "comments": "If exporting to regulated markets, not always required"
+      },
+      {
+        "test": "Tensile Strength",
+        "method": "ISO 13934-1",
+        "requirements": "Min. 150 N (warp & weft)",
+        "comments": "Fabric must not tear under tension"
+      },
+      {
+        "test": "Seam Slippage",
+        "method": "ISO 13936-2",
+        "requirements": "Max. 5 mm @ 60 N",
+        "comments": "Important for satin which can fray or pull under tension"
+      },
+      {
+        "test": "Tear Strength",
+        "method": "ISO 13937-2",
+        "requirements": "Min. 10 N (warp & weft)",
+        "comments": "Ensures fabric holds up under stress"
+      }
+    ]
+  }
+  

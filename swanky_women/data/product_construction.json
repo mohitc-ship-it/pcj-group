@@ -1,0 +1,79 @@
+{
+    "date": "30/08/2025",
+    "season": "Fall 25",
+    "collection": "JC & CO",
+    "style_name": "JCC-S-FA25-DRS",
+    "description": "Women’s Asymmetrical Dress",
+    "category": "Womenswear",
+  
+    "brand": "Swanky",
+    "size_range": "S-XL",
+    "total_order_quantity": "",
+    "sample_size_1st": "S",
+    "sample_pre_production": "",
+    "sample_production": "",
+  
+    "seams": [
+      {
+        "type": "Superimposed Seam",
+        "symbol": "SSa-1",
+        "allowance": "10",
+        "description": "Shoulder Seam",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301",
+        "stitch_size": "3 mm",
+        "machine": "Single needle machine"
+      },
+      {
+        "type": "Superimposed Seam",
+        "symbol": "SSb-2",
+        "allowance": "6",
+        "description": "Side Seam",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301",
+        "stitch_size": "3 mm",
+        "machine": "Single needle machine"
+      },
+      {
+        "type": "Superimposed Seam",
+        "symbol": "SSa",
+        "allowance": "8",
+        "description": "Side seams, shoulder seams, center back seam",
+        "stitch_type": "Overlock (504)",
+        "stitch_symbol": "504",
+        "stitch_size": "4 mm",
+        "machine": "4-thread Overlock"
+      },
+      {
+        "type": "Edge Finish",
+        "symbol": "EFa",
+        "allowance": "10",
+        "description": "Hem stitching, neckline topstitch (if needed)",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301",
+        "stitch_size": "2–2.5 mm",
+        "machine": "Lockstitch Machine"
+      },
+      {
+        "type": "Edge Finish Seam",
+        "symbol": "EFb",
+        "allowance": "10",
+        "description": "Hem (if lined or unlined stretch hem)",
+        "stitch_type": "Coverstitch (406)",
+        "stitch_symbol": "406",
+        "stitch_size": "3 mm",
+        "machine": "Coverstitch Machine"
+      },
+      {
+        "type": "Lapped Seam (invisible zip)",
+        "symbol": "LSb",
+        "allowance": "10",
+        "description": "Center back zipper insertion",
+        "stitch_type": "Lockstitch (301)",
+        "stitch_symbol": "301",
+        "stitch_size": "",
+        "machine": "Invisible Zipper Foot"
+      }
+    ]
+  }
+  

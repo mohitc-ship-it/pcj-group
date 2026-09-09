@@ -1,0 +1,379 @@
+{
+    "pages": {
+        "page_1": "intro_page",
+        "page_2": "technical_sketch_page",
+        "page_3": "3d_cad_design_page",
+        "page_4": "accessories_page",
+        "page_5": "product_construction",
+        "page_6": "measurements",
+        "page_7": "fabrics_quality_standards",
+        "page_8": "size_chart_page",
+        "page_9": "wash_and_care_label"
+    },
+    "header": {
+        "date": "23/12/2025",
+        "season": "Fall/Winter 25",
+        "collection": "JC & Co",
+        "style_name": "Trench Coat",
+        "description": "Gabardine, Wool, Cotton Blends Trench Coat",
+        "category": "Outerwear",
+        "brand": "Grandiose",
+        "size_range": "s to xl",
+        "total_order_quantity": null,
+        "sample_size_1st": "Small",
+        "sample_pre_production": null,
+        "sample_production": null
+    },
+    "page_1": {
+        "garment_back_view_url": "assets/back.png",
+        "garment_front_view_url": "assets/front.png",
+        "style_number": "Trench Coat",
+        "date": "23/12/2025",
+        "brand_name": "Grandiose",
+        "collection_name": "JC & Co",
+        "brand_logo": "assets/brand_logo.png",
+        "season": "Fall/Winter 25"
+    },
+    "page_2": {
+        "front_image_url": "",
+        "back_image_url": "",
+        "detail_image_1_url": "",
+        "detail_image_2_url": "",
+        "detail_image_3_url": "",
+        "detail_image_4_url": "",
+        "color": "Yellow",
+        "details": "Tailored trench coat with a fitted bodice creating a flattering shape, draping elegantly to a mid-calf length. Long, fitted sleeves with a classic cuff detail. Notched lapel collar providing a sophisticated appeal. Double-breasted front with contrasting buttons for added style. Matching fabric belt for cinching at the waist, enhancing the silhouette. Side seam pockets blending seamlessly into the design. Single back vent for ease of movement.",
+        "fabrics": "gabardine blend with wool and cotton"
+    },
+    "page_3": {
+        "technical_sketch_img": "",
+        "brand_label": {
+            "image_url": "assets/labels/brand_label.png",
+            "size": "Approx 5 cm (W) \u00d7 3 cm (H)",
+            "placement": "Inner back neck seam"
+        },
+        "size_label": {
+            "image_url": "assets/labels/size_label.png",
+            "size": "Approx 2.5 cm \u00d7 2.5 cm",
+            "placement": "Below or beside the brand label"
+        },
+        "care_label": {
+            "image_url": "assets/care_label.png",
+            "size": "Approx 5 cm \u00d7 8 cm",
+            "placement": "Inner left side seam, above 10\u201315 cm from the hem"
+        },
+        "care_label_img": "assets/care_label.png",
+        "label_notes": "The color of the labels is white. Type of: 100% Recycled polyester woven label."
+    },
+    "page_4": {
+        "accessories": [
+            {
+                "description": "Internal Snap Closure",
+                "qty": "2",
+                "color": "Metal or Plastic",
+                "position": "Closure"
+            },
+            {
+                "description": "Jigger Button",
+                "qty": "1",
+                "color": "Metal or Plastic",
+                "position": "Closure"
+            },
+            {
+                "description": "Shoulder Pads",
+                "qty": "2",
+                "color": "Foam or Felt",
+                "position": "Structural Trim"
+            },
+            {
+                "description": "Mid-weight Fusible Interfacing",
+                "qty": "Body and Collar",
+                "color": "Polyester/Spandex Blend",
+                "position": "Structural Trim"
+            },
+            {
+                "description": "100% Recycled Polyester Core Spun Sewing Thread",
+                "qty": "Full Garment",
+                "color": "Recycled Polyester",
+                "position": "Thread"
+            },
+            {
+                "description": "Main Label",
+                "qty": "1",
+                "color": "Woven",
+                "position": "Label"
+            },
+            {
+                "description": "Size Label",
+                "qty": "1",
+                "color": "Woven",
+                "position": "Label"
+            },
+            {
+                "description": "Care Label",
+                "qty": "1",
+                "color": "Woven",
+                "position": "Label"
+            },
+            {
+                "description": "Hanger Loop",
+                "qty": "1",
+                "color": "Fabric or Ribbon",
+                "position": "Loop"
+            }
+        ]
+    },
+    "page_5": {
+        "seams": [
+            {
+                "type": "Superimposed Seam",
+                "symbol": "SSa-1",
+                "allowance": "6 mm",
+                "description": "Shoulder Seams",
+                "stitch_type": "4-Thread Overlock",
+                "stitch_symbol": "514",
+                "stitch_size": "3 mm",
+                "machine": "Overlock Machine"
+            },
+            {
+                "type": "Superimposed Seam",
+                "symbol": "SSa-2",
+                "allowance": "6 mm",
+                "description": "Side Seams",
+                "stitch_type": "4-Thread Overlock",
+                "stitch_symbol": "514",
+                "stitch_size": "3 mm",
+                "machine": "Overlock Machine"
+            },
+            {
+                "type": "Flat Seam",
+                "symbol": "LSb-1",
+                "allowance": "10 mm",
+                "description": "Armhole Seams",
+                "stitch_type": "Coverstitch",
+                "stitch_symbol": "406",
+                "stitch_size": "12 SPI",
+                "machine": "Coverstitch Machine"
+            },
+            {
+                "type": "Zipper Insertion Seam",
+                "symbol": "EFa-1",
+                "allowance": "12 mm",
+                "description": "Center Back",
+                "stitch_type": "Lockstitch",
+                "stitch_symbol": "301",
+                "stitch_size": "10 SPI",
+                "machine": "Lockstitch Machine"
+            },
+            {
+                "type": "Turned Hem",
+                "symbol": "EFa-2",
+                "allowance": "10 mm",
+                "description": "Bottom Hem",
+                "stitch_type": "Lockstitch",
+                "stitch_symbol": "301",
+                "stitch_size": "10 SPI",
+                "machine": "Lockstitch Machine"
+            },
+            {
+                "type": "Turned Hem",
+                "symbol": "EFa-3",
+                "allowance": "10 mm",
+                "description": "Sleeve Hem",
+                "stitch_type": "Lockstitch",
+                "stitch_symbol": "301",
+                "stitch_size": "10 SPI",
+                "machine": "Lockstitch Machine"
+            }
+        ]
+    },
+    "page_6": {
+        "measurement_image_url": "",
+        "measurements": [
+            {
+                "point_of_measurement": "Bust",
+                "code": "A",
+                "description": "Measure around the fullest part of the bust.",
+                "measurement_cm": 86.36,
+                "tolerance_cm": "\u00b13.2"
+            },
+            {
+                "point_of_measurement": "Natural Waist",
+                "code": "B",
+                "description": "Measure around the smallest part of the waist.",
+                "measurement_cm": 66.04,
+                "tolerance_cm": "\u00b13.2"
+            },
+            {
+                "point_of_measurement": "Hip",
+                "code": "C",
+                "description": "Measure around the fullest part of the hips.",
+                "measurement_cm": 91.44,
+                "tolerance_cm": "\u00b13.2"
+            },
+            {
+                "point_of_measurement": "Dress Length",
+                "code": "D",
+                "description": "Measure from the highest point of the shoulder to the desired length.",
+                "measurement_cm": 127.0,
+                "tolerance_cm": "\u00b13.2"
+            },
+            {
+                "point_of_measurement": "Sleeve Length",
+                "code": "E",
+                "description": "Measure from the shoulder seam to the wrist.",
+                "measurement_cm": 58.42,
+                "tolerance_cm": "\u00b13.2"
+            },
+            {
+                "point_of_measurement": "Slit Length",
+                "code": "F",
+                "description": "Measure the length of the slit, starting from the bottom hem.",
+                "measurement_cm": 50.8,
+                "tolerance_cm": "\u00b13.2"
+            }
+        ]
+    },
+    "page_7": {
+        "fabrics": [
+            {
+                "description": "gabardine blend with wool and cotton",
+                "color": "#F6EB61",
+                "position": "Shell Fabric"
+            },
+            {
+                "description": "Fusible Interfacing",
+                "color": "N/A",
+                "position": "Internal Support - Collar and zipper area"
+            },
+            {
+                "description": "Clear Elastic/Stay Tape",
+                "color": "N/A",
+                "position": "Internal Support - Asymmetrical shoulder seam"
+            }
+        ],
+        "quality_standards": [
+            {
+                "test": "Water Repellency",
+                "method": "ISO 4920",
+                "requirements": "AATCC 22, Grade 3 minimum",
+                "comments": "For outerwear like trench coats, water repellency is crucial to ensure the garment effectively protects against rain and moisture."
+            },
+            {
+                "test": "Color Fastness to Wash",
+                "method": "ISO 105-C06",
+                "requirements": "Grade 4 minimum",
+                "comments": "High-end retail garments should maintain color integrity after washing, ensuring the vibrant yellow does not fade."
+            },
+            {
+                "test": "Pilling Resistance",
+                "method": "ISO 12945-2",
+                "requirements": "Grade 3 minimum",
+                "comments": "A trench coat is typically worn frequently, and pilling could detract from its appearance and perceived quality."
+            },
+            {
+                "test": "Shrinkage",
+                "method": "ISO 5077",
+                "requirements": "\u00b12% for fabric dimensions",
+                "comments": "Ensuring minimal shrinkage is essential for a tailored fit, particularly for garments that may undergo multiple washes."
+            },
+            {
+                "test": "Seam Strength",
+                "method": "ISO 13934-1",
+                "requirements": "Minimum 40 N",
+                "comments": "Adequate seam strength is vital for durability, especially when worn in various dynamic settings typical of outerwear."
+            },
+            {
+                "test": "Flexibility (Bending Stiffness)",
+                "method": "ISO 9073-7",
+                "requirements": "Values to be determined based on garment design",
+                "comments": "Flexibility affects comfort and ease of movement in trench coats, which should drape elegantly while being functional."
+            }
+        ]
+    },
+    "page_8": {
+        "size_chart": [
+            {
+                "pom": "Bust",
+                "s": 86.36,
+                "m": 90.36,
+                "l": 94.36,
+                "xl": 98.36
+            },
+            {
+                "pom": "Natural Waist",
+                "s": 66.04,
+                "m": 70.04,
+                "l": 74.04,
+                "xl": 78.04
+            },
+            {
+                "pom": "Hip",
+                "s": 91.44,
+                "m": 95.44,
+                "l": 99.44,
+                "xl": 103.44
+            },
+            {
+                "pom": "Dress Length",
+                "s": 127.0,
+                "m": 128.5,
+                "l": 130.0,
+                "xl": 131.5
+            },
+            {
+                "pom": "Sleeve Length",
+                "s": 58.42,
+                "m": 59.42,
+                "l": 60.42,
+                "xl": 61.42
+            },
+            {
+                "pom": "Slit Length",
+                "s": 50.8,
+                "m": 51.3,
+                "l": 51.8,
+                "xl": 52.3
+            }
+        ]
+    },
+    "page_9": {
+        "wash_label": {
+            "composition": "90% Cotton and 10% Spandex",
+            "washing_instructions": "Dry Clean Only",
+            "bleaching": "Do Not Bleach",
+            "drying_instructions": "Do Not Tumble Dry, Hang Dry in Shade",
+            "ironing_instructions": "Cool Iron if Needed",
+            "dry_cleaning": {
+                "line_1": "Dry Clean with Any Solvent",
+                "line_2": "Except Trichloroethylene"
+            },
+            "label_colors": "Black on White"
+        },
+        "care_label": {
+            "image": "assets/care_label.png"
+        },
+        "care_label_instructions": [
+            "The care label must contain <strong>carelabel symbols</strong> and those only.",
+            "Care label must be made in recycled polyester.",
+            "Care labels must contain origin: made in India.",
+            "Care labels must be given the same size, font and style.",
+            "Care instructions should follow <strong>ISO 3758 standard</strong>."
+        ],
+        "other_standards": [
+            {
+                "title": "Standard 100 by Oekotex",
+                "description": "Label that ensures consumers that all materials used in a garment are tested for harmful substances."
+            },
+            {
+                "title": "EU Ecolabel",
+                "description": "Label that ensures consumers that textiles are made using less harmful substances, energy and water."
+            },
+            {
+                "title": "Bluesign",
+                "description": "The Bluesign System reduces impact on people and the environment in the entire textile supply chain, based on input stream management."
+            }
+        ],
+        "wash_care_label_img": ""
+    }
+}
