@@ -36,8 +36,6 @@ export async function resetDraft() {
   return res.json()
 }
 
-
-
 export async function uploadImage(file) {
   const formData = new FormData()
   formData.append("file", file)
@@ -80,4 +78,51 @@ export async function updateMultipleFields(payload) {
   }
 
   return res.json()
+}
+
+// --------------------------------------------------
+// Generation Flow
+// --------------------------------------------------
+
+/**
+ * Upload 2+ images + context and start a background generation job.
+ * @param {File[]} imageFiles - array of File objects (min 2, first = front, second = back)
+ * @param {string} contextText - brand/collection/season/fabric/size context
+ * Returns { job_id, status, image_count }
+ */
+export async function triggerGeneration(imageFiles, contextText) {
+  const formData = new FormData()
+  imageFiles.forEach((file) => formData.append("images", file))
+  formData.append("context", contextText)
+
+  const res = await fetch(`${API_BASE_URL}/api/generate`, {
+    method: "POST",
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(err.error || "Generation failed to start")
+  }
+
+  return res.json() // { job_id, status, image_count }
+}
+
+/**
+ * Poll generation status for a given job_id.
+ * Returns { status, progress, current_step, error }
+ */
+export async function getGenerationStatus(jobId) {
+  const res = await fetch(`${API_BASE_URL}/api/generate-status/${jobId}`)
+  if (!res.ok) {
+    throw new Error("Failed to fetch generation status")
+  }
+  return res.json()
+}
+
+/**
+ * Download the generated Tech_Pack.pdf.
+ */
+export function downloadPdf() {
+  window.open(`${API_BASE_URL}/api/download-pdf`, "_blank")
 }

@@ -129,10 +129,55 @@ if not hasattr(_np, "asscalar"):
 from colormath.color_diff import delta_e_cie2000
 
 # --------------------------------------------------
+# VERIFIED PANTONE TCX LOOKUP (replaces LLM guessing)
+# --------------------------------------------------
+_PANTONE_TCX_CACHE = None
+
+def load_pantone_tcx():
+    """Load the Pantone TCX dataset from data/pantone_tcx.json (cached)."""
+    global _PANTONE_TCX_CACHE
+    if _PANTONE_TCX_CACHE is not None:
+        return _PANTONE_TCX_CACHE
+    import json, os
+    data_path = os.path.join(os.path.dirname(__file__), "data", "pantone_tcx.json")
+    with open(data_path, "r") as f:
+        _PANTONE_TCX_CACHE = json.load(f)
+    return _PANTONE_TCX_CACHE
+
+def nearest_pantone_tcx(hex_color: str, top_k: int = 3) -> list:
+    """
+    Given a hex color (e.g. '#2C3E50'), return the top_k nearest
+    Pantone FHI TCX colors by CIE2000 Delta-E distance.
+    Returns: [{ code, name, hex, delta_e }, ...]  ← ground truth, NOT an LLM guess.
+    """
+    pantones = load_pantone_tcx()
+    r = int(hex_color[1:3], 16)
+    g = int(hex_color[3:5], 16)
+    b = int(hex_color[5:7], 16)
+    target_lab = rgb_to_lab((r, g, b))
+
+    results = []
+    for p in pantones:
+        pr = int(p["hex"][1:3], 16)
+        pg = int(p["hex"][3:5], 16)
+        pb = int(p["hex"][5:7], 16)
+        p_lab = rgb_to_lab((pr, pg, pb))
+        dE = float(delta_e_cie2000(target_lab, p_lab))
+        results.append({
+            "code": p["code"],
+            "name": p["name"],
+            "hex": p["hex"],
+            "delta_e": round(dE, 2),
+        })
+
+    return sorted(results, key=lambda x: x["delta_e"])[:top_k]
+
+# --------------------------------------------------
 # COLOR UTILITIES
 # --------------------------------------------------
 def rgb_to_lab(rgb: Tuple[int,int,int]) -> LabColor:
     srgb = sRGBColor(rgb[0]/255, rgb[1]/255, rgb[2]/255)
+
     return convert_color(srgb, LabColor)
 
 def rgb_to_hsv(rgb: Tuple[int,int,int]):
@@ -539,15 +584,169 @@ def split_into_grids(
     return final_grid_images
 
 
+
+
+# =========================================================
+# AI-ASSISTED DETAIL CROPPING
+# =========================================================
+
+def ai_crop_detail_regions(
+    images: list,
+    garment_details: str,
+    output_dir: str = "assets",
+    n_crops: int = 4,
+    min_crop_size: int = 150,
+    white_threshold: float = 0.85,
+) -> list:
+    """
+    Uses Claude Vision to identify the most important detail regions on a garment,
+    then crops those exact regions from the source images using PIL.
+
+    Strategy:
+    1. Ask Claude Vision to identify top N detail zones with normalized bounding boxes
+    2. Crop each zone from the source image
+    3. Filter out near-blank crops
+    4. Return list of saved crop paths (up to n_crops)
+
+    Falls back to empty list on any error — caller should handle fallback.
+
+    Args:
+        images:          list of source image paths (front first)
+        garment_details: garment description text to guide what to look for
+        output_dir:      where to save cropped images
+        n_crops:         how many detail crops to produce
+        min_crop_size:   minimum pixel dimension for a valid crop
+        white_threshold: fraction of white pixels above which a crop is discarded
+
+    Returns:
+        list of saved crop paths
+    """
+    import json as _json
+    import os as _os
+    from PIL import Image as PILImage
+
+    # ── Step 1: Ask Claude Vision to identify detail regions ──
+    region_prompt = f"""You are a fashion technical designer analyzing garment photographs for a tech pack.
+
+Your task: Identify the {n_crops} most important DETAIL REGIONS on this garment that a manufacturer needs to see up close.
+
+Focus on:
+- Closures (buttons, zippers, hooks, snaps)
+- Collar / neckline construction
+- Sleeve / cuff details  
+- Hem / bottom edge finishing
+- Seam intersections, pockets, pleats, ruching, gathering
+- Any distinctive construction feature visible
+
+Garment description context:
+{garment_details}
+
+For each detail region, return:
+- "label": short name (e.g. "Collar", "Front Zipper", "Hem Detail")
+- "description": one sentence on why this detail matters for manufacturing
+- "image_index": which image to crop from (0 = first/front image, 1 = second/back image, etc.)
+- "x": left edge as fraction of image width (0.0–1.0)
+- "y": top edge as fraction of image height (0.0–1.0)
+- "w": width as fraction of image width (0.05–0.6)
+- "h": height as fraction of image height (0.05–0.6)
+
+Rules:
+- Coordinates must be inside the image (x+w <= 1.0, y+h <= 1.0)
+- Each crop must be at least 5% of image in both dimensions
+- Only label regions that are CLEARLY VISIBLE in the images
+- Prioritize regions that show construction methods a factory needs
+
+Return ONLY valid JSON — a list of exactly {n_crops} objects. No markdown. No explanation.
+Example:
+[
+  {{"label": "Collar", "description": "Stand collar with visible topstitching", "image_index": 0, "x": 0.3, "y": 0.05, "w": 0.4, "h": 0.2}},
+  {{"label": "Front Closure", "description": "Button placket with 5 buttons", "image_index": 0, "x": 0.4, "y": 0.2, "w": 0.2, "h": 0.5}}
+]
+"""
+
+    try:
+        from llm import analyze_images as _analyze_images
+
+        raw, _think = _analyze_images(images, region_prompt)
+        raw = raw.strip()
+        # Strip markdown fences
+        if raw.startswith("```"):
+            lines = raw.split("\n")
+            raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        regions = _json.loads(raw)
+        if not isinstance(regions, list) or len(regions) == 0:
+            print("[ai_crop] No valid regions returned from Claude Vision")
+            return []
+
+        print(f"[ai_crop] Claude identified {len(regions)} detail regions")
+
+    except Exception as e:
+        print(f"[ai_crop] Claude Vision region detection failed: {e}")
+        return []
+
+    # ── Step 2: Crop each region from the source image ──
+    saved_crops = []
+    _os.makedirs(output_dir, exist_ok=True)
+
+    for i, region in enumerate(regions):
+        try:
+            img_idx = int(region.get("image_index", 0))
+            img_idx = min(img_idx, len(images) - 1)  # clamp to available images
+            src_path = images[img_idx]
+
+            img = PILImage.open(src_path).convert("RGB")
+            W, H = img.size
+
+            # Convert normalized coords to pixels
+            x = float(region.get("x", 0.0))
+            y = float(region.get("y", 0.0))
+            w = float(region.get("w", 0.3))
+            h = float(region.get("h", 0.3))
+
+            # Clamp to image bounds
+            x = max(0.0, min(x, 1.0))
+            y = max(0.0, min(y, 1.0))
+            w = max(0.05, min(w, 1.0 - x))
+            h = max(0.05, min(h, 1.0 - y))
+
+            left   = int(x * W)
+            top    = int(y * H)
+            right  = int((x + w) * W)
+            bottom = int((y + h) * H)
+
+            # Skip crops that are too small
+            if (right - left) < min_crop_size or (bottom - top) < min_crop_size:
+                print(f"[ai_crop] Region {i} '{region.get('label')}' too small, skipping")
+                continue
+
+            crop = img.crop((left, top, right, bottom))
+
+            # Filter near-blank crops
+            arr = np.array(crop)
+            white_pixels = np.sum(np.all(arr > 240, axis=2))
+            total_pixels = arr.shape[0] * arr.shape[1]
+            if (white_pixels / total_pixels) > white_threshold:
+                print(f"[ai_crop] Region {i} '{region.get('label')}' is mostly white, skipping")
+                continue
+
+            label_safe = region.get("label", f"detail_{i}").replace(" ", "_").lower()
+            crop_path = _os.path.join(output_dir, f"ai_detail_{i}_{label_safe}.png")
+            crop.save(crop_path)
+            saved_crops.append(crop_path)
+            print(f"[ai_crop] Saved: {crop_path} ({right-left}x{bottom-top}px) — {region.get('label')}")
+
+        except Exception as e:
+            print(f"[ai_crop] Failed to crop region {i}: {e}")
+            continue
+
+    print(f"[ai_crop] Produced {len(saved_crops)}/{len(regions)} valid detail crops")
+    return saved_crops[:n_crops]
+
+
 # ======================
 # Example usage
 # ======================
 # if __name__ == "__main__":
-#     fimage = combine_images_horizontally(["assets/20260112_173540_0_Women_Light_Jacket_Discrete_Back.png","assets/20260112_173540_1_Women_Light_Jacket_Discrete_Front.png"],"final.png")
-#     print(split_into_grids(
-#         image_path=fimage,
-#         output_dir="assets",
-#         grid_height=1400,
-#         extra_width=190
-#     )
-#     )
+#     fimage = combine_images_horizontally(["assets/front.png","assets/back.png"],"final.png")
+#     print(split_into_grids(image_path=fimage, output_dir="assets", grid_height=1400, extra_width=190))

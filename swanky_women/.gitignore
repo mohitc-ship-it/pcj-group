@@ -7,3 +7,4 @@ public/uploads/*.png
 temp/*pdf
 output_grids/*png
 output_grids_80/*png
+venv/

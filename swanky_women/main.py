@@ -4,8 +4,9 @@ from copy import deepcopy
 
 from llm import analyze_images, llm_structured, llm_query
 from generate import generatePdf
-from utils import extract_clothing_palette, map_json, combine_images_horizontally, split_into_grids, recommend_colors_from_images
+from utils import extract_clothing_palette, map_json, combine_images_horizontally, split_into_grids, recommend_colors_from_images, nearest_pantone_tcx, ai_crop_detail_regions
 from imageGen import generate_image
+from image_verifier import verify_and_regenerate
 
 from models import (
     TechPackHeader,
@@ -69,7 +70,19 @@ def ensure_page_9_contract(page_9: dict) -> dict:
 #     ).model_dump()
 
 def extract_garment_color(images):
-    palette = recommend_colors_from_images(images[0],images[1])
+    palette = recommend_colors_from_images(images[0], images[1] if len(images) > 1 else images[0])
+    palette_with_pantone = []
+    for color in palette[:6]:
+        tcx_matches = nearest_pantone_tcx(color["hex"], top_k=1)
+        best_match = tcx_matches[0] if tcx_matches else None
+        palette_with_pantone.append({
+            **color,
+            "verified_pantone_code": best_match["code"] if best_match else "N/A",
+            "verified_pantone_name": best_match["name"] if best_match else "N/A",
+            "delta_e": best_match["delta_e"] if best_match else None,
+        })
+    palette_summary = "\n".join([f"  HEX {c['hex']} | Confidence {c['confidence']:.2f} | → VERIFIED TCX: {c['verified_pantone_code']} ({c['verified_pantone_name']}) | ΔE={c['delta_e']}" for c in palette_with_pantone])
+    prompt = f"""ROLE: Textile Color Matching Specialist\nYou are working for a fashion brand color lab.\nThe Pantone TCX codes below are VERIFIED.\nVERIFIED COLOR PALETTE:\n{palette_summary}\nSelect TOP 3-5 dominant garment colors. Set pantone_accuracy_note = "Verified – Delta-E TCX lookup"\nReturn a GarmentColorList JSON."""
 
     # palette = extract_clothing_palette(images[0])
 
@@ -165,10 +178,9 @@ If confidence < 0.7 → requires_confirmation = true
     print(f"[DEBUG] extract_garment_color: palette length={len(palette) if hasattr(palette,'__len__') else 'N/A'}")
     # only print a small sample of the prompt to avoid huge logs
     print(f"[DEBUG] extract_garment_color: calling analyze_images + llm_structured with prompt preview: {prompt[:200].replace('\n',' ')}...")
-    result = llm_structured(
-        analyze_images(images, prompt),
-        GarmentColorList
-    ).model_dump()
+    _analysis, _analysis_think = analyze_images(images, prompt, enable_thinking=True)
+    _obj, _think = llm_structured(_analysis, GarmentColorList, enable_thinking=True)
+    result = _obj.model_dump()
     print(f"[DEBUG] extract_garment_color: got {len(result.get('colors', []))} colors")
     return result
 
@@ -330,9 +342,10 @@ STRICT RULES
 You are describing the garment like a factory inspector — not selling it.
 """
 
-    vision_text = analyze_images(images, prompt)
+    vision_text, _vision_think = analyze_images(images, prompt)
     print(f"[DEBUG] vision_agent: analyze_images returned text length={len(vision_text) if vision_text else 0}")
-    structure = llm_structured(vision_text, GarmentStructureModel).model_dump()
+    _obj, _think = llm_structured(vision_text, GarmentStructureModel, enable_thinking=True)
+    structure = _obj.model_dump()
     print(f"[DEBUG] vision_agent: structure keys={list(structure.keys())}")
     return {
         "raw_observation_text": vision_text,
@@ -518,7 +531,8 @@ Return a **GarmentClassificationModel** with:
 Every field must be justified by structure.
 """
     print(f"[DEBUG] garment_identifier_agent: structure preview keys={list(structure.keys()) if isinstance(structure, dict) else 'Not dict'}")
-    classification = llm_structured(prompt, GarmentClassificationModel).model_dump()
+    _obj, _think = llm_structured(prompt, GarmentClassificationModel, enable_thinking=True)
+    classification = _obj.model_dump()
     print(f"[DEBUG] garment_identifier_agent: classification -> market={classification.get('market')} category={classification.get('category')}")
     return classification
 
@@ -583,7 +597,8 @@ OUTPUT:
 - FabricDecisionModel
 """
     print(f"[DEBUG] fabric_decision_agent: inputs -> classification keys={list(classification.keys()) if isinstance(classification, dict) else 'N/A'}; garment_color={garment_color.get('hex') if isinstance(garment_color, dict) else garment_color}")
-    fabric = llm_structured(prompt, FabricDecisionModel).model_dump()
+    _obj, _think = llm_structured(prompt, FabricDecisionModel, enable_thinking=True)
+    fabric = _obj.model_dump()
     print(f"[DEBUG] fabric_decision_agent: fabric decision keys={list(fabric.keys())}")
     return fabric
 
@@ -828,7 +843,8 @@ Your job is to **translate garment design into manufacturable construction logic
 """
 
     print(f"[DEBUG] construction_decision_agent: running - classification='{classification.get('category') if isinstance(classification, dict) else 'N/A'}'")
-    construction = llm_structured(prompt,ConstructionDecisionModel).model_dump()
+    _obj, _think = llm_structured(prompt,ConstructionDecisionModel, enable_thinking=True)
+    construction = _obj.model_dump()
     print(f"[DEBUG] construction_decision_agent: returned overall_complexity={construction.get('overall_complexity')}")
     return construction
 
@@ -875,7 +891,8 @@ def measurement_decision_agent(classification, sizing):
     OUTPUT:
     - MeasurementDecisionModel (points, tolerances, sources)
     """
-    return llm_structured(prompt, MeasurementDecisionModel).model_dump()
+    _obj, _think = llm_structured(prompt, MeasurementDecisionModel, enable_thinking=True)
+    return _obj.model_dump()
 
 def measurement_decision_agent(classification, sizing,context):
     prompt = f"""
@@ -1059,7 +1076,8 @@ STRICT RULES
 Your job is to define **how fit is controlled**, not to create measurements.
 """
     print(f"[DEBUG] measurement_decision_agent: sizing sample_size={sizing.get('sample_size') if isinstance(sizing, dict) else sizing}")
-    measurement = llm_structured(prompt, MeasurementDecisionModel).model_dump()
+    _obj, _think = llm_structured(prompt, MeasurementDecisionModel, enable_thinking=True)
+    measurement = _obj.model_dump()
     print(f"[DEBUG] measurement_decision_agent: measurement_points count={len(measurement.get('measurement_points', []))}")
     return measurement
 
@@ -1200,10 +1218,9 @@ OUTPUT:
     
     print(f"[DEBUG] resolver_agent: starting resolver with fabric_decision keys={list(fabric_decision.keys()) if isinstance(fabric_decision, dict) else 'N/A'}")
     # We analyze images again here just in case specific visual details are needed for trims/finishes
-    factory = llm_structured(
-        analyze_images(images, prompt),
-        FactoryInstructionModel
-    ).model_dump()
+    _analysis, _analysis_think = analyze_images(images, prompt, enable_thinking=True)
+    _obj, _think = llm_structured(_analysis, FactoryInstructionModel, enable_thinking=True)
+    factory = _obj.model_dump()
     print(f"[DEBUG] resolver_agent: factory_output keys={list(factory.keys())}")
     return factory
 
@@ -1406,16 +1423,73 @@ def verifier_agent(factory_output, full_context):
     - VerificationResult (valid, issues, confidence, fix_suggestions)
     """
     print(f"[DEBUG] verifier_agent: verifying factory_output keys={list(factory_output.keys()) if isinstance(factory_output, dict) else 'N/A'}")
-    verification = llm_structured(prompt, VerificationResult).model_dump()
+    _obj, _think = llm_structured(prompt, VerificationResult, enable_thinking=True)
+    verification = _obj.model_dump()
     print(f"[DEBUG] verifier_agent: verification result -> valid={verification.get('valid')} confidence={verification.get('confidence')}")
     return verification
 
+
+
+# =========================================================
+# TASK B — ACCESSORIES VERIFICATION AGENT
+# =========================================================
+
+def verify_accessories(accessories_list: list, images: list, _report_fn=None, job_progress_base: int = 79) -> list:
+    if not accessories_list:
+        return accessories_list
+
+    import json as _json
+
+    accessories_summary = "\n".join([
+        f"{i+1}. {a.get('description','N/A')} | Qty: {a.get('qty','N/A')} | Color: {a.get('color','N/A')} | Position: {a.get('position','N/A')}"
+        for i, a in enumerate(accessories_list)
+    ])
+
+    prompt = f"""You are a senior technical designer reviewing a garment accessories list for accuracy.
+ACCESSORIES LIST FROM AI (may contain errors):\n{accessories_summary}
+
+YOUR TASK:
+1. Look carefully at the garment in the images
+2. REMOVE any accessories from the list that are clearly NOT visible on this garment (hallucinations)
+3. ADD any obvious accessories that ARE clearly visible but were missed
+4. KEEP all accessories that are genuinely present
+
+Return ONLY valid JSON — a list of objects with these exact fields:
+[
+  {{"description": "...", "qty": "...", "color": "...", "position": "..."}}
+]"""
+
+    try:
+        raw, _think = analyze_images(images, prompt, enable_thinking=True)
+        raw = raw.strip()
+        if raw.startswith("```"):
+            lines = raw.split("\n")
+            raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        verified = _json.loads(raw)
+        if isinstance(verified, list):
+            msg = f"{len(verified)} accessories verified"
+            detail = _think or f"Vision check: removed hallucinations, confirmed visible items."
+            if _report_fn:
+                _report_fn("Accessories Verification", msg, detail, job_progress_base)
+            return verified
+    except Exception as e:
+        print(f"[verify_accessories] Error: {e}")
+
+    return accessories_list
 
 # =========================================================
 # MAIN PIPELINE
 # =========================================================
 
-def generate_techpack(images, context,generate=False):
+def generate_techpack(images, context, generate=False, progress_callback=None):
+    def _report(step, decision, reasoning, progress):
+        print(f"[AGENT] {step} → {decision}")
+        if progress_callback:
+            try:
+                progress_callback(step, decision, reasoning, progress)
+            except Exception as e:
+                print(f"[progress_callback error] {e}")
 
     # 1. Load master
     with open("data/master.json") as f:
@@ -1441,10 +1515,8 @@ def generate_techpack(images, context,generate=False):
     """
 
     print("trying for header")
-    header = llm_structured(
-        header_prompt,
-        TechPackHeader
-    ).model_dump()
+    _obj, _think = llm_structured(header_prompt, TechPackHeader, enable_thinking=True)
+    header = _obj.model_dump()
     print(f"[DEBUG] generate_techpack: header generated -> style_name={header.get('style_name') if isinstance(header, dict) else 'N/A'}")
     master["header"] = header
 
@@ -1580,8 +1652,8 @@ For Outerwear/Coats/Trench Coats/Jackets:
 - Identify sleeve construction (Set-in, Raglan, Raglan-style ease)
 - Do NOT use generic dress terms for coats. Use outerwear terminology.
 """
-    page2_details = analyze_images(images, page2_prompt)
-    print("page2 details are", page2_details)
+    page2_details, _p2_think = analyze_images(images, page2_prompt, enable_thinking=True)
+    _report("Detail Analysis", "Analyzed details", _p2_think, 10)
     
     master["page_2"].update({
         "details": page2_details,
@@ -1589,20 +1661,44 @@ For Outerwear/Coats/Trench Coats/Jackets:
         "back_image_url": back_img,
     })
     
-    combined_image = combine_images_horizontally(images,"assets/combined.png")
-    # Determine grid height based on garment category
-    garment_cat = classification.get('category', '').lower()
-    if garment_cat in ('outerwear',) or 'jacket' in garment_cat or 'coat' in garment_cat:
+    combined_image = combine_images_horizontally(images, "assets/combined.png")
+
+    original_input_images = images
+    extra_input_images = original_input_images[2:]
+
+    ai_crops = ai_crop_detail_regions(
+        images=original_input_images,
+        garment_details=page2_details,
+        output_dir="assets",
+        n_crops=4,
+    )
+    _report("Detail Cropping",
+            f"AI crops: {len(ai_crops)} regions identified and cropped",
+            f"Claude Vision cropped {len(ai_crops)} detail zones." if ai_crops else "Found no regions — falling back to grid crops",
+            83)
+
+    garment_cat = classification.get("category", "").lower()
+    if garment_cat in ("outerwear",) or "jacket" in garment_cat or "coat" in garment_cat:
         grid_height = 1400
     else:
         grid_height = 575
-    images = split_into_grids(combined_image,"assets",grid_height=grid_height,extra_width=190)
+    grid_crops = split_into_grids(combined_image, "assets", grid_height=grid_height, extra_width=190)
 
-    # Use front image as fallback if not enough detail grids
-    DEFAULT_IMAGE = front_img
+    def _is_useful_crop(path: str, white_threshold: float = 0.90) -> bool:
+        try:
+            from PIL import Image as _PILImage
+            import numpy as _np
+            _img = _PILImage.open(path).convert("RGB")
+            _arr = _np.array(_img)
+            white_px = _np.sum(_np.all(_arr > 240, axis=2))
+            return (white_px / (_arr.shape[0] * _arr.shape[1])) < white_threshold
+        except Exception:
+            return True
 
-    # Ensure at least 4 images, fill missing with front image
-    safe_images = images + [DEFAULT_IMAGE] * (4 - len(images))
+    useful_grid_crops = [p for p in grid_crops if _is_useful_crop(p)]
+    detail_pool = ai_crops + extra_input_images + useful_grid_crops
+    safe_images = (detail_pool + [None, None, None, None])[:4]
+    images = grid_crops if grid_crops else original_input_images
 
     master["page_2"].update({
         "detail_image_1_url": safe_images[0],
@@ -1651,7 +1747,17 @@ Do not invent details. Only label what is explicitly provided.
 """
 
     if generate:
-        master['page_3']['technical_sketch_img'] = generate_image(technical_sketch_prompt, "assets/combined.png","assets/technical_sketch.png")
+        generate_image(technical_sketch_prompt, "assets/combined.png", "assets/technical_sketch.png")
+        sketch_path, sketch_log = verify_and_regenerate(
+            image_path="assets/technical_sketch.png",
+            image_type="technical_sketch",
+            original_prompt=technical_sketch_prompt,
+            generate_fn=generate_image,
+            ref_image="assets/combined.png",
+        )
+        master["page_3"]["technical_sketch_img"] = sketch_path
+        sketch_result = sketch_log[-1]
+        _report("Sketch Verification", f"{'✅ Passed' if sketch_result['valid'] else '⚠️ Regenerated'}", str(sketch_result.get('issues', [])), 85)
     else:
         master['page_3']['technical_sketch_img'] = "assets/technical_sketch.png"
 
@@ -1665,7 +1771,17 @@ Do not invent details. Only label what is explicitly provided.
     """
 
     if generate:
-        master['page_3']['brand_label_img'] = generate_image(brand_label_prompt, "assets/brand_label.png","assets/brand_label_final.png")
+        generate_image(brand_label_prompt, "assets/brand_label.png", "assets/brand_label_final.png")
+        brand_path, brand_log = verify_and_regenerate(
+            image_path="assets/brand_label_final.png",
+            image_type="brand_label",
+            original_prompt=brand_label_prompt,
+            generate_fn=generate_image,
+            ref_image="assets/brand_label.png",
+        )
+        master["page_3"]["brand_label_img"] = brand_path
+        brand_result = brand_log[-1]
+        _report("Brand Label Verification", f"{'✅ Passed' if brand_result['valid'] else '⚠️ Regenerated'}", str(brand_result.get('issues', [])), 87)
     else:
         print("going in else for brand label")
         master['page_3']['brand_label_img'] = "assets/brand_label_final.png"
@@ -1675,7 +1791,17 @@ Do not invent details. Only label what is explicitly provided.
             and dress description as {page2_details}"""
 
     if generate:
-        master['page_3']['care_label_img'] = generate_image(care_label_prompt, "assets/care_label.png","assets/care_label_final.png")
+        generate_image(care_label_prompt, "assets/care_label.png", "assets/care_label_final.png")
+        care_path, care_log = verify_and_regenerate(
+            image_path="assets/care_label_final.png",
+            image_type="care_label",
+            original_prompt=care_label_prompt,
+            generate_fn=generate_image,
+            ref_image="assets/care_label.png",
+        )
+        master["page_3"]["care_label_img"] = care_path
+        care_result = care_log[-1]
+        _report("Care Label Verification", f"{'✅ Passed' if care_result['valid'] else '⚠️ Regenerated'}", str(care_result.get('issues', [])), 89)
     else:
         print("going in else for care label")
         master['page_3']['care_label_img'] = "assets/care_label_final.png"
@@ -1702,25 +1828,35 @@ Do not invent details. Only label what is explicitly provided.
     {master['page_6']['measurements']}"""
 
     if generate:
-        master['page_6']['measurement_image_url'] = generate_image(measurement_diagram, combined_image,"assets/measurement_diagram.png")
+        generate_image(measurement_diagram, combined_image, "assets/measurement_diagram.png")
+        meas_path, meas_log = verify_and_regenerate(
+            image_path="assets/measurement_diagram.png",
+            image_type="measurement_diagram",
+            original_prompt=measurement_diagram,
+            generate_fn=generate_image,
+            ref_image=combined_image,
+        )
+        master["page_6"]["measurement_image_url"] = meas_path
+        meas_result = meas_log[-1]
+        _report("Measurement Diagram Verification", f"{'✅ Passed' if meas_result['valid'] else '⚠️ Regenerated'}", str(meas_result.get('issues', [])), 91)
     else:
         master['page_6']['measurement_image_url'] = "assets/measurement_diagram.png"
 
     
-    master["page_4"]["accessories"] = factory_output.get("accessories", [])
+    master["page_4"]["accessories"] = verify_accessories(factory_output.get("accessories", []), images, _report, 79)
     master["page_5"]["seams"] = factory_output.get("seams", [])
     master["page_6"]["measurements"] = factory_output.get("measurements", [])
     master["page_7"]["fabrics"] = factory_output.get("fabrics", [])
     
     # # Page 7 Quality Standards (Agent call)
-    # master["page_7"]["quality_standards"] = llm_structured(
+    # _obj, _think = llm_structured(
     #     f"""Generate quality standards for this {classification['category']}. Return JSON only.
     #     example quality standards are Dimensional Stability , Color Fastness to Washing, Color Fastness to Rubbing, Flammability (optional), etc could be possible based on fabric and garment information.
     #     """,
     #     QualityStandardsList
-    # ).model_dump()["quality_standards"]
+    # # replaced above
 
-    master["page_7"]["quality_standards"] = llm_structured(
+    _obj, _think = llm_structured(
     f"""
     ROLE  
     You are a **Factory Quality Assurance Engineer** preparing the official **buyer test requirement sheet** for this garment.
@@ -1862,17 +1998,17 @@ Do not invent details. Only label what is explicitly provided.
     Requirement: Pass  
     Comments: Required for sleepwear or regulated export markets
     """
-    , QualityStandardsList
-).model_dump()["quality_standards"]
+    , QualityStandardsList, enable_thinking=True)
+    master["page_7"]["quality_standards"] = _obj.model_dump().get("quality_standards", [])
 
 
     # Page 8 Size Chart (Agent call based on measurements)
     # master["page_8"]["size_chart"] = llm_structured(
     #     f"Generate size chart for {classification['market']} {classification['category']} Size {classification['size_range'] if 'size_range' in classification else 'S-XL'}. Return JSON only.",
     #     SizeChartList
-    # ).model_dump()["size_chart"]
+    # # replaced above
 
-    master["page_8"]["size_chart"] = llm_structured(
+    _obj, _think = llm_structured(
         f"""
     ROLE: Apparel Size & Fit Standards Engineer  
 
@@ -1971,8 +2107,8 @@ Do not invent details. Only label what is explicitly provided.
 
     Return JSON only.
     """,
-        SizeChartList
-    ).model_dump()["size_chart"]
+        SizeChartList, enable_thinking=True)
+    master["page_8"]["size_chart"] = _obj.model_dump().get("size_chart", [])
 
     
     # Page 9 Care

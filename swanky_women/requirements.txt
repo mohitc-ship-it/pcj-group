@@ -12,6 +12,8 @@ Pillow==10.4.0
 fonttools==4.53.1
 fastapi
 uvicorn[standard]
+python-multipart
+requests
 
 # LLM - Claude (Anthropic)
 anthropic

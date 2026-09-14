@@ -1,7 +1,7 @@
 import os
 import json
 import base64
-from typing import List
+from typing import List, Tuple, Optional
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import anthropic
@@ -17,32 +17,65 @@ def _get_client():
         _client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     return _client
 
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_MODEL = "claude-sonnet-4-6"
+
+# Budget tokens for extended thinking (how much Claude can "think" per call)
+THINKING_BUDGET = 5000
+
+
+def _extract_thinking(response) -> str:
+    """Extract extended thinking text from a Claude response, if present."""
+    thinking_parts = []
+    for block in response.content:
+        if block.type == "thinking":
+            thinking_parts.append(block.thinking)
+    return "\n\n".join(thinking_parts) if thinking_parts else ""
+
+
+def _extract_text(response) -> str:
+    """Extract the main text output from a Claude response."""
+    for block in response.content:
+        if block.type == "text":
+            return block.text
+    return ""
+
 
 # ---------- Normal text output ----------
-def llm_query(query: str, model: str = DEFAULT_MODEL):
+def llm_query(query: str, model: str = DEFAULT_MODEL, enable_thinking: bool = False) -> Tuple[str, str]:
+    """
+    Returns (text_result, thinking_text).
+    thinking_text is empty string when enable_thinking=False.
+    """
     client = _get_client()
-    response = client.messages.create(
+
+    kwargs = dict(
         model=model,
-        max_tokens=4096,
-        temperature=0,
-        messages=[
-            {"role": "user", "content": query}
-        ]
+        max_tokens=8000 if enable_thinking else 4096,
+        messages=[{"role": "user", "content": query}]
     )
-    return response.content[0].text
+    if enable_thinking:
+        kwargs["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
+        # (betas handled by SDK automatically or omitted)
+
+    response = client.messages.create(**kwargs)
+    text = _extract_text(response) or response.content[0].text
+    thinking = _extract_thinking(response) if enable_thinking else ""
+    return text, thinking
 
 
 # ---------- Structured output with schema ----------
-def llm_structured(query: str, output_schema: BaseModel, model: str = DEFAULT_MODEL):
+def llm_structured(
+    query: str,
+    output_schema: BaseModel,
+    model: str = DEFAULT_MODEL,
+    enable_thinking: bool = False,
+) -> Tuple[BaseModel, str]:
     """
-    query: str -> user question
-    output_schema: pydantic BaseModel -> defines structured output
-    Returns: parsed pydantic model instance
+    Returns (parsed_model_instance, thinking_text).
+    thinking_text is empty string when enable_thinking=False.
     """
     client = _get_client()
 
-    # Build JSON schema from pydantic model
     schema = output_schema.model_json_schema()
     schema_str = json.dumps(schema, indent=2)
 
@@ -62,19 +95,26 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
 
     max_retries = 2
     last_error = None
+    last_thinking = ""
 
     for attempt in range(max_retries + 1):
         try:
-            response = client.messages.create(
+            kwargs = dict(
                 model=model,
-                max_tokens=16384,
-                temperature=0,
-                messages=[
-                    {"role": "user", "content": structured_prompt}
-                ]
+                max_tokens=16384 if not enable_thinking else 20000,
+                messages=[{"role": "user", "content": structured_prompt}]
             )
+            if enable_thinking:
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
+                # (betas handled by SDK automatically or omitted)
 
-            raw_text = response.content[0].text.strip()
+            response = client.messages.create(**kwargs)
+
+            if enable_thinking:
+                last_thinking = _extract_thinking(response)
+                raw_text = _extract_text(response).strip()
+            else:
+                raw_text = response.content[0].text.strip()
 
             # Clean up potential markdown wrapping
             if raw_text.startswith("```"):
@@ -85,27 +125,19 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                     lines = lines[:-1]
                 raw_text = "\n".join(lines)
 
-            # Handle truncated JSON — try to fix common issues
+            # Handle truncated JSON
             try:
                 parsed = json.loads(raw_text)
             except json.JSONDecodeError:
-                # Try to fix truncated JSON by closing open structures
                 fixed = raw_text
-                # Count open/close braces and brackets
                 open_braces = fixed.count('{') - fixed.count('}')
                 open_brackets = fixed.count('[') - fixed.count(']')
-
-                # Remove trailing incomplete string/value
                 if fixed.rstrip()[-1] not in ('}', ']', '"', 'e', 'l'):
-                    # Truncated mid-value — find last complete field
                     last_comma = fixed.rfind(',')
                     if last_comma > 0:
                         fixed = fixed[:last_comma]
-
-                # Close open structures
                 fixed += ']' * max(0, open_brackets)
                 fixed += '}' * max(0, open_braces)
-
                 try:
                     parsed = json.loads(fixed)
                 except json.JSONDecodeError:
@@ -114,7 +146,7 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                         continue
                     raise
 
-            return output_schema.model_validate(parsed)
+            return output_schema.model_validate(parsed), last_thinking
 
         except Exception as e:
             last_error = e
@@ -136,22 +168,25 @@ def local_image_to_base64(path: str) -> tuple:
         "webp": "image/webp",
     }
     media_type = media_type_map.get(ext, "image/jpeg")
-
     with open(path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
     return b64, media_type
 
 
-def analyze_images(image_paths: List[str], prompt: str, model: str = DEFAULT_MODEL):
+def analyze_images(
+    image_paths: List[str],
+    prompt: str,
+    model: str = DEFAULT_MODEL,
+    enable_thinking: bool = False,
+) -> Tuple[str, str]:
     """
     Analyze images with Claude vision.
-    Returns plain text response.
+    Returns (text_result, thinking_text).
+    thinking_text is empty string when enable_thinking=False.
     """
     client = _get_client()
 
-    # Build content blocks: images first, then prompt
     content = []
-
     for path in image_paths:
         b64_data, media_type = local_image_to_base64(path)
         content.append({
@@ -162,39 +197,35 @@ def analyze_images(image_paths: List[str], prompt: str, model: str = DEFAULT_MOD
                 "data": b64_data,
             }
         })
+    content.append({"type": "text", "text": prompt})
 
-    content.append({
-        "type": "text",
-        "text": prompt
-    })
-
-    response = client.messages.create(
+    kwargs = dict(
         model=model,
-        max_tokens=4096,
-        temperature=0,
-        messages=[
-            {"role": "user", "content": content}
-        ]
+        max_tokens=8000 if enable_thinking else 4096,
+        messages=[{"role": "user", "content": content}]
     )
+    if enable_thinking:
+        kwargs["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
+        # (betas handled by SDK automatically or omitted)
 
-    result_text = response.content[0].text
-    print(f"[Claude Vision] Response length: {len(result_text)} chars")
-    return result_text
+    response = client.messages.create(**kwargs)
+
+    if enable_thinking:
+        text = _extract_text(response)
+        thinking = _extract_thinking(response)
+    else:
+        text = response.content[0].text
+        thinking = ""
+
+    print(f"[Claude Vision] Response length: {len(text)} chars")
+    return text, thinking
 
 
 # -------------------------------
 # CLI Runner
 # -------------------------------
 if __name__ == "__main__":
-    # Quick test
-    print("Testing llm_query...")
-    result = llm_query("Say 'hello' in 3 words")
-    print(f"Result: {result}")
-
-    print("\nTesting analyze_images...")
-    image_paths = ['assets/front.png', 'assets/back.png']
-    if os.path.exists(image_paths[0]):
-        result = analyze_images(image_paths, "Describe this garment in 2 sentences.")
-        print(f"Result: {result}")
-    else:
-        print("Test images not found, skipping vision test.")
+    print("Testing llm_query with thinking...")
+    result, thinking = llm_query("Why is accuracy important in fashion tech packs?", enable_thinking=True)
+    print(f"Thinking:\n{thinking[:300]}...")
+    print(f"\nResult: {result[:200]}")

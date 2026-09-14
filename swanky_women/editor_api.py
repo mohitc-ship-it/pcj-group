@@ -1,7 +1,8 @@
 import json
+import threading
 from pathlib import Path
-from fastapi import FastAPI, Body
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Body, Form
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from jinja2 import Environment, FileSystemLoader
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -344,10 +345,157 @@ def update_multiple_fields(payload: dict):
     save_draft(draft)
     return {"status": "updated"}
 
+# --------------------------------------------------
+# Generation Job Store (in-memory, single-user demo)
+# --------------------------------------------------
+_jobs: dict = {}
+
+PIPELINE_STEPS = [
+    "Analyzing garment images",
+    "Extracting dominant color + Pantone TCX",
+    "Classifying garment type",
+    "Determining fabric composition",
+    "Generating construction specs",
+    "Calculating measurements + size chart",
+    "Running cross-field verification",
+    "Generating technical sketch",
+    "Generating brand label, care label",
+    "Rendering 9-page PDF",
+]
+
+
+def _push_reasoning(job_id: str, step: str, decision: str, reasoning: str, progress: int):
+    """Push a reasoning trace entry to the job's step_log."""
+    import time
+    _jobs[job_id]["current_step"] = step
+    _jobs[job_id]["progress"] = progress
+    _jobs[job_id]["step_log"].append({
+        "step": step,
+        "decision": decision,
+        "reasoning": reasoning,
+        "timestamp": time.strftime("%H:%M:%S"),
+    })
+
+
+def _run_generation_job(job_id: str, image_paths: list, context: str):
+    """Runs generate_techpack in a background thread, updating job state with reasoning traces."""
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(__file__))
+        from main import generate_techpack
+
+        # Inject a progress_callback the pipeline can call after each agent
+        def progress_callback(step: str, decision: str, reasoning: str, progress: int):
+            _push_reasoning(job_id, step, decision, reasoning, progress)
+
+        _push_reasoning(job_id, "Starting pipeline...", "", "Initializing AI agents and loading models.", 2)
+
+        # Run the actual pipeline (blocking, in background thread)
+        pdf_path = generate_techpack(image_paths, context, True, progress_callback=progress_callback)
+
+        # Clear any stale draft so the frontend editor loads this new generation
+        if DRAFT_FILE.exists():
+            try:
+                os.remove(DRAFT_FILE)
+            except Exception:
+                pass
+
+        _jobs[job_id]["status"] = "done"
+        _jobs[job_id]["progress"] = 100
+        _jobs[job_id]["current_step"] = "Tech Pack ready!"
+        _jobs[job_id]["pdf_path"] = str(pdf_path) if pdf_path else None
+        _push_reasoning(job_id, "Complete", "Tech Pack generated", "All 9 pages rendered and merged into PDF.", 100)
+
+    except Exception as e:
+        _jobs[job_id]["status"] = "error"
+        _jobs[job_id]["error"] = str(e)
+        _jobs[job_id]["current_step"] = f"Error: {str(e)[:120]}"
+        print(f"[Generation Job {job_id}] ERROR: {e}")
+
+
+@app.post("/api/generate")
+async def start_generation(
+    images: list[UploadFile] = File(...),
+    context: str = Form(...),
+):
+    """
+    Accepts 2+ garment images + context, starts generation in background.
+    Returns job_id immediately — client polls /api/generate-status/{job_id}.
+    """
+    if len(images) < 2:
+        return JSONResponse(
+            {"error": "At least 2 images (front and back) are required."},
+            status_code=400
+        )
+
+    os.makedirs(ASSETS_DIR, exist_ok=True)
+
+    # Save all uploaded images as image_0.png, image_1.png, ...
+    # Name first two consistently so pipeline auto-detects front/back
+    saved_paths = []
+    for i, img_file in enumerate(images):
+        ext = os.path.splitext(img_file.filename or "")[1] or ".png"
+        filename = f"image_{i}_{'front' if i == 0 else 'back' if i == 1 else 'extra'}{ext}"
+        dest = os.path.join(ASSETS_DIR, filename)
+        with open(dest, "wb") as f:
+            f.write(await img_file.read())
+        saved_paths.append(dest)
+
+    # Create job
+    job_id = uuid.uuid4().hex
+    _jobs[job_id] = {
+        "status": "running",
+        "progress": 0,
+        "current_step": "Starting pipeline...",
+        "pdf_path": None,
+        "error": None,
+        "step_log": [],   # reasoning traces accumulate here
+    }
+
+    # Start background thread
+    thread = threading.Thread(
+        target=_run_generation_job,
+        args=(job_id, saved_paths, context),
+        daemon=True,
+    )
+    thread.start()
+
+    return JSONResponse({"job_id": job_id, "status": "running", "image_count": len(saved_paths)})
+
+
+
+@app.get("/api/generate-status/{job_id}")
+def get_generation_status(job_id: str):
+    """Poll this endpoint to check generation progress and get reasoning traces."""
+    job = _jobs.get(job_id)
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    return JSONResponse({
+        "status": job["status"],           # "running" | "done" | "error"
+        "progress": job["progress"],        # 0-100
+        "current_step": job["current_step"],
+        "step_log": job.get("step_log", []),  # reasoning trace entries
+        "error": job.get("error"),
+    })
+
+
+@app.get("/api/download-pdf")
+def download_pdf():
+    """Serve the generated Tech_Pack.pdf for download."""
+    pdf_path = BASE_DIR / "Tech_Pack.pdf"
+    if not pdf_path.exists():
+        return JSONResponse({"error": "PDF not found. Generate a tech pack first."}, status_code=404)
+    return FileResponse(
+        path=str(pdf_path),
+        media_type="application/pdf",
+        filename="Tech_Pack.pdf",
+    )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",
+        "editor_api:app",
         host="0.0.0.0",
         port=8000,
         reload=True

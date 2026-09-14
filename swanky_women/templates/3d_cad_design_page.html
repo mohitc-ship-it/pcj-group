@@ -332,10 +332,10 @@
                     <h3>DETAILS</h3>
                     <table class="thumbnail-table">
                         <tr>
-                            <td><img src="{{page_2.detail_image_1_url}}" alt="Dress view 1"></td>
-                            <td><img src="{{page_2.detail_image_2_url}}" alt="Dress view 2"></td>
-                            <td><img src="{{page_2.detail_image_3_url}}" alt="Dress view 3"></td>
-                            <td><img src="{{page_2.detail_image_4_url}}" alt="Dress view 4"></td>
+                            {% if page_2.detail_image_1_url %}<td><img src="{{ page_2.detail_image_1_url }}" alt="Detail 1"></td>{% endif %}
+                            {% if page_2.detail_image_2_url %}<td><img src="{{ page_2.detail_image_2_url }}" alt="Detail 2"></td>{% endif %}
+                            {% if page_2.detail_image_3_url %}<td><img src="{{ page_2.detail_image_3_url }}" alt="Detail 3"></td>{% endif %}
+                            {% if page_2.detail_image_4_url %}<td><img src="{{ page_2.detail_image_4_url }}" alt="Detail 4"></td>{% endif %}
                         </tr>
                     </table>
                 </td>
