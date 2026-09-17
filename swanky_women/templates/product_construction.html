@@ -17,12 +17,11 @@
         }
 
         .page-container {
-            width: 1200px;
-            height: 750px;
-            margin: 20px;
+            width: 100%;
+            border-collapse: collapse;
             border: 3px solid #000;
-            overflow: hidden;
             background: #fff;
+            margin: 0;
         }
 
         /* HEADER TABLE LAYOUT */
@@ -165,7 +164,7 @@
 
 <body>
 
-<div class="page-container">
+<table class="page-container"><thead><tr><td style="padding:0;">
 
     <!-- ================= HEADER TABLE ================= -->
     <table class="header-table">
@@ -207,39 +206,41 @@
             </td>
         </tr>
     </table>
+            </td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="vertical-align: top;">
 
     <div style="width: 100%; padding: 30px;">
         <table class="seam-table">
             <thead>
                 <tr>
+                    <th>Part</th>
                     <th>Seam Type</th>
-                    <th>Seam Symbol</th>
-                    <th>Seam Allowance (mm)</th>
-                    <th>Seam Position/Description</th>
+                    <th>Seam Allowance</th>
                     <th>Stitch Type</th>
-                    <th>Stitch Symbol</th>
-                    <th>Stitch Size</th>
+                    <th>Stitch Size (SPI)</th>
                     <th>Machine Type</th>
                 </tr>
             </thead>
             <tbody>
                 {% for seam in page_5.seams %}
                 <tr>
-                    <td>{{ seam.type }}</td>
-                    <td>{{ seam.symbol }}</td>
-                    <td class="text-center">{{ seam.allowance }}</td>
-                    <td>{{ seam.description }}</td>
+                    <td>{{ seam.part }}</td>
+                    <td>{{ seam.seam_type }}</td>
+                    <td class="text-center">{{ seam.seam_allowance }}</td>
                     <td>{{ seam.stitch_type }}</td>
-                    <td class="text-center">{{ seam.stitch_symbol }}</td>
-                    <td class="text-center">{{ seam.stitch_size }}</td>
-                    <td>{{ seam.machine }}</td>
+                    <td class="text-center">{{ seam.stitch_size_spi }}</td>
+                    <td>{{ seam.machine_type }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-</div>
+</td></tr></tbody></table>
 
 </body>
 </html>

@@ -437,14 +437,7 @@ def map_json(input_json: dict) -> dict:
     # -----------------------------
     # PAGE 6 — Measurements
     # -----------------------------
-    measurements = input_json.get("page_6", {}).get("measurements", [])
-    for idx, meas in enumerate(measurements):
-        # pom_code is missing → infer from order if needed
-        # if meas.get("pom_code") is None:
-            # meas["code"] = chr(ord("A") + idx)
-        meas['code'] = meas['pom_code']
-
-        meas["measurement_cm"] = meas["sample_size_value_cm"]
+    # Now handled directly by Pydantic models.
 
     print("✅ JSON UPDATED SUCCESSFULLY")
     return input_json

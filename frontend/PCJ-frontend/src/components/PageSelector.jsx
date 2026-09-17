@@ -27,8 +27,8 @@ export default function PageSelector({ page, onChange }) {
     { id: "page_4", label: "Accessories" },
     { id: "page_5", label: "Construction" },
     { id: "page_6", label: "Measurements" },
-    { id: "page_7", label: "Fabric & Quality" },
-    { id: "page_8", label: "Size Chart" },
+    { id: "page_7", label: "Fabric & Quality Standards" },
+    { id: "page_8", label: "Reference Image" },
     { id: "page_9", label: "Wash & Care" },
   ]
 

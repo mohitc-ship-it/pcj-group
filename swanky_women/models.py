@@ -1149,6 +1149,9 @@ class FactoryFabric(BaseModel):
         description="Fiber composition with percentages"
     )
 
+    justification: Optional[str] = None
+
+
     construction: Literal[
         "Woven",
         "Knit",
@@ -1276,23 +1279,17 @@ class FactoryFabric(StrictModel):
 
 
 class FactorySeam(StrictModel):
-    seam_location: str
+    part: str = Field(..., description="Part or area of the garment (e.g. Main Body Panels, Side Seams)")
 
-    seam_type: str
+    seam_type: str = Field(..., description="Type of seam (e.g. Plain seam, pressed open)")
 
-    seam_symbol: Optional[str]
+    seam_allowance: str = Field(..., description="Seam allowance (e.g. 1 cm, 1.5 cm)")
 
-    seam_allowance_mm: str
+    stitch_type: str = Field(..., description="Stitch Type (e.g. Lockstitch, Overlock + Lockstitch)")
 
-    description: str
+    stitch_size_spi: str = Field(..., description="Stitch Size in SPI (e.g. 10-12 SPI)")
 
-    stitch_type: str
-
-    stitch_symbol: str
-
-    stitch_size: str
-
-    machine_type: str
+    machine_type: str = Field(..., description="Machine Type (e.g. Single needle lockstitch)")
 
     justification: str
 
@@ -1302,22 +1299,15 @@ class FactorySeam(StrictModel):
 
 
 class FactoryMeasurement(StrictModel):
-    point_of_measurement: str
+    size: str = Field(..., description="Size label (e.g. S, M, L, XL)")
 
-    pom_code: Optional[str]
+    bust: Optional[str] = Field(None, description="Bust measurement in inches. MUST BE A RANGE (e.g. 35.5 - 36.5)")
+    waist: Optional[str] = Field(None, description="Waist measurement in inches. MUST BE A RANGE (e.g. 29.5 - 30.5)")
+    hip: Optional[str] = Field(None, description="Hip measurement in inches. MUST BE A RANGE (e.g. 39.5 - 40.5)")
+    shoulder: Optional[str] = Field(None, description="Shoulder measurement in inches. MUST BE A RANGE (e.g. 14.5 - 15.0)")
 
-    description: str
-
-    sample_size_value_cm: Optional[float]
-
-    tolerance_cm: str
-
-    grading: Literal[
-        "Graded",
-        "Not Graded"
-    ]
-
-    value_source: str
+    sleeve_length: Optional[str] = Field(None, description="Sleeve Length in inches. MUST BE A RANGE")
+    dress_length: Optional[str] = Field(None, description="Dress Length in inches. MUST BE A RANGE")
 
     justification: str
 
@@ -1327,17 +1317,13 @@ class FactoryMeasurement(StrictModel):
 
 
 class FactoryAccessory(StrictModel):
-    item_description: str
+    description: str = Field(..., description="Combined description including name, type, dimensions, and material")
 
-    quantity: str
+    quantity_per_style: str = Field(..., description="Quantity required per style")
 
-    material: Optional[str]
+    color: Optional[str] = Field(None, description="Color or finish of the accessory")
 
-    dimensions: Optional[str]
-
-    color: Optional[str]
-
-    placement: str
+    position: str = Field(..., description="Where the accessory is placed on the garment")
 
     justification: str
 

@@ -90,10 +90,14 @@ export async function updateMultipleFields(payload) {
  * @param {string} contextText - brand/collection/season/fabric/size context
  * Returns { job_id, status, image_count }
  */
-export async function triggerGeneration(imageFiles, contextText) {
+export async function triggerGeneration(imageFiles, contextText, sampleSize = "") {
   const formData = new FormData()
   imageFiles.forEach((file) => formData.append("images", file))
   formData.append("context", contextText)
+  
+  if (sampleSize) {
+    formData.append("sample_size", sampleSize)
+  }
 
   const res = await fetch(`${API_BASE_URL}/api/generate`, {
     method: "POST",
@@ -124,5 +128,5 @@ export async function getGenerationStatus(jobId) {
  * Download the generated Tech_Pack.pdf.
  */
 export function downloadPdf() {
-  window.open(`${API_BASE_URL}/api/download-pdf`, "_blank")
+  window.open(`${API_BASE_URL}/api/download-pdf?t=${Date.now()}`, "_blank")
 }

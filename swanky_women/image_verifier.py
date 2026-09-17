@@ -86,6 +86,15 @@ CORRECTIVE_PREFIXES = {
     ),
 }
 
+# Appended to ALL corrective prompts — tells the model to only fix listed issues,
+# never alter garment structure, stitching, accessories, or silhouette
+GARMENT_PRESERVATION_RULE = (
+    "IMPORTANT — DO NOT CHANGE: Preserve ALL original garment details exactly as provided. "
+    "Do NOT change: stitching type, seam details, accessories (buttons, zippers, trim, pockets), "
+    "garment silhouette, collar style, sleeve design, or any other construction feature. "
+    "Only fix the specific issues listed above. Everything else must remain identical to the original prompt."
+)
+
 
 def verify_image(image_path: str, image_type: str) -> dict:
     """Verify a generated image using Claude Vision."""
@@ -97,7 +106,7 @@ def verify_image(image_path: str, image_type: str) -> dict:
         return {"valid": True, "issues": [], "score": 10, "corrective_hint": ""}
 
     try:
-        raw, _think = analyze_images([image_path], checklist)
+        raw, _think = analyze_images([image_path], checklist, enable_thinking=True)
         raw = raw.strip()
         # Strip markdown fences if present
         if raw.startswith("```"):
@@ -109,11 +118,12 @@ def verify_image(image_path: str, image_type: str) -> dict:
             "issues": result.get("issues", []),
             "score": result.get("score", 0),
             "corrective_hint": result.get("corrective_hint", ""),
+            "thinking": _think
         }
     except Exception as e:
         print(f"[image_verifier] Verification error for {image_type}: {e}")
         # On error, assume valid so pipeline is not blocked
-        return {"valid": True, "issues": [f"Verification error: {str(e)[:80]}"], "score": 7, "corrective_hint": ""}
+        return {"valid": True, "issues": [f"Verification error: {str(e)[:80]}"], "score": 7, "corrective_hint": "", "thinking": ""}
 
 
 def verify_and_regenerate(
@@ -126,12 +136,17 @@ def verify_and_regenerate(
 ) -> tuple:
     """
     Verify a generated image and regenerate if it fails.
+    
+    Strategy:
+    - Attempt 0 (first gen)  → already done, just verify
+    - Attempt 1 (first retry) → use Flash model (fast, cheap) with corrective prompt
+    - Attempt 2+ (final retry) → escalate to Pro model for best quality
 
     Args:
         image_path:      path to the generated image
         image_type:      'technical_sketch' | 'brand_label' | 'care_label' | 'measurement_diagram'
         original_prompt: original generation prompt
-        generate_fn:     callable(prompt, ref_image, output_path) -> output_path
+        generate_fn:     callable(prompt, ref_image, output_path, use_pro=bool) -> output_path
         ref_image:       optional reference image path
         max_retries:     max regeneration attempts
 
@@ -155,13 +170,22 @@ def verify_and_regenerate(
             print(f"[image_verifier] {image_type} — max retries reached, keeping last output")
             break
 
-        # Build corrective prompt
+        # Build corrective prompt: correction prefix + garment preservation + hint + original
         corrective_prefix = CORRECTIVE_PREFIXES.get(image_type, "")
         hint = result.get("corrective_hint", "")
-        corrective_prompt = corrective_prefix + (hint + " " if hint else "") + original_prompt
+        corrective_prompt = (
+            corrective_prefix
+            + (hint + " " if hint else "")
+            + GARMENT_PRESERVATION_RULE + " "
+            + original_prompt
+        )
 
-        print(f"[image_verifier] Regenerating {image_type} (attempt {attempt + 2})...")
-        new_path = generate_fn(corrective_prompt, ref_image, image_path)
+        # Escalate to Pro model on the last retry attempt
+        use_pro = (attempt >= max_retries - 1)
+        model_label = "Pro" if use_pro else "Flash"
+        print(f"[image_verifier] Regenerating {image_type} with {model_label} model (attempt {attempt + 2})...")
+
+        new_path = generate_fn(corrective_prompt, ref_image, image_path, use_pro=use_pro)
         if new_path:
             image_path = new_path
 

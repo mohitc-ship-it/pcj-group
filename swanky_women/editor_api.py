@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 import threading
 from pathlib import Path
 from fastapi import FastAPI, Body, Form
@@ -55,7 +56,7 @@ PAGE_TEMPLATE_MAP = {
     "page_5": "product_construction.html",
     "page_6": "measurements.html",
     "page_7": "fabrics_quality_standards.html",
-    "page_8": "size_chart_page.html",
+    "page_8": "reference_image_page.html",
     "page_9": "wash_and_care_label.html",
 }
 
@@ -166,7 +167,9 @@ def normalize_asset_urls(obj):
     elif isinstance(obj, str):
         if "assets/" in obj:
             asset_path = obj[obj.index("assets/"):]
-            return f"http://localhost:8000/{asset_path}"
+            import time
+            timestamp = int(time.time())
+            return f"http://localhost:8000/{asset_path}?t={timestamp}"
         return obj
 
     else:
@@ -377,7 +380,7 @@ def _push_reasoning(job_id: str, step: str, decision: str, reasoning: str, progr
     })
 
 
-def _run_generation_job(job_id: str, image_paths: list, context: str):
+def _run_generation_job(job_id: str, image_paths: list, context: str, sample_size: str):
     """Runs generate_techpack in a background thread, updating job state with reasoning traces."""
     try:
         import sys, os
@@ -391,7 +394,7 @@ def _run_generation_job(job_id: str, image_paths: list, context: str):
         _push_reasoning(job_id, "Starting pipeline...", "", "Initializing AI agents and loading models.", 2)
 
         # Run the actual pipeline (blocking, in background thread)
-        pdf_path = generate_techpack(image_paths, context, True, progress_callback=progress_callback)
+        pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback)
 
         # Clear any stale draft so the frontend editor loads this new generation
         if DRAFT_FILE.exists():
@@ -417,6 +420,7 @@ def _run_generation_job(job_id: str, image_paths: list, context: str):
 async def start_generation(
     images: list[UploadFile] = File(...),
     context: str = Form(...),
+    sample_size: Optional[str] = Form("M"),
 ):
     """
     Accepts 2+ garment images + context, starts generation in background.
@@ -455,7 +459,7 @@ async def start_generation(
     # Start background thread
     thread = threading.Thread(
         target=_run_generation_job,
-        args=(job_id, saved_paths, context),
+        args=(job_id, saved_paths, context, sample_size),
         daemon=True,
     )
     thread.start()
@@ -481,14 +485,23 @@ def get_generation_status(job_id: str):
 
 @app.get("/api/download-pdf")
 def download_pdf():
-    """Serve the generated Tech_Pack.pdf for download."""
-    pdf_path = BASE_DIR / "Tech_Pack.pdf"
-    if not pdf_path.exists():
+    """Serve the generated Tech_Pack.pdf for download, regenerating it first."""
+    from generate import generatePdf
+    
+    # Always regenerate from the latest master.json to capture UI edits & layout fixes
+    pdf_path = generatePdf()
+    
+    if not pdf_path or not Path(pdf_path).exists():
         return JSONResponse({"error": "PDF not found. Generate a tech pack first."}, status_code=404)
     return FileResponse(
         path=str(pdf_path),
         media_type="application/pdf",
         filename="Tech_Pack.pdf",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        }
     )
 
 

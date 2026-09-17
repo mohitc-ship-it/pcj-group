@@ -96,13 +96,17 @@ export default function UploadPage() {
   const [season, setSeason] = useState("")
   const [fabric, setFabric] = useState("")
   const [sizeRange, setSizeRange] = useState("")
+  const [sampleSize, setSampleSize] = useState("")
   const [notes, setNotes] = useState("")
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   function addImage(file) {
-    setImages(prev => [...prev, { file, preview: URL.createObjectURL(file) }])
+    setImages(prev => {
+      if (prev.length >= 2) return prev
+      return [...prev, { file, preview: URL.createObjectURL(file) }]
+    })
   }
 
   function removeImage(index) {
@@ -124,7 +128,7 @@ export default function UploadPage() {
     return lines.join("\n")
   }
 
-  const canGenerate = images.length >= 2 && brand.trim()
+  const canGenerate = images.length === 2 && brand.trim()
 
   async function handleGenerate() {
     if (!canGenerate) return
@@ -132,7 +136,7 @@ export default function UploadPage() {
     setLoading(true)
     try {
       const imageFiles = images.map(img => img.file)
-      const { job_id } = await triggerGeneration(imageFiles, buildContext())
+      const { job_id } = await triggerGeneration(imageFiles, buildContext(), sampleSize)
       navigate(`/generating?job_id=${job_id}`)
     } catch (err) {
       setError(err.message || "Failed to start generation. Is the backend running?")
@@ -172,7 +176,7 @@ export default function UploadPage() {
             </div>
             <h1 className="text-4xl font-bold tracking-tight mb-3">Upload Your Garment</h1>
             <p className="text-white/40 text-base max-w-lg mx-auto leading-relaxed">
-              Upload garment photos (minimum 2 — front and back). Add detail shots, close-ups, or swatches for richer output.
+              Upload exactly 2 garment photos (Front and Back).
             </p>
           </div>
 
@@ -190,7 +194,7 @@ export default function UploadPage() {
                 {images.length > 0 && (
                   <div className={`text-xs px-3 py-1 rounded-full border font-semibold
                     ${images.length >= 2 ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"}`}>
-                    {images.length} image{images.length !== 1 ? "s" : ""} {images.length >= 2 ? "✓" : "— need 2+"}
+                    {images.length} / 2 images {images.length === 2 ? "✓" : ""}
                   </div>
                 )}
               </div>
@@ -221,12 +225,7 @@ export default function UploadPage() {
                   <div className="flex items-center gap-4 mt-5">
                     <div className="flex items-center gap-1.5 text-white/25 text-xs">
                       <ImageIcon className="w-3.5 h-3.5" />
-                      Minimum 2 images
-                    </div>
-                    <div className="w-px h-4 bg-white/10" />
-                    <div className="flex items-center gap-1.5 text-white/25 text-xs">
-                      <Plus className="w-3.5 h-3.5" />
-                      More = better output
+                      Exactly 2 images (Front and Back)
                     </div>
                   </div>
                 </div>
@@ -243,8 +242,8 @@ export default function UploadPage() {
                       index={i}
                     />
                   ))}
-                  {/* Always show an "Add image" card */}
-                  <AddImageCard onFile={addImage} />
+                  {/* Show "Add image" card if under 2 */}
+                  {images.length < 2 && <AddImageCard onFile={addImage} />}
                 </div>
               )}
 
@@ -252,7 +251,7 @@ export default function UploadPage() {
               {images.length > 0 && (
                 <div className="bg-white/[0.03] border border-white/6 rounded-xl px-4 py-3">
                   <p className="text-white/40 text-xs leading-relaxed">
-                    <span className="text-white/60 font-semibold">Image order matters.</span> First image is used as the front view, second as the back. Any additional images become detail close-ups on Page 2.
+                    <span className="text-white/60 font-semibold">Image order matters.</span> First image is used as the front view, second as the back.
                   </p>
                 </div>
               )}
@@ -272,7 +271,10 @@ export default function UploadPage() {
                   <FormField id="season" label="Season" value={season} onChange={setSeason} placeholder="e.g. FW25" />
                 </div>
                 <FormField id="fabric" label="Fabric Preference" value={fabric} onChange={setFabric} placeholder="e.g. Wool blend / Gabardine" />
-                <FormField id="sizeRange" label="Size Range" value={sizeRange} onChange={setSizeRange} placeholder="e.g. XS – XL" />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField id="sizeRange" label="Size Range" value={sizeRange} onChange={setSizeRange} placeholder="e.g. XS – XL" />
+                  <FormField id="sampleSize" label="Sample Size" value={sampleSize} onChange={setSampleSize} placeholder="e.g. M" />
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="notes" className="text-xs font-semibold text-white/60 uppercase tracking-widest">Additional Notes</label>
                   <textarea
@@ -315,8 +317,8 @@ export default function UploadPage() {
                   <>
                     <Sparkles className="w-5 h-5" />
                     Generate Tech Pack
-                    {images.length >= 2 && (
-                      <span className="text-white/50 text-sm font-normal">({images.length} images)</span>
+                    {images.length === 2 && (
+                      <span className="text-white/50 text-sm font-normal">(2/2 images)</span>
                     )}
                     <ChevronRight className="w-5 h-5 opacity-60" />
                   </>

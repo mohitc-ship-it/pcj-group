@@ -9,7 +9,9 @@ from typing import Optional
 load_dotenv()
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
-IMAGE_MODEL = "google/gemini-3-pro-image"  # Nano Banana Pro
+IMAGE_MODEL_FLASH = "google/gemini-3.1-flash-image"  # Gemini 3.1 Flash Image — fast + cheap, first attempt
+IMAGE_MODEL_PRO   = "google/gemini-3-pro-image"       # Gemini 3 Pro Image — high quality, used on final retry
+IMAGE_MODEL = IMAGE_MODEL_FLASH  # Default (backwards compat)
 
 
 def _image_to_base64_url(image_path: str) -> str:
@@ -39,11 +41,15 @@ def _extract_and_save_image(data_url: str, output_filename: str) -> Optional[str
 def generate_image(
     prompt: str,
     image_path: Optional[str] = None,
-    output_filename: str = "generated_image.png"
+    output_filename: str = "generated_image.png",
+    use_pro: bool = False,
 ) -> Optional[str]:
     """
-    Generates image from text prompt or edits input image using Nano Banana Pro via OpenRouter.
+    Generates image from text prompt or edits input image.
+    - use_pro=False → uses gemini-flash-image (fast, cheap, first attempt)
+    - use_pro=True  → uses gemini-3-pro-image (high quality, used on retry)
     """
+    model = IMAGE_MODEL_PRO if use_pro else IMAGE_MODEL_FLASH
     try:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
@@ -68,7 +74,7 @@ def generate_image(
                 "Content-Type": "application/json",
             },
             json={
-                "model": IMAGE_MODEL,
+                "model": model,
                 "messages": [{"role": "user", "content": content}]
             },
             timeout=180

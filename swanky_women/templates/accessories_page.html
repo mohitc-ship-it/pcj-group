@@ -17,12 +17,11 @@
         }
 
         .page-container {
-            width: 1200px;
-            height: 750px;
-            margin: 20px;
+            width: 100%;
+            border-collapse: collapse;
             border: 3px solid #000;
-            overflow: hidden;
             background: #fff;
+            margin: 0;
         }
 
         /* HEADER TABLE LAYOUT */
@@ -167,7 +166,7 @@
 
 <body>
 
-<div class="page-container">
+<table class="page-container"><thead><tr><td style="padding:0;">
 
     <!-- ================= HEADER TABLE ================= -->
     <table class="header-table">
@@ -182,7 +181,7 @@
 
             <td class="header-center">
                 <div class="header-title-container">
-                    <h1>Accessories</h1>
+                    <h1>ACCESSORIES</h1>
                 </div>
                 <div class="category">{{ header.category }}</div>
             </td>
@@ -203,12 +202,19 @@
                     </tr>
                 </table>
 
+
                 <div class="info-row">Sample Size 1st-Approval: {{ header.sample_size_1st or '' }}</div>
                 <div class="info-row">Sample Size Pre-Production: {{ header.sample_pre_production or '' }}</div>
                 <div class="info-row">Sample Size Production Sample: {{ header.sample_production or '' }}</div>
             </td>
         </tr>
     </table>
+            </td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="vertical-align: top;">
 
     <!-- ================= TABLE ================= -->
 
@@ -216,9 +222,9 @@
         <thead>
         <tr>
             <th style="width: 40px;"></th>
-            <th>Description (Name, Type, Dimensions, Material)</th>
+            <th>Description (name, type, dimensions, material)</th>
             <th style="width: 140px;">Quantity per style</th>
-            <th style="width: 140px;">Color (Pantone)</th>
+            <th style="width: 140px;">Color</th>
             <th style="width: 180px;">Position</th>
         </tr>
         </thead>
@@ -228,7 +234,7 @@
             <tr>
                 <td>{{ loop.index }}.</td>
                 <td>{{ row.description }}</td>
-                <td>{{ row.qty }}</td>
+                <td>{{ row.quantity_per_style }}</td>
                 <td>{{ row.color }}</td>
                 <td>{{ row.position }}</td>
             </tr>
@@ -236,7 +242,7 @@
         </tbody>
     </table>
 
-</div>
+</td></tr></tbody></table>
 
 </body>
 </html>

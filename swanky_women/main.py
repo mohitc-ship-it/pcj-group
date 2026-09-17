@@ -113,66 +113,20 @@ EXTRACTED COLOR PALETTE (from garment pixels)
 YOUR TASK
 ────────────────────────────────────────────
 
-You must determine:
+You must determine ALL prominent colors on the garment:
 
-1. The **single main garment color**
-   - The color that covers the **largest surface area** of the garment
-   - Ignore:
-     • Shadows
-     • Highlights
-     • Texture variations
-     • Lighting bias
-     • Folds and wrinkles
-
-2. The **best matching Pantone TCX** for that color
-   - TCX = textile (fabric) system
-   - This is an **approximation**, not a guarantee
-
-────────────────────────────────────────────
-COLOR SELECTION RULES
-────────────────────────────────────────────
-
-You must choose the color that:
-• Is present on the majority of the garment
-• Matches the extracted palette
-• Is NOT background
-• Is NOT a shadow
-• Is NOT a trim or small detail
-
-If two colors are close:
-→ Pick the more neutral, dominant, mid-tone one
-
-────────────────────────────────────────────
-PANTONE RULES
-────────────────────────────────────────────
-
-You must:
-• Provide a Pantone TCX code (e.g., 19-4052 TCX)
-• Mark it as **SUGGESTED**
-• Base it on visual proximity to the HEX value
-• Never claim it is exact
-
-You must NOT:
-• Use Pantone Solid Coated (PMS)
-• Use Pantone C/U
-• Guarantee accuracy
+1. The **Primary Garment Color** (Main Fabric)
+   - The color that covers the **largest surface area** of the garment.
+   
+2. Any **Secondary / Trim Colors** (e.g., Piping, Contrast Collar, Buttons, Placket trim)
+   - Colors used for specific details.
+   - Ignore shadows, highlights, and lighting bias.
 
 ────────────────────────────────────────────
 OUTPUT
 ────────────────────────────────────────────
 
-Return List of **GarmentColorModel** in JSON with:
-
-• color_name  
-• hex  
-• pantone_tcx  
-• confidence (0–1)  
-• justification  
-• pantone_accuracy_note = "Suggested – visual approximation only"
-
-showcasing top 5-8 possible pantone colors (most nearest for manufacturer's understanding)
-
-If confidence < 0.7 → requires_confirmation = true
+Return a JSON list of **GarmentColorModel** containing only the actually present primary and secondary colors. Do not output 5-8 variations of the same color. Only output distinct functional colors (e.g., 1 main color, 1 trim color).
 """""
 
     print(f"[DEBUG] extract_garment_color: palette length={len(palette) if hasattr(palette,'__len__') else 'N/A'}")
@@ -1148,26 +1102,29 @@ REFERENCE EXAMPLE (Women's Asymmetrical Dress):
 SECTION 3 — MEASUREMENTS
 ────────────────────────────────────────────
 
-Use REAL US Women's size S values for the garment category.
-These must be HALF-BODY measurements (not full circumference) for chest, waist, hip.
+You MUST generate a FULL GRADED SIZE SCALE. Output one separate Measurement object for EACH size: S, M, L, XL.
+Do NOT output only one size. All 4 sizes are REQUIRED.
 
-CRITICAL MEASUREMENT REFERENCE (US Women's Size S):
-- Dress/Top: Chest=84cm, Waist=68cm, Hips=92cm, Shoulder-to-Shoulder=37cm
-- Jacket/Outerwear: Chest=88-92cm, Waist=72-76cm, Shoulder=38-40cm
-- Body Length: Dress maxi=130-140cm, Dress midi=100-115cm, Jacket hip-length=58-65cm
+All measurements are FULL CIRCUMFERENCE (NOT half-body) in INCHES.
 
-Tolerances must use ± format with SPECIFIC values:
-- Circumferences: ±1.27 cm
-- Lengths: ±0.64 to ±0.67 cm
-- Sleeve: ±0.27 cm
-- Width measurements: ±0.64 cm
+CRITICAL GRADED REFERENCE — US Women's Jacket/Outerwear (all values in inches):
+
+| Size  | Bust      | Waist     | Hip       | Shoulder Width | Sleeve Length | Jacket Length |
+|-------|-----------|-----------|-----------|----------------|---------------|---------------|
+| S     | 35 - 36   | 27 - 28   | 37 - 38   | 14 - 14.5      | 24 - 24.5     | 21 - 22       |
+| M     | 37 - 38   | 29 - 30   | 39 - 40   | 14.5 - 15      | 24.5 - 25     | 22 - 23       |
+| L     | 39.5 - 41 | 31.5 - 33 | 41.5 - 43 | 15 - 15.5      | 25 - 25.5     | 23 - 24       |
+| XL    | 43.5 - 45 | 35.5 - 37 | 45 - 47   | 15.5 - 16      | 25.5 - 26     | 24 - 25       |
+
+Use these exact values as your base. Only adjust slightly if the garment image clearly shows an oversized, cropped, or structured fit.
+
+TOLERANCE FORMAT — Use ± range format (already built into the range values above). Do NOT add separate tolerance values.
 
 Include garment-specific POMs:
-- Dresses: include Slit Length if slit exists, Dress Length (front AND back if asymmetric)
 - Jackets: include Across Shoulder, Pocket Opening Width
-- All: Chest, Waist, Hips, Sleeve Length, Armhole Depth
+- All: Bust, Waist, Hip, Sleeve Length, Jacket Length
 
-Each measurement MUST have a UNIQUE justification — do NOT use the same justification for all.
+Each measurement MUST have a UNIQUE justification — do NOT use the same justification for all sizes.
 
 ────────────────────────────────────────────
 SECTION 4 — ACCESSORIES
@@ -1185,6 +1142,12 @@ CONDITIONAL items (only if visible in image or structure):
 - Buttons — specify exact count matching what is VISIBLE in image
 - Interlining/Fusible — if structured collar/cuffs exist
 - Decorative trim — only if visible
+
+CRITICAL FORMATTING RULE FOR ACCESSORY DESCRIPTIONS:
+Descriptions MUST be extremely short, concise, and typically just one line. Do NOT write long paragraphs or excessive details. 
+Example 1: "BUTTONS, ENGRAVED LOGO DESIGN, GOLD TONE, 4 TOTAL ON POCKETS, 14mm"
+Example 2: "TEXTURED PRINT CHAIN TRIMMED ON JACKET, ON NECKLINE, AROUND POCKETS OUTLINES, HEM LINE, ON CUFFS"
+Example 3: "THREAD, POLYESTER"
 
 Count accessories by CAREFULLY examining the images. If 4 buttons visible, say 4, NOT 5 or 6.
 
@@ -1318,7 +1281,7 @@ OUTPUT:
 # Each measurement must include:
 # • POM code (A, B, C, etc)
 # • Name (Bust, Waist, Length, Sleeve, etc)
-# • Value
+# • Value MUST BE A RANGE (e.g., 30" - 31") incorporating the tolerance. Do NOT provide a single number. All measurement attributes must be given as a range.
 # • Tolerance
 # • Justification
 
@@ -1450,13 +1413,14 @@ ACCESSORIES LIST FROM AI (may contain errors):\n{accessories_summary}
 
 YOUR TASK:
 1. Look carefully at the garment in the images
-2. REMOVE any accessories from the list that are clearly NOT visible on this garment (hallucinations)
+2. REMOVE accessories ONLY if they are clearly NOT visible and NOT structurally necessary (e.g., hallucinated zippers on a simple t-shirt).
+   - CRITICAL: Do NOT remove buttons if there is a placket, cuff, or closure that requires them, even if small.
 3. ADD any obvious accessories that ARE clearly visible but were missed
-4. KEEP all accessories that are genuinely present
+4. KEEP all accessories that are genuinely present or mandatory (like labels and thread)
 
 Return ONLY valid JSON — a list of objects with these exact fields:
 [
-  {{"description": "...", "qty": "...", "color": "...", "position": "..."}}
+  {{"description": "...", "quantity_per_style": "...", "color": "...", "position": "...", "justification": "..."}}
 ]"""
 
     try:
@@ -1482,7 +1446,7 @@ Return ONLY valid JSON — a list of objects with these exact fields:
 # MAIN PIPELINE
 # =========================================================
 
-def generate_techpack(images, context, generate=False, progress_callback=None):
+def generate_techpack(images, context, generate=False, sample_size="M", progress_callback=None):
     def _report(step, decision, reasoning, progress):
         print(f"[AGENT] {step} → {decision}")
         if progress_callback:
@@ -1502,13 +1466,17 @@ def generate_techpack(images, context, generate=False, progress_callback=None):
     header_prompt = f"""
     Generate FACTORY tech pack header.
     
-    Logic for style name generation : [Brand/Collection] – [Season] – [Year] – [Garment Type]
-    Example of style_name: JCC-S-FA25-DRS
+    Logic for style name generation : [Brand/Collection]-[Brand Initial]-[Season1]/[Season2][Year]-[Garment Type]
+    CRITICAL RULE: If the season is Fall/Winter, format it with a slash as FA/WI. If Spring/Summer, format as SP/SU.
+    CRITICAL RULE: The Brand/Collection abbreviation uses the FIRST LETTER of EACH WORD in order. 
+    Example: "JC Private Collection" → J(JC) + P(Private) + C(Collection) = JPC. NOT JCP.
+    Example of style_name: JPC-D-FA/WI25-BLO
     
     Inputs:
     {context}
     
     Date: {datetime.datetime.now().strftime("%d/%m/%Y")}
+    Sample Size: {sample_size} (You MUST set sample_size_1st exactly to this value)
 
     description should be one liner
     such as "women's asymmetric dress"
@@ -1747,17 +1715,17 @@ Do not invent details. Only label what is explicitly provided.
 """
 
     if generate:
-        generate_image(technical_sketch_prompt, "assets/combined.png", "assets/technical_sketch.png")
+        generate_image(technical_sketch_prompt, "assets/combined.png", "assets/technical_sketch.png", use_pro=False)
         sketch_path, sketch_log = verify_and_regenerate(
             image_path="assets/technical_sketch.png",
             image_type="technical_sketch",
             original_prompt=technical_sketch_prompt,
-            generate_fn=generate_image,
+            generate_fn=lambda p, ref, out, use_pro=False: generate_image(p, ref, out, use_pro=use_pro),
             ref_image="assets/combined.png",
         )
         master["page_3"]["technical_sketch_img"] = sketch_path
         sketch_result = sketch_log[-1]
-        _report("Sketch Verification", f"{'✅ Passed' if sketch_result['valid'] else '⚠️ Regenerated'}", str(sketch_result.get('issues', [])), 85)
+        _report("Sketch Verification", f"{'✅ Passed' if sketch_result['valid'] else '⚠️ Regenerated'}", sketch_result.get('thinking', ''), 85)
     else:
         master['page_3']['technical_sketch_img'] = "assets/technical_sketch.png"
 
@@ -1771,17 +1739,17 @@ Do not invent details. Only label what is explicitly provided.
     """
 
     if generate:
-        generate_image(brand_label_prompt, "assets/brand_label.png", "assets/brand_label_final.png")
+        generate_image(brand_label_prompt, "assets/brand_label.png", "assets/brand_label_final.png", use_pro=False)
         brand_path, brand_log = verify_and_regenerate(
             image_path="assets/brand_label_final.png",
             image_type="brand_label",
             original_prompt=brand_label_prompt,
-            generate_fn=generate_image,
+            generate_fn=lambda p, ref, out, use_pro=False: generate_image(p, ref, out, use_pro=use_pro),
             ref_image="assets/brand_label.png",
         )
         master["page_3"]["brand_label_img"] = brand_path
         brand_result = brand_log[-1]
-        _report("Brand Label Verification", f"{'✅ Passed' if brand_result['valid'] else '⚠️ Regenerated'}", str(brand_result.get('issues', [])), 87)
+        _report("Brand Label Verification", f"{'✅ Passed' if brand_result['valid'] else '⚠️ Regenerated'}", brand_result.get('thinking', ''), 87)
     else:
         print("going in else for brand label")
         master['page_3']['brand_label_img'] = "assets/brand_label_final.png"
@@ -1791,17 +1759,17 @@ Do not invent details. Only label what is explicitly provided.
             and dress description as {page2_details}"""
 
     if generate:
-        generate_image(care_label_prompt, "assets/care_label.png", "assets/care_label_final.png")
+        generate_image(care_label_prompt, "assets/care_label.png", "assets/care_label_final.png", use_pro=False)
         care_path, care_log = verify_and_regenerate(
             image_path="assets/care_label_final.png",
             image_type="care_label",
             original_prompt=care_label_prompt,
-            generate_fn=generate_image,
+            generate_fn=lambda p, ref, out, use_pro=False: generate_image(p, ref, out, use_pro=use_pro),
             ref_image="assets/care_label.png",
         )
         master["page_3"]["care_label_img"] = care_path
         care_result = care_log[-1]
-        _report("Care Label Verification", f"{'✅ Passed' if care_result['valid'] else '⚠️ Regenerated'}", str(care_result.get('issues', [])), 89)
+        _report("Care Label Verification", f"{'✅ Passed' if care_result['valid'] else '⚠️ Regenerated'}", care_result.get('thinking', ''), 89)
     else:
         print("going in else for care label")
         master['page_3']['care_label_img'] = "assets/care_label_final.png"
@@ -1828,17 +1796,17 @@ Do not invent details. Only label what is explicitly provided.
     {master['page_6']['measurements']}"""
 
     if generate:
-        generate_image(measurement_diagram, combined_image, "assets/measurement_diagram.png")
+        generate_image(measurement_diagram, combined_image, "assets/measurement_diagram.png", use_pro=False)
         meas_path, meas_log = verify_and_regenerate(
             image_path="assets/measurement_diagram.png",
             image_type="measurement_diagram",
             original_prompt=measurement_diagram,
-            generate_fn=generate_image,
+            generate_fn=lambda p, ref, out, use_pro=False: generate_image(p, ref, out, use_pro=use_pro),
             ref_image=combined_image,
         )
         master["page_6"]["measurement_image_url"] = meas_path
         meas_result = meas_log[-1]
-        _report("Measurement Diagram Verification", f"{'✅ Passed' if meas_result['valid'] else '⚠️ Regenerated'}", str(meas_result.get('issues', [])), 91)
+        _report("Measurement Diagram Verification", f"{'✅ Passed' if meas_result['valid'] else '⚠️ Regenerated'}", meas_result.get('thinking', ''), 91)
     else:
         master['page_6']['measurement_image_url'] = "assets/measurement_diagram.png"
 
@@ -2109,6 +2077,10 @@ Do not invent details. Only label what is explicitly provided.
     """,
         SizeChartList, enable_thinking=True)
     master["page_8"]["size_chart"] = _obj.model_dump().get("size_chart", [])
+    if len(original_input_images) > 0:
+        master["page_8"]["reference_image_front"] = original_input_images[0]
+    if len(original_input_images) > 1:
+        master["page_8"]["reference_image_back"] = original_input_images[1]
 
     
     # Page 9 Care

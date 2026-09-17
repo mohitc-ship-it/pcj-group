@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <title>Swanky Tech Pack - 3D CAD</title>
+    <title>Swanky Tech Pack - Reference Image</title>
 
     <style>
         @page {
@@ -139,9 +138,8 @@
         /* SKETCH AREA */
         .sketch-container {
             width: 100%;
-            height: 270px;
-            border-bottom: 2px solid #000;
-            padding: 5px;
+            height: 610px;
+            padding: 10px;
         }
 
         .sketch-table {
@@ -158,110 +156,13 @@
             padding: 4px;
         }
 
-        .sketch-label {
-            font-size: 12px;
-            margin-bottom: 2px;
-            display: block;
-        }
-
         .sketch-img {
-            max-height: 210px;
+            max-height: 580px;
             max-width: 95%;
             object-fit: contain;
             display: inline-block;
         }
 
-        /* BOTTOM PRODUCT SECTION */
-        .product-table {
-            width: 100%;
-            height: 275px;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        .gallery-td {
-            width: 48%;
-            padding: 12px;
-            border-right: 1.5px solid #000;
-            vertical-align: top;
-        }
-
-        .info-td {
-            width: 52%;
-            padding: 12px;
-            vertical-align: top;
-        }
-
-        .gallery-td h3, .info-section-title {
-            margin-top: 0;
-            text-transform: uppercase;
-            font-size: 13px;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-        }
-
-        .thumbnail-table {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        .thumbnail-table td {
-            width: 25%;
-            padding: 3px;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .thumbnail-table img {
-            width: 100%;
-            height: 110px;
-            border: 1px solid #ddd;
-            object-fit: contain;
-            background-color: #fff;
-            display: block;
-        }
-
-        .info-inner-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        .color-col {
-            width: 32%;
-            padding-right: 15px;
-            vertical-align: top;
-        }
-
-        .details-col {
-            width: 68%;
-            vertical-align: top;
-            font-size: 11px;
-            line-height: 1.35;
-        }
-
-        .color-swatch {
-            border: 1px solid #000;
-            height: 65px;
-            width: 100%;
-            margin-bottom: 5px;
-        }
-
-        .pantone-label {
-            border: 1px solid #000;
-            padding: 5px;
-            font-size: 11px;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        .details-text {
-            white-space: pre-line;
-            font-size: 11px;
-            line-height: 1.35;
-        }
     </style>
 </head>
 
@@ -282,7 +183,7 @@
 
                 <td class="header-center">
                     <div class="header-title-container">
-                        <h1>3D CAD DESIGN</h1>
+                        <h1>REFERENCE IMAGE</h1>
                     </div>
                     <div class="category">{{ header.category }}</div>
                 </td>
@@ -316,53 +217,20 @@
             <table class="sketch-table">
                 <tr>
                     <td class="sketch-td">
-                        <span class="sketch-label">Front:</span>
-                        <img src="{{page_2.front_image_url}}" class="sketch-img" alt="Front View">
+                        {% if page_8.reference_image_front %}
+                        <img src="{{page_8.reference_image_front}}" class="sketch-img" alt="Front View">
+                        {% endif %}
                     </td>
                     <td class="sketch-td">
-                        <span class="sketch-label">Back:</span>
-                        <img src="{{page_2.back_image_url}}" class="sketch-img" alt="Back View">
+                        {% if page_8.reference_image_back %}
+                        <img src="{{page_8.reference_image_back}}" class="sketch-img" alt="Back View">
+                        {% endif %}
                     </td>
                 </tr>
             </table>
         </div>
 
-        <!-- ================= BOTTOM PRODUCT SECTION ================= -->
-        <table class="product-table">
-            <tr>
-                <td class="gallery-td">
-                    <h3>DETAILS</h3>
-                    <table class="thumbnail-table">
-                        <tr>
-                            {% if page_2.detail_image_1_url %}<td><img src="{{ page_2.detail_image_1_url }}" alt="Detail 1"></td>{% endif %}
-                            {% if page_2.detail_image_2_url %}<td><img src="{{ page_2.detail_image_2_url }}" alt="Detail 2"></td>{% endif %}
-                            {% if page_2.detail_image_3_url %}<td><img src="{{ page_2.detail_image_3_url }}" alt="Detail 3"></td>{% endif %}
-                            {% if page_2.detail_image_4_url %}<td><img src="{{ page_2.detail_image_4_url }}" alt="Detail 4"></td>{% endif %}
-                        </tr>
-                    </table>
-                </td>
-
-                <td class="info-td">
-                    <table class="info-inner-table">
-                        <tr>
-                            <td class="color-col">
-                                <div class="info-section-title">COLORS</div>
-                                <div class="color-swatch" style="background-color: {{ page_2.color_hex }}"></div>
-                                <div class="pantone-label">PANTONE@<br>{{ page_2.pantone_tcx }}</div>
-                            </td>
-
-                            <td class="details-col">
-                                <div class="info-section-title">DETAILS</div>
-                                <div class="details-text">{{ page_2.details }}</div>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-
     </div>
 
 </body>
-
 </html>

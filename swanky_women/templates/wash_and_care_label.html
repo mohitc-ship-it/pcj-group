@@ -23,12 +23,11 @@
         }
 
         .page-container {
-            width: 1200px;
-            height: 750px;
-            margin: 20px;
+            width: 100%;
+            border-collapse: collapse;
             border: 3px solid #000;
-            overflow: hidden;
             background: #fff;
+            margin: 0;
         }
 
         /* HEADER TABLE LAYOUT */
@@ -215,7 +214,7 @@
 
 <body>
 
-    <div class="page-container">
+    <table class="page-container"><thead><tr><td style="padding:0;">
 
         <!-- ================= HEADER TABLE ================= -->
         <table class="header-table">
@@ -250,6 +249,7 @@
                             </td>
                         </tr>
                     </table>
+
 
                     <div class="info-row">Sample Size 1st-Approval: {{ header.sample_size_1st or '' }}</div>
                     <div class="info-row">Sample Size Pre-Production: {{ header.sample_pre_production or '' }}</div>
@@ -318,7 +318,7 @@
 
         </div>
 
-    </div>
+    </td></tr></tbody></table>
 
 </body>
 

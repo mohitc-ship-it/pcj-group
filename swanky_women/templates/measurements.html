@@ -17,12 +17,11 @@
         }
 
         .page-container {
-            width: 1200px;
-            height: 750px;
-            margin: 20px;
+            width: 100%;
+            border-collapse: collapse;
             border: 3px solid #000;
-            overflow: hidden;
             background: #fff;
+            margin: 0;
         }
 
         /* HEADER TABLE LAYOUT */
@@ -181,7 +180,7 @@
 
 <body>
 
-<div class="page-container">
+<table class="page-container"><thead><tr><td style="padding:0;">
 
     <!-- ================= HEADER TABLE ================= -->
     <table class="header-table">
@@ -217,43 +216,50 @@
                     </tr>
                 </table>
 
+
                 <div class="info-row">Sample Size 1st-Approval: {{ header.sample_size_1st or '' }}</div>
                 <div class="info-row">Sample Size Pre-Production: {{ header.sample_pre_production or '' }}</div>
                 <div class="info-row">Sample Size Production Sample: {{ header.sample_production or '' }}</div>
             </td>
         </tr>
     </table>
+            </td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="vertical-align: top;">
 
-    <div class="two-image-section">
-        <img src="{{ page_6.measurement_image_url }}" alt="Measurement Image">
-    </div>
-
-    <div style="width: 100%; padding: 10px 30px 10px 30px;">
+    <div style="width: 100%; padding: 40px 30px;">
         <table class="seam-table">
             <thead>
                 <tr>
-                    <th>Point of Measurement</th>
-                    <th>Code</th>
-                    <th>Description</th>
-                    <th>Measurement</th>
-                    <th>Tolerance (cm)</th>
+                    <th>Size</th>
+                    <th>Bust</th>
+                    <th>Waist</th>
+                    <th>Hip</th>
+                    <th>Shoulder</th>
+                    <th>Sleeve Length</th>
+                    <th>Dress Length</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in page_6.measurements %}
                 <tr>
-                    <td class="text-center">{{ item.point_of_measurement }}</td>
-                    <td class="text-center">{{ item.code }}</td>
-                    <td class="text-center">{{ item.description }}</td>
-                    <td class="text-center">{{ item.measurement_cm }}</td>
-                    <td class="text-center">{{ item.tolerance_cm }}</td>
+                    <td class="text-center">{{ item.size }}</td>
+                    <td class="text-center">{{ item.bust or '' }}</td>
+                    <td class="text-center">{{ item.waist or '' }}</td>
+                    <td class="text-center">{{ item.hip or '' }}</td>
+                    <td class="text-center">{{ item.shoulder or '' }}</td>
+                    <td class="text-center">{{ item.sleeve_length or '' }}</td>
+                    <td class="text-center">{{ item.dress_length or '' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-</div>
+</td></tr></tbody></table>
 
 </body>
 </html>

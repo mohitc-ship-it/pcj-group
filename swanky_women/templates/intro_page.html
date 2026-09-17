@@ -35,17 +35,21 @@
         /* Image Placements */
         .garment-back {
             position: absolute;
-            top: 10px;
-            left: 120px;
-            width: 380px;
+            top: 50px;
+            left: 450px;
+            width: 320px;
+            max-height: 700px;
+            object-fit: contain;
             z-index: 1;
         }
 
         .garment-front {
             position: absolute;
-            bottom: 0px;
-            left: 380px;
-            width: 380px;
+            bottom: 20px;
+            left: 50px;
+            width: 350px;
+            max-height: 700px;
+            object-fit: contain;
             z-index: 2;
         }
 
@@ -122,9 +126,9 @@
         </div>
     </div>
 
-    <div class="brand-branding">
-        <img src="{{page_1.brand_logo}}" style="width: 250px; position: absolute; left: 450px; bottom: 20px;" alt="logo" >
-        <!-- <img style="width: 250px; position: absolute; left: 450px; bottom: 20px;" src="../assets/brand_logo.png" alt="Logo" > -->
+    <div class="brand-branding" style="position: absolute; right: 50px; bottom: 50px; text-align: right;">
+        <div class="logo-main" style="font-family: Arial, sans-serif; font-weight: normal; font-size: 60px; letter-spacing: 2px;">{{ page_1.brand_name | upper }}</div>
+        <div class="logo-subtext" style="font-weight: normal; font-size: 14px; margin-top: -5px;">By {{ page_1.collection_name }}</div>
     </div>
 
 </div>

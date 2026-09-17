@@ -105,7 +105,7 @@ def generatePdf():
         ("product_construction.html", "page_5.pdf"),
         ("measurements.html", "page_6.pdf"),
         ("fabrics_quality_standards.html", "page_7.pdf"),
-        ("size_chart_page.html", "page_8.pdf"),
+        ("reference_image_page.html", "page_8.pdf"),
         ("wash_and_care_label.html", "page_9.pdf"),
     ]
 
@@ -145,9 +145,9 @@ def generatePdf():
 
     for pdf_path in generated_pdfs:
         reader = PdfReader(str(pdf_path))
-        # Only take the first page — overflow pages are unwanted spillover
-        if reader.pages:
-            writer.add_page(reader.pages[0])
+        # Include all pages so large tables can paginate correctly
+        for page in reader.pages:
+            writer.add_page(page)
 
     final_pdf_path = BASE_DIR / "Tech_Pack.pdf"
 

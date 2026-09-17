@@ -102,11 +102,16 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
             kwargs = dict(
                 model=model,
                 max_tokens=16384 if not enable_thinking else 20000,
-                messages=[{"role": "user", "content": structured_prompt}]
+                messages=[
+                    {"role": "user", "content": structured_prompt},
+                    # JSON prefill — forces model to start output with `{` (Anthropic JSON prompting best practice)
+                    {"role": "assistant", "content": "{"},
+                ],
             )
             if enable_thinking:
                 kwargs["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
-                # (betas handled by SDK automatically or omitted)
+                # Cannot use prefill with extended thinking — remove assistant prefill
+                kwargs["messages"] = [{"role": "user", "content": structured_prompt}]
 
             response = client.messages.create(**kwargs)
 
@@ -115,6 +120,9 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                 raw_text = _extract_text(response).strip()
             else:
                 raw_text = response.content[0].text.strip()
+                # Restore the `{` that was used as a prefill token
+                if not raw_text.startswith("{") and not raw_text.startswith("["):
+                    raw_text = "{" + raw_text
 
             # Clean up potential markdown wrapping
             if raw_text.startswith("```"):
