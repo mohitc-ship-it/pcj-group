@@ -77,9 +77,13 @@
         .category {
             border-top: 1px solid #000;
             text-align: center;
-            padding: 5px;
-            font-size: 13px;
+            padding: 4px;
+            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
             height: 26px;
+            line-height: 18px;
         }
 
         .brand-row-table {
@@ -184,11 +188,8 @@
 
         .label-img-wrapper {
             width: 100%;
-            min-height: 65px;
             height: auto;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
+            display: block;
             background: #fff;
             margin-bottom: 8px;
         }
@@ -208,33 +209,26 @@
         }
 
         .size_card {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 20px;
+            display: block;
+            width: 60px;
+            height: 52px;
+            line-height: 52px;
             background: #fff;
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
             text-align: center;
             font-family: Arial, Helvetica, sans-serif;
-            min-width: 50px;
-            height: 50px;
         }
 
         .brand_card {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            display: block;
             width: 160px;
-            height: 65px;
             background: #fff;
             border: 2px solid #222;
             border-radius: 2px;
             text-align: center;
-            padding: 6px 10px;
+            padding: 8px 6px;
             font-family: Arial, Helvetica, sans-serif;
             box-shadow: 0 1px 4px rgba(0,0,0,0.12);
         }
@@ -263,12 +257,8 @@
         }
 
         .care_card {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
+            display: block;
             width: 180px;
-            min-height: 80px;
             background: #fff;
             border: 2px solid #222;
             border-top: 6px solid #222;
@@ -282,10 +272,8 @@
         
         .care_card .care-icons {
             font-size: 16px;
-            margin-bottom: 5px;
-            display: flex;
-            gap: 4px;
-            justify-content: center;
+            margin-bottom: 4px;
+            text-align: center;
         }
         
         .care_card .care-instructions {
@@ -298,11 +286,13 @@
         }
         
         .care_card .care-composition {
-            font-size: 6.5px;
+            font-size: 6px;
             color: #333;
-            margin-top: 4px;
-            line-height: 1.4;
+            margin-top: 3px;
+            line-height: 1.2;
             text-align: center;
+            max-height: 32px;
+            overflow: hidden;
         }
         
         .care_card .care-origin {
@@ -420,8 +410,8 @@
                                 {% endif %}
                             </div>
                             <div class="care-composition">
-                                {% if page_9 and page_9.wash_label %}
-                                    {{ page_9.wash_label.composition }}
+                                {% if page_9 and page_9.wash_label and page_9.wash_label.composition %}
+                                    {{ page_9.wash_label.composition | replace('\n', ' ') }}
                                 {% else %}
                                     100% Polyester
                                 {% endif %}

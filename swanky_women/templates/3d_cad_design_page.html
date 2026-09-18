@@ -78,9 +78,13 @@
         .category {
             border-top: 1px solid #000;
             text-align: center;
-            padding: 5px;
-            font-size: 13px;
+            padding: 4px;
+            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
             height: 26px;
+            line-height: 18px;
         }
 
         .brand-row-table {
@@ -208,8 +212,7 @@
         }
 
         .thumbnail-table td {
-            width: 25%;
-            padding: 3px;
+            padding: 2px;
             text-align: center;
             vertical-align: middle;
         }
@@ -334,10 +337,18 @@
                     <h3>DETAILS</h3>
                     <table class="thumbnail-table">
                         <tr>
-                            {% if page_2.detail_image_1_url %}<td><img src="{{ page_2.detail_image_1_url }}" alt="Detail 1"></td>{% endif %}
-                            {% if page_2.detail_image_2_url %}<td><img src="{{ page_2.detail_image_2_url }}" alt="Detail 2"></td>{% endif %}
-                            {% if page_2.detail_image_3_url %}<td><img src="{{ page_2.detail_image_3_url }}" alt="Detail 3"></td>{% endif %}
-                            {% if page_2.detail_image_4_url %}<td><img src="{{ page_2.detail_image_4_url }}" alt="Detail 4"></td>{% endif %}
+                            {% if page_2.detail_images %}
+                                {% for img_url in page_2.detail_images %}
+                                    <td><img src="{{ img_url }}" alt="Detail {{ loop.index }}"></td>
+                                {% endfor %}
+                            {% else %}
+                                {% if page_2.detail_image_1_url %}<td><img src="{{ page_2.detail_image_1_url }}" alt="Detail 1"></td>{% endif %}
+                                {% if page_2.detail_image_2_url %}<td><img src="{{ page_2.detail_image_2_url }}" alt="Detail 2"></td>{% endif %}
+                                {% if page_2.detail_image_3_url %}<td><img src="{{ page_2.detail_image_3_url }}" alt="Detail 3"></td>{% endif %}
+                                {% if page_2.detail_image_4_url %}<td><img src="{{ page_2.detail_image_4_url }}" alt="Detail 4"></td>{% endif %}
+                                {% if page_2.detail_image_5_url %}<td><img src="{{ page_2.detail_image_5_url }}" alt="Detail 5"></td>{% endif %}
+                                {% if page_2.detail_image_6_url %}<td><img src="{{ page_2.detail_image_6_url }}" alt="Detail 6"></td>{% endif %}
+                            {% endif %}
                         </tr>
                     </table>
                 </td>
@@ -352,8 +363,15 @@
                             </td>
 
                             <td class="details-col">
-                                <div class="info-section-title">DETAILS</div>
-                                <div class="details-text">{{ page_2.details }}</div>
+                                <div class="details-text">
+                                    {% if page_2.details is mapping %}
+                                        {% if page_2.details.silhouette %}<div><strong>Silhouette:</strong> {{ page_2.details.silhouette }}</div>{% endif %}
+                                        {% if page_2.details.sleeves %}<div><strong>Sleeves:</strong> {{ page_2.details.sleeves }}</div>{% endif %}
+                                        {% if page_2.details.other_features %}<div><strong>Other Features:</strong> {{ page_2.details.other_features }}</div>{% endif %}
+                                    {% else %}
+                                        {{ page_2.details | replace('\n', '<br>') }}
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                     </table>

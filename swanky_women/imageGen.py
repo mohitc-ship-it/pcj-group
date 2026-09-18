@@ -9,9 +9,9 @@ from typing import Optional
 load_dotenv()
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
-IMAGE_MODEL_FLASH = "google/gemini-3.1-flash-image"  # Gemini 3.1 Flash Image — fast + cheap, first attempt
-IMAGE_MODEL_PRO   = "google/gemini-3-pro-image"       # Gemini 3 Pro Image — high quality, used on final retry
-IMAGE_MODEL = IMAGE_MODEL_FLASH  # Default (backwards compat)
+IMAGE_MODEL_FLASH = os.getenv("IMAGE_MODEL_FLASH", "google/gemini-3.1-flash-image")  # Nano Banana 2 / Flash Image
+IMAGE_MODEL_PRO   = os.getenv("IMAGE_MODEL_PRO", "google/gemini-3-pro-image")        # Nano Banana Pro Image
+IMAGE_MODEL = IMAGE_MODEL_PRO if os.getenv("IMAGE_USE_PRO", "false").lower() == "true" else IMAGE_MODEL_FLASH
 
 
 def _image_to_base64_url(image_path: str) -> str:
@@ -43,11 +43,14 @@ def generate_image(
     image_path: Optional[str] = None,
     output_filename: str = "generated_image.png",
     use_pro: bool = False,
+    image_paths: Optional[list] = None,
+    seed: Optional[int] = None,
 ) -> Optional[str]:
     """
-    Generates image from text prompt or edits input image.
+    Generates image from text prompt or edits input image(s).
     - use_pro=False → uses gemini-flash-image (fast, cheap, first attempt)
     - use_pro=True  → uses gemini-3-pro-image (high quality, used on retry)
+    - seed: deterministic seed for reproducible generations
     """
     model = IMAGE_MODEL_PRO if use_pro else IMAGE_MODEL_FLASH
     try:
@@ -58,14 +61,34 @@ def generate_image(
                 return output_filename
             return None
 
+        # Resolve seed from argument or environment
+        if seed is None:
+            env_seed = os.getenv("IMAGE_SEED")
+            if env_seed and env_seed.isdigit():
+                seed = int(env_seed)
+
         # Build message content
         content = []
-        if image_path and os.path.exists(image_path):
+        if image_paths:
+            for p in image_paths:
+                if p and os.path.exists(p):
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": _image_to_base64_url(p)}
+                    })
+        elif image_path and os.path.exists(image_path):
             content.append({
                 "type": "image_url",
                 "image_url": {"url": _image_to_base64_url(image_path)}
             })
         content.append({"type": "text", "text": prompt})
+
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": content}]
+        }
+        if seed is not None:
+            payload["seed"] = seed
 
         response = requests.post(
             OPENROUTER_BASE_URL,
@@ -73,10 +96,7 @@ def generate_image(
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": model,
-                "messages": [{"role": "user", "content": content}]
-            },
+            json=payload,
             timeout=180
         )
 

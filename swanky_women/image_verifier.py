@@ -18,6 +18,7 @@ Check ALL of the following:
 3. GARMENT VISIBLE — Is a garment clearly drawn? (FAIL if it looks like a photograph)
 4. NO MODEL — Is the model face/body removed? (FAIL if human face/skin prominently visible)
 5. FLAT SKETCH — Does it look like a flat technical drawing?
+6. HEMLINE BALANCE — For garments with level hemlines (T-shirts, shirts, nightdresses, tops, dresses), are front and back views EQUAL in vertical length/height? (FAIL if the back view has been artificially extended, dropped, or lengthened lower than the front view when they should be equal).
 
 Respond ONLY in this exact JSON format (no markdown):
 {"valid": true, "issues": [], "score": 8, "corrective_hint": ""}
@@ -68,6 +69,8 @@ CORRECTIVE_PREFIXES = {
         "CRITICAL CORRECTION: Generate a pure technical flat sketch. "
         "WHITE background ONLY. BLACK line art ONLY. NO colors, NO fills, NO gradients, NO shading. "
         "NO human face or skin visible. Remove all background elements. Clean factory-ready CAD style. "
+        "HEMLINE RULE: Front and back views MUST have EQUAL vertical length and height. "
+        "Do NOT extend the back panel or draw a dropped/longer back hem. Keep hemlines level and aligned. "
     ),
     "brand_label": (
         "CRITICAL CORRECTION: Generate a clean fabric brand label. "

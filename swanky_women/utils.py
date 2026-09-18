@@ -444,11 +444,7 @@ def map_json(input_json: dict) -> dict:
 
 
 import json
-
-with open("data/master_filled.json","r",encoding="utf-8") as f:
-    json_r = json.load(f)
-
-# print(map_json(json_r))
+# Top-level debug load removed to prevent import failure when running outside swanky_women directory
 
 
 from PIL import Image
@@ -618,49 +614,65 @@ def ai_crop_detail_regions(
     import os as _os
     from PIL import Image as PILImage
 
-    # ── Step 1: Ask Claude Vision to identify detail regions ──
-    region_prompt = f"""You are a fashion technical designer analyzing garment photographs for a tech pack.
+    # ── Environment Configurations ──
+    crop_model = _os.getenv("DETAIL_CROP_MODEL", "google/gemini-3.8-flash")
+    frac_min = float(_os.getenv("DETAIL_CROP_SIZE_FRACTION_MIN", "0.55"))
+    frac_max = float(_os.getenv("DETAIL_CROP_SIZE_FRACTION_MAX", "0.85"))
+    frac_default = float(_os.getenv("DETAIL_CROP_SIZE_FRACTION_DEFAULT", "0.65"))
+    min_export_px = int(_os.getenv("DETAIL_CROP_MIN_EXPORT_PX", "600"))
 
-Your task: Identify the {n_crops} most important DETAIL REGIONS on this garment that a manufacturer needs to see up close.
-
-Focus on:
-- Closures (buttons, zippers, hooks, snaps)
-- Collar / neckline construction
-- Sleeve / cuff details  
-- Hem / bottom edge finishing
-- Seam intersections, pockets, pleats, ruching, gathering
-- Any distinctive construction feature visible
+    # ── Step 1: Ask Vision model to identify detail regions ──
+    region_prompt = f"""You are an expert fashion technical designer creating close-up construction detail callouts for a production tech pack.
 
 Garment description context:
 {garment_details}
 
-For each detail region, return:
-- "label": short name (e.g. "Collar", "Front Zipper", "Hem Detail")
-- "description": one sentence on why this detail matters for manufacturing
-- "image_index": which image to crop from (0 = first/front image, 1 = second/back image, etc.)
-- "x": left edge as fraction of image width (0.0–1.0)
-- "y": top edge as fraction of image height (0.0–1.0)
-- "w": width as fraction of image width (0.05–0.6)
-- "h": height as fraction of image height (0.05–0.6)
+Your task: Identify exactly {n_crops} distinct construction detail regions following this STRICT DETAIL PRIORITY HIERARCHY:
 
-Rules:
-- Coordinates must be inside the image (x+w <= 1.0, y+h <= 1.0)
-- Each crop must be at least 5% of image in both dimensions
-- Only label regions that are CLEARLY VISIBLE in the images
-- Prioritize regions that show construction methods a factory needs
+1. PRIORITY 1 — TOP STYLE / CUT & NECKLINE:
+   Any distinctive architectural cut or styling at the top of the garment: collar construction, lapel notch / peak and gorge seam, curved round neckline, plunge, or neckband styling.
 
-Return ONLY valid JSON — a list of exactly {n_crops} objects. No markdown. No explanation.
-Example:
-[
-  {{"label": "Collar", "description": "Stand collar with visible topstitching", "image_index": 0, "x": 0.3, "y": 0.05, "w": 0.4, "h": 0.2}},
-  {{"label": "Front Closure", "description": "Button placket with 5 buttons", "image_index": 0, "x": 0.4, "y": 0.2, "w": 0.2, "h": 0.5}}
-]
-"""
+2. PRIORITY 2 — ACCESSORIES, HARDWARE & POCKET TRIMS:
+   The primary decorative or functional accessories / hardware: flap pockets, welt pockets, buttons, zipper pulls, belt buckles, or beadwork.
+   CRITICAL: If both upper (chest) and lower (waist/hip) pockets exist, treat them as distinct details and crop each one separately!
+   NEVER slice through a pocket or button — capture the ENTIRE pocket with breathing room around it.
+
+3. PRIORITY 3 — SLEEVE / CUFF CONSTRUCTION & TRIMS:
+   Sleeve cuff with its decorative trim border, cuff vent, buttons, or edge stitching.
+
+4. PRIORITY 4 — CURVED CUTS, SILHOUETTE CONTOURS & HEM:
+   Distinctive curved silhouette lines: lower front curved hem corner or peplum curve, contoured waist seams, princess seams, walking slit/vent, or bottom hem finishing.
+
+CRITICAL FRAMING & SIZING RULES:
+- GENEROUS, LARGER CROP WINDOW (NO TIGHT CROPS):
+  Provide a generous crop window (crop_size_fraction between {frac_min:.2f} and {frac_max:.2f} of image width, recommend ~{frac_default:.2f}) so that the COMPLETE detail is captured with its surrounding construction context.
+  NEVER leave parts in half:
+  - For pockets: capture the ENTIRE pocket, including the full pocket flap/welt, button, and surrounding panel fabric. Do NOT slice the pocket in half.
+  - For lapel & collar: capture the FULL lapel notch, peak, collar roll, and gorge seam down into the chest. Center directly on the fabric of the lapel/notch, NOT on the wearer's neck or throat skin.
+  - For button closures: capture the complete button row with surrounding front placket panels.
+  - For sleeve cuffs: capture the full width of the cuff, vent, and buttons.
+  - For peplum / hems: capture the full sweep of the curved hem and seam.
+- AVOID HUMAN BODY PARTS: Center strictly on the garment construction itself (fabric, stitches, collar notch, lapel roll). NEVER center on the model's head, face, lips, chin, or neck skin. For collar/lapel callouts, center on the notch or fold of the fabric on the chest/shoulder area, NOT on the wearer's neck or chin.
+- Center the target feature dead in the middle of the frame.
+
+For each detail region, return valid JSON with:
+- "label": Short descriptive name of the detail
+- "priority_category": One of "top_cut_neckline", "accessories_hardware_pocket", "sleeve_cuff", "curved_hem_contour"
+- "reasoning": In-depth technical explanation of WHY this region was chosen, what manufacturing/quality challenges exist here (e.g. trim tension, button placement, puckering, curve radius), and why the factory must inspect it up close.
+- "image_index": 0 for front image, 1 for back image
+- "center_x": X coordinate of the dead center of the detail as fraction of image width (0.0 to 1.0)
+- "center_y": Y coordinate of the dead center of the detail as fraction of image height (0.0 to 1.0)
+- "crop_size_fraction": Size of square crop relative to image width ({frac_min:.2f} to {frac_max:.2f}) so the complete detail fits with generous breathing room.
+
+Return ONLY a valid JSON array of exactly {n_crops} objects. No markdown. No code fences. No explanation."""
 
     try:
-        from llm import analyze_images as _analyze_images
+        try:
+            from llm import analyze_images as _analyze_images
+        except ImportError:
+            from swanky_women.llm import analyze_images as _analyze_images
 
-        raw, _think = _analyze_images(images, region_prompt)
+        raw, _think = _analyze_images(images, region_prompt, model=crop_model)
         raw = raw.strip()
         # Strip markdown fences
         if raw.startswith("```"):
@@ -669,13 +681,13 @@ Example:
 
         regions = _json.loads(raw)
         if not isinstance(regions, list) or len(regions) == 0:
-            print("[ai_crop] No valid regions returned from Claude Vision")
+            print("[ai_crop] No valid regions returned from Vision model")
             return []
 
-        print(f"[ai_crop] Claude identified {len(regions)} detail regions")
+        print(f"[ai_crop] Vision model ({crop_model}) identified {len(regions)} detail regions")
 
     except Exception as e:
-        print(f"[ai_crop] Claude Vision region detection failed: {e}")
+        print(f"[ai_crop] Vision region detection failed: {e}")
         return []
 
     # ── Step 2: Crop each region from the source image ──
@@ -688,32 +700,57 @@ Example:
             img_idx = min(img_idx, len(images) - 1)  # clamp to available images
             src_path = images[img_idx]
 
-            img = PILImage.open(src_path).convert("RGB")
+            img_raw = PILImage.open(src_path)
+            # Alpha composite onto white background so background stays clean white
+            if img_raw.mode in ("RGBA", "LA") or (img_raw.mode == "P" and "transparency" in img_raw.info):
+                img = PILImage.new("RGB", img_raw.size, (255, 255, 255))
+                rgba = img_raw.convert("RGBA")
+                img.paste(rgba, mask=rgba.split()[3])
+            else:
+                img = img_raw.convert("RGB")
+
             W, H = img.size
 
-            # Convert normalized coords to pixels
-            x = float(region.get("x", 0.0))
-            y = float(region.get("y", 0.0))
-            w = float(region.get("w", 0.3))
-            h = float(region.get("h", 0.3))
+            # Determine center point and crop size
+            if "center_x" in region and "center_y" in region:
+                cx = float(region["center_x"]) * W
+                cy = float(region["center_y"]) * H
+                crop_frac = float(region.get("crop_size_fraction", frac_default))
+                crop_frac = max(frac_min, min(frac_max, crop_frac))
+                size = max(int(crop_frac * W), int(min(W, H) * 0.35))
+            else:
+                # Legacy x, y, w, h
+                x_val = float(region.get("x", 0.0)) * W
+                y_val = float(region.get("y", 0.0)) * H
+                w_val = float(region.get("w", 0.50)) * W
+                h_val = float(region.get("h", 0.50)) * H
+                cx = x_val + w_val / 2.0
+                cy = y_val + h_val / 2.0
+                size = int(max(w_val, h_val, min(W, H) * 0.35))
 
-            # Clamp to image bounds
-            x = max(0.0, min(x, 1.0))
-            y = max(0.0, min(y, 1.0))
-            w = max(0.05, min(w, 1.0 - x))
-            h = max(0.05, min(h, 1.0 - y))
+            # Enforce true 1:1 square crop centered on (cx, cy)
+            half = size / 2.0
+            left = int(round(cx - half))
+            top = int(round(cy - half))
+            right = left + size
+            bottom = top + size
 
-            left   = int(x * W)
-            top    = int(y * H)
-            right  = int((x + w) * W)
-            bottom = int((y + h) * H)
+            # Handle boundaries by padding with white canvas so target remains centered without shrinking
+            if left < 0 or top < 0 or right > W or bottom > H:
+                crop_canvas = PILImage.new("RGB", (size, size), (255, 255, 255))
+                src_left = max(0, left)
+                src_top = max(0, top)
+                src_right = min(W, right)
+                src_bottom = min(H, bottom)
 
-            # Skip crops that are too small
-            if (right - left) < min_crop_size or (bottom - top) < min_crop_size:
-                print(f"[ai_crop] Region {i} '{region.get('label')}' too small, skipping")
-                continue
+                paste_x = src_left - left
+                paste_y = src_top - top
 
-            crop = img.crop((left, top, right, bottom))
+                sub = img.crop((src_left, src_top, src_right, src_bottom))
+                crop_canvas.paste(sub, (paste_x, paste_y))
+                crop = crop_canvas
+            else:
+                crop = img.crop((left, top, right, bottom))
 
             # Filter near-blank crops
             arr = np.array(crop)
@@ -723,11 +760,22 @@ Example:
                 print(f"[ai_crop] Region {i} '{region.get('label')}' is mostly white, skipping")
                 continue
 
+            # Upscale if below min_export_px using high-fidelity LANCZOS to prevent any blurriness in PDF
+            orig_w, orig_h = crop.size
+            if crop.width < min_export_px or crop.height < min_export_px:
+                scale = max(min_export_px / crop.width, min_export_px / crop.height)
+                new_w = int(round(crop.width * scale))
+                new_h = int(round(crop.height * scale))
+                crop = crop.resize((new_w, new_h), resample=PILImage.Resampling.LANCZOS)
+
             label_safe = region.get("label", f"detail_{i}").replace(" ", "_").lower()
             crop_path = _os.path.join(output_dir, f"ai_detail_{i}_{label_safe}.png")
-            crop.save(crop_path)
+            # Save lossless PNG with no compression degradation
+            crop.save(crop_path, format="PNG", compress_level=1)
             saved_crops.append(crop_path)
-            print(f"[ai_crop] Saved: {crop_path} ({right-left}x{bottom-top}px) — {region.get('label')}")
+            print(f"[ai_crop] Saved: {crop_path} (orig {orig_w}x{orig_h}px -> export {crop.width}x{crop.height}px) — {region.get('label')}")
+            if region.get("reasoning"):
+                print(f"         Technical Reasoning: {region.get('reasoning')}")
 
         except Exception as e:
             print(f"[ai_crop] Failed to crop region {i}: {e}")
@@ -735,6 +783,100 @@ Example:
 
     print(f"[ai_crop] Produced {len(saved_crops)}/{len(regions)} valid detail crops")
     return saved_crops[:n_crops]
+
+
+def format_technical_sketch(
+    sketch_path: str,
+    is_two_piece: bool = False,
+    output_path: Optional[str] = None
+) -> str:
+    """
+    Ensures technical sketch follows the required horizontal layout:
+    - If two-piece (separate upper and bottom wear): creates 4 parts horizontally:
+      [Top Front] [Top Back] [Bottom Front] [Bottom Back]
+    - If single piece: keeps 2 parts horizontally:
+      [Front] [Back]
+    """
+    from PIL import Image as PILImage
+    from typing import Optional
+    import numpy as _np
+    import os as _os
+
+    if output_path is None:
+        output_path = sketch_path
+
+    if not _os.path.exists(sketch_path):
+        return sketch_path
+
+    try:
+        img = PILImage.open(sketch_path).convert("RGB")
+        W, H = img.size
+
+        arr = _np.array(img.convert("L"))
+        dark_mask = (arr < 230)
+        row_counts = dark_mask.sum(axis=1)
+
+        # Check if vertically stacked (middle 35%-65% has a significant drop in dark pixels)
+        mid_start = int(0.35 * H)
+        mid_end = int(0.65 * H)
+        mid_zone = row_counts[mid_start:mid_end]
+        min_idx = _np.argmin(mid_zone)
+        min_val = mid_zone[min_idx]
+        split_y = mid_start + min_idx
+
+        # If explicit two_piece or clearly stacked 2-tier layout
+        has_vertical_split = (min_val < 50 and H > W * 0.9)
+
+        if not (is_two_piece or has_vertical_split):
+            # Single piece: auto-trim outer white borders
+            rows = _np.where(_np.any(dark_mask, axis=1))[0]
+            cols = _np.where(_np.any(dark_mask, axis=0))[0]
+            if len(rows) > 0 and len(cols) > 0:
+                t = max(0, rows[0] - 20)
+                b = min(H, rows[-1] + 20)
+                l = max(0, cols[0] - 20)
+                r = min(W, cols[-1] + 20)
+                trimmed = img.crop((l, t, r, b))
+                trimmed.save(output_path, quality=95)
+            return output_path
+
+        # Two-piece: slice top and bottom segments and place side-by-side horizontally
+        top_half = img.crop((0, 0, W, split_y))
+        bottom_half = img.crop((0, split_y, W, H))
+
+        def crop_dark(im, pad=10):
+            m = (_np.array(im.convert("L")) < 230)
+            rows = _np.where(_np.any(m, axis=1))[0]
+            cols = _np.where(_np.any(m, axis=0))[0]
+            if len(rows) == 0 or len(cols) == 0:
+                return im
+            return im.crop((
+                max(0, cols[0] - pad),
+                max(0, rows[0] - pad),
+                min(im.width, cols[-1] + pad),
+                min(im.height, rows[-1] + pad)
+            ))
+
+        t_crop = crop_dark(top_half)
+        b_crop = crop_dark(bottom_half)
+
+        target_h = 520
+        t_scaled = t_crop.resize((int(round(t_crop.width * (target_h / t_crop.height))), target_h), PILImage.Resampling.LANCZOS)
+        b_scaled = b_crop.resize((int(round(b_crop.width * (target_h / b_crop.height))), target_h), PILImage.Resampling.LANCZOS)
+
+        spacing = 60
+        total_w = t_scaled.width + spacing + b_scaled.width
+        canvas = PILImage.new("RGB", (total_w + 60, target_h + 30), (255, 255, 255))
+        canvas.paste(t_scaled, (30, 15))
+        canvas.paste(b_scaled, (30 + t_scaled.width + spacing, 15))
+
+        canvas.save(output_path, quality=95)
+        print(f"[format_sketch] Converted 2-piece sketch into side-by-side horizontal layout: {output_path} ({canvas.size})")
+        return output_path
+
+    except Exception as e:
+        print(f"[format_sketch] Error formatting sketch: {e}")
+        return sketch_path
 
 
 # ======================

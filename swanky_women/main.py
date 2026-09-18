@@ -4,9 +4,10 @@ from copy import deepcopy
 
 from llm import analyze_images, llm_structured, llm_query
 from generate import generatePdf
-from utils import extract_clothing_palette, map_json, combine_images_horizontally, split_into_grids, recommend_colors_from_images, nearest_pantone_tcx, ai_crop_detail_regions
+from utils import extract_clothing_palette, map_json, combine_images_horizontally, split_into_grids, recommend_colors_from_images, nearest_pantone_tcx, ai_crop_detail_regions, format_technical_sketch
 from imageGen import generate_image
 from image_verifier import verify_and_regenerate
+from sketch_prompter import build_normal_sketch_prompt, build_json_sketch_prompt, convert_text_to_json_prompt
 
 from models import (
     TechPackHeader,
@@ -239,11 +240,13 @@ D. CLOSURES (only if visible)
 • None visible  
 
 E. HEM & EDGES  
-• Straight  
-• Curved  
+• Straight / Level (front and back hem lengths are EQUAL)  
+• Curved / Shirt-tail  
+• Hi-Low / Dropped back hem (back visibly longer than front)  
 • Asymmetrical  
 • Raw edge  
 • Finished edge  
+• HEM LENGTH BALANCE DOUBLE-CHECK: For T-shirts, shirts, nightdresses, tops, and dresses, explicitly check whether the Front and Back hem lengths are EQUAL/LEVEL or if the back is longer. Unless an asymmetrical or hi-low drop hem is clearly visible, record the hemline as "Equal/Level length (Front and Back equal)". Never assume the back is longer.
 
 F. PANELING & FEATURES  
 • Seams  
@@ -276,7 +279,7 @@ You must produce:
 • fit_impression  
 • closure_visibility  
 • visible_features  
-• hem_type  
+• hem_type (specify hem finish and explicitly state whether front and back lengths are equal/level or hi-low)  
 • complexity  
 • raw_observation_text  
 
@@ -1138,18 +1141,22 @@ MANDATORY items for EVERY garment:
 5. Hanger Loop — "Cotton twill tape" | 1 pc | placement: "Inside center back neck seam"
 
 CONDITIONAL items (only if visible in image or structure):
-- Concealed/Invisible Zipper (22-24 cm) — if closure visible/needed
-- Buttons — specify exact count matching what is VISIBLE in image
-- Interlining/Fusible — if structured collar/cuffs exist
+- Concealed/Invisible Zipper (22-24 cm) — ONLY if closure visible/needed for dresses or skirts. Do NOT add to shirts, suits, or coats with buttons or belts.
+- Buttons — specify exact count matching what is VISIBLE in image:
+  * For shirts/blouses: count front placket buttons (including collar stand button).
+  * For cuffs: count buttons on barrel cuff AND gauntlet sleeve plackets (e.g. 2 on cuff + 1 on gauntlet = 3 per sleeve, 6 total for cuffs).
+  * Group buttons clearly: e.g. "BUTTONS, 4 HOLE, 12L FOR FRONT, 10L FOR CUFFS, 6 FOR FRONT, 6 FOR CUFFS (3 EACH)"
+- Interlining/Fusible — if structured collar/placket/cuffs exist
 - Decorative trim — only if visible
 
 CRITICAL FORMATTING RULE FOR ACCESSORY DESCRIPTIONS:
 Descriptions MUST be extremely short, concise, and typically just one line. Do NOT write long paragraphs or excessive details. 
-Example 1: "BUTTONS, ENGRAVED LOGO DESIGN, GOLD TONE, 4 TOTAL ON POCKETS, 14mm"
-Example 2: "TEXTURED PRINT CHAIN TRIMMED ON JACKET, ON NECKLINE, AROUND POCKETS OUTLINES, HEM LINE, ON CUFFS"
-Example 3: "THREAD, POLYESTER"
+Example 1: "BUTTONS, 4 HOLE, PLASTIC BUTTONS, 12 L FOR FRONT, 10 L FOR CUFFS, 6 FOR FRONT, 6 FOR CUFFS (3 EACH)"
+Example 2: "BUTTONS, ENGRAVED LOGO DESIGN, GOLD TONE, 4 TOTAL ON POCKETS, 14mm"
+Example 3: "THREAD, CORE SPUN POLYESTER"
+Example 4: "INTERFACING, FUSED AT COLLAR, PLACKET, CUFFS"
 
-Count accessories by CAREFULLY examining the images. If 4 buttons visible, say 4, NOT 5 or 6.
+Count accessories by CAREFULLY examining the images. Accurately count all front closure buttons and cuff/gauntlet buttons.
 
 ────────────────────────────────────────────
 SECTION 5 — CARE LABEL
@@ -1412,11 +1419,15 @@ def verify_accessories(accessories_list: list, images: list, _report_fn=None, jo
 ACCESSORIES LIST FROM AI (may contain errors):\n{accessories_summary}
 
 YOUR TASK:
-1. Look carefully at the garment in the images
-2. REMOVE accessories ONLY if they are clearly NOT visible and NOT structurally necessary (e.g., hallucinated zippers on a simple t-shirt).
+1. Look carefully at the garment in the images.
+2. BUTTON ACCURACY & COUNTING:
+   - Count buttons precisely: count center front placket buttons (including collar stand button).
+   - Check sleeve cuffs: count both cuff closure buttons and gauntlet placket buttons on each sleeve (e.g. 2 cuff + 1 gauntlet = 3 buttons each cuff, 6 total for cuffs).
+   - If buttons are present, specify the exact count for front and for cuffs.
+3. REMOVE accessories ONLY if they are clearly NOT visible and NOT structurally necessary (e.g., hallucinated zippers on a shirt, or extra belts).
    - CRITICAL: Do NOT remove buttons if there is a placket, cuff, or closure that requires them, even if small.
-3. ADD any obvious accessories that ARE clearly visible but were missed
-4. KEEP all accessories that are genuinely present or mandatory (like labels and thread)
+4. ADD any obvious accessories that ARE clearly visible but were missed (like interfacing at collar/cuffs, spare button).
+5. KEEP all accessories that are genuinely present or mandatory (like labels, fusible interfacing, and thread).
 
 Return ONLY valid JSON — a list of objects with these exact fields:
 [
@@ -1466,20 +1477,58 @@ def generate_techpack(images, context, generate=False, sample_size="M", progress
     header_prompt = f"""
     Generate FACTORY tech pack header.
     
-    Logic for style name generation : [Brand/Collection]-[Brand Initial]-[Season1]/[Season2][Year]-[Garment Type]
-    CRITICAL RULE: If the season is Fall/Winter, format it with a slash as FA/WI. If Spring/Summer, format as SP/SU.
-    CRITICAL RULE: The Brand/Collection abbreviation uses the FIRST LETTER of EACH WORD in order. 
-    Example: "JC Private Collection" → J(JC) + P(Private) + C(Collection) = JPC. NOT JCP.
-    Example of style_name: JPC-D-FA/WI25-BLO
+    Logic for style name generation : [Collection Initial]-[Brand Initial]-[Season Code][2-Digit Year]-[Garment Type]
+    
+    CRITICAL RULES FOR STYLE NAME:
+    1. [Collection Initial]: First letter of each word in the Collection name in order.
+       Example: "JC Private Collection" → J (from JC) + P (from Private) + C (from Collection) = JPC.
+    2. [Brand Initial]: First letter of the Brand name.
+       Example: Brand "Discrete" → D.
+    3. [Season Code][2-Digit Year]:
+       - Fall/Winter → FA/WI
+       - Spring/Summer → SP/SU
+       Always format with slash between seasons and append the 2-digit year (e.g. FA/WI25).
+    4. [Garment Type]: 3-letter uppercase abbreviation for the garment type.
+       Use these standard fashion nomenclature codes:
+       - Cocktail Dress → CDR
+       - Dress (General/Casual) → DRS
+       - Evening Gown → GWN
+       - Turtleneck → TRT
+       - Light Jacket → LJK
+       - Jacket → JKT
+       - Coat → COA
+       - Suit → SUT
+       - Blazer → BLZ
+       - Shirt → SHT
+       - Blouse → BLO
+       - Pants / Trousers → PNT
+       - Skirt → SKT
+       - Shorts → SRT
+       - Jumpsuit → JMP
+       - Sweater / Knitwear → SWT
+       - Cardigan → CRD
+       - Vest → VST
+       - Top → TOP
+    
+    Examples:
+    - Collection "JC Private Collection", Brand "Discrete", Season "Fall/Winter 25", Garment "Cocktail Dress" → JPC-D-FA/WI25-CDR
+    - Collection "JC Private Collection", Brand "Discrete", Season "Fall/Winter 25", Garment "Turtleneck" → JPC-D-FA/WI25-TRT
+    - Collection "JC Private Collection", Brand "Discrete", Season "Fall/Winter 25", Garment "Light Jacket" → JPC-D-FA/WI25-LJK
     
     Inputs:
     {context}
     
-    Date: {datetime.datetime.now().strftime("%d/%m/%Y")}
+    Category Rule:
+    category MUST be strictly one of these three values:
+    - "women wear"
+    - "kids' wear"
+    - "men's wear"
+    Never use "outerwear", "innerwear", "apparel", "dress", etc. Always assign one of the 3 demographic wear categories above.
+    
     Sample Size: {sample_size} (You MUST set sample_size_1st exactly to this value)
+    Date: If a date is provided in the inputs (e.g. 08-11-2025), use that exact date. Otherwise use {datetime.datetime.now().strftime("%d/%m/%Y")}.
 
-    description should be one liner
-    such as "women's asymmetric dress"
+    description should be one liner, such as "women's light jacket".
     """
 
     print("trying for header")
@@ -1634,15 +1683,16 @@ For Outerwear/Coats/Trench Coats/Jackets:
     original_input_images = images
     extra_input_images = original_input_images[2:]
 
+    n_crops_cfg = int(os.getenv("DETAIL_CROP_COUNT", "6"))
     ai_crops = ai_crop_detail_regions(
         images=original_input_images,
         garment_details=page2_details,
         output_dir="assets",
-        n_crops=4,
+        n_crops=n_crops_cfg,
     )
     _report("Detail Cropping",
             f"AI crops: {len(ai_crops)} regions identified and cropped",
-            f"Claude Vision cropped {len(ai_crops)} detail zones." if ai_crops else "Found no regions — falling back to grid crops",
+            f"Vision model cropped {len(ai_crops)} detail zones." if ai_crops else "Found no regions — falling back to grid crops",
             83)
 
     garment_cat = classification.get("category", "").lower()
@@ -1664,38 +1714,71 @@ For Outerwear/Coats/Trench Coats/Jackets:
             return True
 
     useful_grid_crops = [p for p in grid_crops if _is_useful_crop(p)]
-    detail_pool = ai_crops + extra_input_images + useful_grid_crops
-    safe_images = (detail_pool + [None, None, None, None])[:4]
-    images = grid_crops if grid_crops else original_input_images
+    detail_pool = ai_crops if ai_crops else (extra_input_images + useful_grid_crops)
 
     master["page_2"].update({
-        "detail_image_1_url": safe_images[0],
-        "detail_image_2_url": safe_images[1],
-        "detail_image_3_url": safe_images[2],
-        "detail_image_4_url": safe_images[3],
+        "detail_images": detail_pool[:6],
+        "detail_image_1_url": detail_pool[0] if len(detail_pool) > 0 else None,
+        "detail_image_2_url": detail_pool[1] if len(detail_pool) > 1 else None,
+        "detail_image_3_url": detail_pool[2] if len(detail_pool) > 2 else None,
+        "detail_image_4_url": detail_pool[3] if len(detail_pool) > 3 else None,
+        "detail_image_5_url": detail_pool[4] if len(detail_pool) > 4 else None,
+        "detail_image_6_url": detail_pool[5] if len(detail_pool) > 5 else None,
         "optional_image_urls": images  # keep original list
     })
 
 
     # page 3
 
-    technical_sketch_prompt = f"""
+    desc_str = (master.get("header", {}).get("description", "") + " " + classification.get("category", "") + " " + master.get("header", {}).get("style_name", "")).lower()
+    is_two_piece = any(kw in desc_str for kw in ("suit", "set", "two-piece", "2-piece", "skirt suit", "pant suit", "co-ord", "tracksuit", "sut"))
 
-Convert the provided image of a model wearing a garment into a professional fashion technical sketch suitable for a production tech pack.
+    if is_two_piece:
+        layout_instruction = """Layout Requirements:
+- This garment consists of two separate segments (separate upper wear and separate bottom wear).
+- Present the four garment parts horizontally side-by-side:
+  [Top Wear Front]  [Bottom Wear Front]  [Top Wear Back]  [Bottom Wear Back]
+- Both upper wear and bottom wear must be clearly depicted front and back without model or human body."""
+    else:
+        layout_instruction = """Layout Requirements:
+- Create the technical sketch showing Front and Back views side by side."""
+
+    technical_sketch_prompt = f"""Convert the provided image of a model wearing a garment into a professional fashion technical sketch suitable for a production tech pack.
 
 Output Requirements:
-- Create clean black-and-white vector-style line art
-- Show front and back
-- White background, no color, no shading, no textures
+- Create clean 2D vector-style black line art on pure white body (#ffffff)
+- White background, no color, no background textures (collar/stand may have contrast shading if visible in reference)
 - Garment only (remove model facial and body features)
 
-Annotation & Labeling:
-- Add clear callout labels and leader lines
-- Label all construction, seam, and design details provided below
-- Use industry-standard fashion technical drawing conventions
-- Layout should look like it was created by a senior fashion designer
+{layout_instruction}
 
-Don't draw any lines or zippers or buttons or any other details , untill specified in accesories.
+Strict Feature & Count Accuracy:
+- Accurately reflect the exact count of buttons, pockets, seams, and trims seen in the reference photos and accessories specification.
+- Vertical Proportions: Maintain tall, elongated vertical fashion proportions. Do NOT draw garments compressed, short-heighted, or stumpy. Dresses and tops must have an elegant, elongated silhouette.
+- SLEEVE COMPLETENESS (CRITICAL):
+  * Both left and right sleeves MUST be drawn completely with finished cuffs on both Front and Back views.
+  * Leave generous canvas margin/padding around both sides so neither sleeve is cropped, truncated, or omitted at canvas edges.
+- HEMLINE BALANCE & EQUAL FRONT/BACK LENGTH RULE (CRITICAL CHECK):
+  * For T-shirts, nightdresses, shirts, blouses, tops, and dresses: Check the front and back hem levels very carefully.
+  * DO NOT artificially lengthen the back panel, extend the backside lower, or add an unwanted hi-low / curved scoop drop hem.
+  * Unless the garment reference explicitly displays a hi-low / dipped back hem design, the FRONT and BACK views MUST HAVE EXACTLY EQUAL VERTICAL LENGTH.
+  * The bottom hemline of the back view MUST align horizontally at the exact same vertical level as the front view hemline.
+- BUTTON COUNT ACCOUNTING & DISAMBIGUATION (COLLAR STAND VS PLACKET):
+  * When a shirt/blouse specifies a total count of front buttons (e.g., 6 buttons), this count ALREADY INCLUDES the collar stand button.
+  * Exact breakdown: 1 collar stand button + 5 front placket buttons = 6 buttons TOTAL.
+  * DO NOT draw 6 placket buttons and then add an extra collar button (which erroneously totals 7).
+- Zipper Placement: Check closure location precisely. If the garment has a side invisible zipper, place it at the side seam and leave the center back as a clean vertical seam. Only draw a center back zipper if it genuinely opens at center back.
+- Sleeve cuffs: Accurately show buttons on barrel cuffs AND sleeve gauntlet plackets (e.g. 2 cuff + 1 gauntlet = 3 per sleeve).
+- Back construction: Clean horizontal back yoke with subtle central knife pleats/tucks only if present on reference. Completely smooth back with NO random extra vertical lines or pleats.
+
+Annotation & Labeling:
+- BRAND & SIZE LABEL: In the Front View, inside the inner back neckline/collar opening, always illustrate the small rectangular brand neck tag, labeled with a leader line: 'BRAND & SIZE LABEL'.
+- Use clean, thin RED LEADER LINES connecting each uppercase label text directly to its corresponding garment feature.
+- CONCISE CALLOUT LABELS: Use standard short 1-4 word fashion tech pack callouts (e.g. 'BRAND & SIZE LABEL', 'COLLAR', 'FRONT PLACKET', 'LONG SLEEVES WITH CUFF', 'BACK YOKE', 'CUFFS PLACKET', 'CENTER BACK SEAM'). Do NOT write long paragraphs or descriptive sentences as labels.
+- CRITICAL: Keep ONLY the garment drawings, leader lines, and callout label text in the image.
+  DO NOT include any bottom specification bars, SEAMS & TRIMS note boxes, borders, titles, 'FRONT VIEW'/'BACK VIEW' text, or headers in the image.
+
+Don't draw any lines or zippers or buttons or any other details, until specified in accessories.
 
 Garment Details to Label:
 {page2_details}
@@ -1714,20 +1797,50 @@ Style Guidance:
 Do not invent details. Only label what is explicitly provided.
 """
 
+    # Support two flows: "normal" text prompt or "json" prompt
+    sketch_prompt_flow = os.getenv("SKETCH_PROMPT_FLOW", "normal").strip().lower()
+    if sketch_prompt_flow == "json":
+        print("[INFO] Using structured JSON prompt flow for technical sketch generation.")
+        technical_sketch_prompt = build_json_sketch_prompt(
+            page2_details=page2_details,
+            construction_decisions=construction_decisions,
+            accessories=factory_output.get("accessories", []),
+            is_two_piece=is_two_piece,
+            garment_type=structure.get("garment_type", ""),
+            brand_collection=master.get("page_1", {}).get("collection_name", "")
+        )
+    elif sketch_prompt_flow == "converted_json":
+        print("[INFO] Using converted JSON prompt flow for technical sketch generation.")
+        technical_sketch_prompt = convert_text_to_json_prompt(technical_sketch_prompt)
+    else:
+        print("[INFO] Using standard text prompt flow for technical sketch generation.")
+
     if generate:
-        generate_image(technical_sketch_prompt, "assets/combined.png", "assets/technical_sketch.png", use_pro=False)
+        use_pro = os.getenv("IMAGE_USE_PRO", "false").lower() == "true"
+        image_seed = int(os.getenv("IMAGE_SEED", "42")) if os.getenv("IMAGE_SEED", "42").isdigit() else 42
+        input_refs = images if images else ["assets/combined.png"]
+        generate_image(
+            technical_sketch_prompt,
+            "assets/combined.png",
+            "assets/technical_sketch.png",
+            use_pro=use_pro,
+            seed=image_seed,
+            image_paths=input_refs
+        )
         sketch_path, sketch_log = verify_and_regenerate(
             image_path="assets/technical_sketch.png",
             image_type="technical_sketch",
             original_prompt=technical_sketch_prompt,
-            generate_fn=lambda p, ref, out, use_pro=False: generate_image(p, ref, out, use_pro=use_pro),
+            generate_fn=lambda p, ref, out, use_pro=use_pro: generate_image(p, ref, out, use_pro=use_pro, seed=image_seed, image_paths=input_refs),
             ref_image="assets/combined.png",
         )
+        sketch_path = format_technical_sketch(sketch_path, is_two_piece=is_two_piece, output_path="assets/technical_sketch_formatted.png")
         master["page_3"]["technical_sketch_img"] = sketch_path
         sketch_result = sketch_log[-1]
         _report("Sketch Verification", f"{'✅ Passed' if sketch_result['valid'] else '⚠️ Regenerated'}", sketch_result.get('thinking', ''), 85)
     else:
-        master['page_3']['technical_sketch_img'] = "assets/technical_sketch.png"
+        sketch_path = format_technical_sketch("assets/technical_sketch.png", is_two_piece=is_two_piece, output_path="assets/technical_sketch_formatted.png")
+        master['page_3']['technical_sketch_img'] = sketch_path
 
     brand_label_prompt = f"""Create a brand label for a garment with:
     - Brand/Collection name: {master['page_1']['collection_name']}

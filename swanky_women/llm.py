@@ -6,7 +6,12 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import anthropic
 
-load_dotenv()
+# Load .env from same directory as this file or current working directory
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv()
 
 # ---------- Client ----------
 _client = None
@@ -17,7 +22,8 @@ def _get_client():
         _client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     return _client
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "google/gemini-3.1-flash-lite")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Budget tokens for extended thinking (how much Claude can "think" per call)
 THINKING_BUDGET = 5000
@@ -40,12 +46,45 @@ def _extract_text(response) -> str:
     return ""
 
 
+import requests
+
+def _call_openrouter(model: str, messages: list, max_tokens: int = 4096, temperature: float = 0.2) -> Tuple[str, str]:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY not found in environment")
+    payload = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+    response = requests.post(
+        OPENROUTER_BASE_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=120,
+    )
+    if response.status_code != 200:
+        raise RuntimeError(f"OpenRouter API error {response.status_code}: {response.text}")
+    res_data = response.json()
+    msg = res_data.get("choices", [{}])[0].get("message", {})
+    text = msg.get("content", "") or ""
+    thinking = msg.get("reasoning", "") or ""
+    return text, thinking
+
+
 # ---------- Normal text output ----------
 def llm_query(query: str, model: str = DEFAULT_MODEL, enable_thinking: bool = False) -> Tuple[str, str]:
     """
     Returns (text_result, thinking_text).
     thinking_text is empty string when enable_thinking=False.
     """
+    if not model.startswith("claude-"):
+        return _call_openrouter(model=model, messages=[{"role": "user", "content": query}])
+
     client = _get_client()
 
     kwargs = dict(
@@ -55,7 +94,6 @@ def llm_query(query: str, model: str = DEFAULT_MODEL, enable_thinking: bool = Fa
     )
     if enable_thinking:
         kwargs["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
-        # (betas handled by SDK automatically or omitted)
 
     response = client.messages.create(**kwargs)
     text = _extract_text(response) or response.content[0].text
@@ -74,8 +112,6 @@ def llm_structured(
     Returns (parsed_model_instance, thinking_text).
     thinking_text is empty string when enable_thinking=False.
     """
-    client = _get_client()
-
     schema = output_schema.model_json_schema()
     schema_str = json.dumps(schema, indent=2)
 
@@ -93,6 +129,36 @@ Return ONLY the JSON object. No markdown, no explanation, no code fences.
 Do NOT wrap in ```json``` tags.
 Keep responses concise — do not add unnecessary whitespace or verbose justifications."""
 
+    if not model.startswith("claude-"):
+        max_retries = 2
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                raw_text, thinking = _call_openrouter(
+                    model=model,
+                    messages=[{"role": "user", "content": structured_prompt}],
+                    max_tokens=8192,
+                    temperature=0.1
+                )
+                raw_text = raw_text.strip()
+                if raw_text.startswith("```"):
+                    lines = raw_text.split("\n")
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].strip() == "```":
+                        lines = lines[:-1]
+                    raw_text = "\n".join(lines).strip()
+
+                parsed = json.loads(raw_text)
+                return output_schema.model_validate(parsed), thinking
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries:
+                    print(f"[llm_structured OpenRouter] Attempt {attempt+1} failed: {str(e)[:100]}, retrying...")
+                    continue
+                raise last_error
+
+    client = _get_client()
     max_retries = 2
     last_error = None
     last_thinking = ""
@@ -104,13 +170,11 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                 max_tokens=16384 if not enable_thinking else 20000,
                 messages=[
                     {"role": "user", "content": structured_prompt},
-                    # JSON prefill — forces model to start output with `{` (Anthropic JSON prompting best practice)
                     {"role": "assistant", "content": "{"},
                 ],
             )
             if enable_thinking:
                 kwargs["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
-                # Cannot use prefill with extended thinking — remove assistant prefill
                 kwargs["messages"] = [{"role": "user", "content": structured_prompt}]
 
             response = client.messages.create(**kwargs)
@@ -120,11 +184,9 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                 raw_text = _extract_text(response).strip()
             else:
                 raw_text = response.content[0].text.strip()
-                # Restore the `{` that was used as a prefill token
                 if not raw_text.startswith("{") and not raw_text.startswith("["):
                     raw_text = "{" + raw_text
 
-            # Clean up potential markdown wrapping
             if raw_text.startswith("```"):
                 lines = raw_text.split("\n")
                 if lines[0].startswith("```"):
@@ -133,27 +195,7 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                     lines = lines[:-1]
                 raw_text = "\n".join(lines)
 
-            # Handle truncated JSON
-            try:
-                parsed = json.loads(raw_text)
-            except json.JSONDecodeError:
-                fixed = raw_text
-                open_braces = fixed.count('{') - fixed.count('}')
-                open_brackets = fixed.count('[') - fixed.count(']')
-                if fixed.rstrip()[-1] not in ('}', ']', '"', 'e', 'l'):
-                    last_comma = fixed.rfind(',')
-                    if last_comma > 0:
-                        fixed = fixed[:last_comma]
-                fixed += ']' * max(0, open_brackets)
-                fixed += '}' * max(0, open_braces)
-                try:
-                    parsed = json.loads(fixed)
-                except json.JSONDecodeError:
-                    if attempt < max_retries:
-                        print(f"[llm_structured] JSON parse failed, retrying ({attempt+1}/{max_retries})...")
-                        continue
-                    raise
-
+            parsed = json.loads(raw_text)
             return output_schema.model_validate(parsed), last_thinking
 
         except Exception as e:
@@ -188,10 +230,22 @@ def analyze_images(
     enable_thinking: bool = False,
 ) -> Tuple[str, str]:
     """
-    Analyze images with Claude vision.
+    Analyze images with Claude or Gemini vision.
     Returns (text_result, thinking_text).
-    thinking_text is empty string when enable_thinking=False.
     """
+    if not model.startswith("claude-"):
+        content = []
+        for path in image_paths:
+            b64_data, media_type = local_image_to_base64(path)
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{media_type};base64,{b64_data}"}
+            })
+        content.append({"type": "text", "text": prompt})
+        text, thinking = _call_openrouter(model=model, messages=[{"role": "user", "content": content}])
+        print(f"[Gemini Vision] Response length: {len(text)} chars")
+        return text, thinking
+
     client = _get_client()
 
     content = []
@@ -214,7 +268,6 @@ def analyze_images(
     )
     if enable_thinking:
         kwargs["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
-        # (betas handled by SDK automatically or omitted)
 
     response = client.messages.create(**kwargs)
 

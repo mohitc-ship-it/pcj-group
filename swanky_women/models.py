@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Literal
 
 # # ---------------- HEADER ----------------
@@ -9,13 +9,25 @@ class TechPackHeader(BaseModel):
     collection: str
     style_name: str   # STYLE CODE (single source of truth)
     description: str
-    category: str
+    category: str     # Strictly: "women wear", "kids' wear", or "men's wear"
     brand: str
     size_range: str
-    total_order_quantity: Optional[str]
+    total_order_quantity: Optional[str] = None
     sample_size_1st: str
-    sample_pre_production: Optional[str]
-    sample_production: Optional[str]
+    sample_pre_production: Optional[str] = None
+    sample_production: Optional[str] = None
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def normalize_category(cls, v):
+        if not v:
+            return "women wear"
+        v_clean = str(v).strip().lower()
+        if "kid" in v_clean or "child" in v_clean:
+            return "kids' wear"
+        if "men" in v_clean and "women" not in v_clean:
+            return "men's wear"
+        return "women wear"
 
 
 # # ---------------- COLOR ----------------
