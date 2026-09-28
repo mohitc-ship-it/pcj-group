@@ -36,6 +36,46 @@ export async function resetDraft() {
   return res.json()
 }
 
+export async function saveDraft(pageId, data) {
+  const res = await fetch(`${API_BASE_URL}/api/save-draft/${pageId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("Failed to save draft")
+  return res.json()
+}
+
+export async function manualCrop(payload) {
+  const res = await fetch(`${API_BASE_URL}/api/manual-crop`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error("Crop failed")
+  return res.json()
+}
+
+export async function regenerateSketch(instruction) {
+  const res = await fetch(`${API_BASE_URL}/api/regenerate-sketch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ instruction }),
+  })
+  if (!res.ok) throw new Error("Sketch regeneration failed")
+  return res.json()
+}
+
+export async function regenerateTableRow(payload) {
+  const res = await fetch(`${API_BASE_URL}/api/regenerate-table-row`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error("Row regeneration failed")
+  return res.json()
+}
+
 export async function uploadImage(file) {
   const formData = new FormData()
   formData.append("file", file)
@@ -90,13 +130,17 @@ export async function updateMultipleFields(payload) {
  * @param {string} contextText - brand/collection/season/fabric/size context
  * Returns { job_id, status, image_count }
  */
-export async function triggerGeneration(imageFiles, contextText, sampleSize = "") {
+export async function triggerGeneration(imageFiles, contextText, sampleSize = "", brandLogoFile = null) {
   const formData = new FormData()
   imageFiles.forEach((file) => formData.append("images", file))
   formData.append("context", contextText)
   
   if (sampleSize) {
     formData.append("sample_size", sampleSize)
+  }
+
+  if (brandLogoFile) {
+    formData.append("brand_logo", brandLogoFile)
   }
 
   const res = await fetch(`${API_BASE_URL}/api/generate`, {

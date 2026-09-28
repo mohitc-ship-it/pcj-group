@@ -194,3 +194,30 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 }
+/* Custom scrollbar for tables */
+.custom-table-scrollbar::-webkit-scrollbar {
+  height: 12px; /* slightly thicker for easier clicking */
+  width: 12px;
+}
+.custom-table-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+.custom-table-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  border: 2px solid #0f0f13; /* adds "padding" around thumb */
+}
+.custom-table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Global selection highlight for dark mode */
+::selection {
+  background-color: rgba(167, 139, 250, 0.8); /* Bright violet for high visibility */
+  color: white;
+}
+input::selection, textarea::selection {
+  background-color: rgba(167, 139, 250, 0.8);
+  color: white;
+}

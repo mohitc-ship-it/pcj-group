@@ -52,14 +52,14 @@ export default function ImageField({
   }
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">{label}</label>
+    <div className="space-y-1.5 mb-4">
+      <label className="text-xs font-bold text-white/80 tracking-wide">{label}</label>
 
       {value && (
         <img
           src={value}
           alt={label}
-          className="max-h-40 border rounded"
+          className="max-h-48 border border-white/10 rounded-xl bg-white/5 object-contain"
         />
       )}
 
@@ -76,6 +76,7 @@ export default function ImageField({
         size="sm"
         onClick={() => fileInputRef.current.click()}
         disabled={loading}
+        className="bg-white/5 hover:bg-white/10 text-white/80 border-white/10 hover:text-white"
       >
         {loading ? "Uploading..." : "Upload Image"}
       </Button>

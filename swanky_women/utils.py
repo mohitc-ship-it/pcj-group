@@ -206,7 +206,7 @@ def extract_valid_pixels(image_path: str) -> np.ndarray:
             continue
 
         lab = rgb_to_lab((r,g,b))
-        if lab.lab_l < 30:  # remove deep shadows
+        if lab.lab_l < 12:  # remove deep shadows (was 30, which deleted navy/black garments!)
             continue
 
         valid.append((r,g,b))
@@ -342,6 +342,48 @@ def approx_print_pantone(hex_color, pantones, top_k=3):
     return sorted(results, key=lambda x:x["delta_e"])[:top_k]
 
 # --------------------------------------------------
+# SPLIT PALETTE INTO N DISTINCT COLOR GROUPS
+# --------------------------------------------------
+def cluster_into_color_groups(top_colors: List[Dict], n_groups: int = 2, min_lab_distance: float = 22.0) -> List[List[Dict]]:
+    """
+    Splits ranked pixel colors into N visually distinct groups.
+    Uses CIELAB Delta-E distance to separate colors that are perceptually far apart.
+    Returns a list of groups, each group is a list of color dicts.
+    """
+    if not top_colors:
+        return []
+
+    # Each group starts empty. We assign each color to the nearest group centroid.
+    # Seed with the most dominant color as the first group centroid.
+    groups = [[top_colors[0]]]
+    group_centroids_lab = [rgb_to_lab(top_colors[0]["rgb"])]
+
+    for color in top_colors[1:]:
+        color_lab = rgb_to_lab(color["rgb"])
+        # Find nearest existing group
+        min_dist = float("inf")
+        nearest_group_idx = 0
+        for i, centroid_lab in enumerate(group_centroids_lab):
+            dE = delta_e_cie2000(
+                LabColor(color_lab.lab_l, color_lab.lab_a, color_lab.lab_b),
+                LabColor(centroid_lab.lab_l, centroid_lab.lab_a, centroid_lab.lab_b)
+            )
+            if dE < min_dist:
+                min_dist = dE
+                nearest_group_idx = i
+
+        if min_dist >= min_lab_distance and len(groups) < n_groups:
+            # This color is far enough from all existing groups — start a new group
+            groups.append([color])
+            group_centroids_lab.append(color_lab)
+        else:
+            # Assign to nearest group
+            groups[nearest_group_idx].append(color)
+
+    return groups
+
+
+# --------------------------------------------------
 # 🔥 MAIN ENTRY FUNCTION
 # --------------------------------------------------
 def recommend_colors_from_images(
@@ -378,6 +420,90 @@ def recommend_colors_from_images(
     #     output["note"] = "Print Pantone is NON-BINDING and NOT TCX."
 
     return top_colors
+
+
+def render_pantone_swatches(pantone_options: list, output_path: str = None) -> str:
+    """
+    Renders a grid of solid Pantone color swatches as a labeled PNG image.
+    Each swatch is a 200x200px solid block with the Pantone code and name below it.
+
+    Args:
+        pantone_options: list of {"code": ..., "name": ..., "hex": ...} dicts
+        output_path: optional path to save; auto-generates temp file if None
+
+    Returns:
+        Absolute path to the saved PNG.
+    """
+    import os, tempfile, math
+    from PIL import Image, ImageDraw
+
+    SWATCH_W = 200
+    SWATCH_H = 200
+    LABEL_H  = 55
+    COLS     = 5
+    PAD      = 12
+    BG       = (230, 230, 230)
+    TEXT_COL = (30, 30, 30)
+
+    n    = len(pantone_options)
+    rows = math.ceil(n / COLS) if n else 1
+    img_w = COLS * (SWATCH_W + PAD) + PAD
+    img_h = rows * (SWATCH_H + LABEL_H + PAD) + PAD
+
+    canvas = Image.new("RGB", (img_w, img_h), BG)
+    draw   = ImageDraw.Draw(canvas)
+    
+    # Try to load a larger font, fallback to default if not found
+    try:
+        from PIL import ImageFont
+        font_large = ImageFont.truetype("Arial.ttf", 24)
+        font_small = ImageFont.truetype("Arial.ttf", 16)
+    except:
+        try:
+            font_large = ImageFont.truetype("/Library/Fonts/Arial.ttf", 24)
+            font_small = ImageFont.truetype("/Library/Fonts/Arial.ttf", 16)
+        except:
+            font_large = None
+            font_small = None
+
+    for i, p in enumerate(pantone_options):
+        row = i // COLS
+        col = i % COLS
+        x   = PAD + col * (SWATCH_W + PAD)
+        y   = PAD + row * (SWATCH_H + LABEL_H + PAD)
+
+        # Parse hex → RGB
+        raw = p.get("hex", "#888888").lstrip("#")
+        if len(raw) == 6:
+            r, g, b = int(raw[0:2], 16), int(raw[2:4], 16), int(raw[4:6], 16)
+        else:
+            r, g, b = 136, 136, 136
+
+        # Solid color block
+        draw.rectangle([x, y, x + SWATCH_W, y + SWATCH_H], fill=(r, g, b))
+
+        # White label area below
+        draw.rectangle([x, y + SWATCH_H, x + SWATCH_W, y + SWATCH_H + LABEL_H], fill=(255, 255, 255))
+
+        # Label text
+        code = p.get("code", "")
+        name = p.get("name", "")
+        if font_large:
+            draw.text((x + 6, y + SWATCH_H + 6),  code, fill=TEXT_COL, font=font_large)
+            draw.text((x + 6, y + SWATCH_H + 32), name, fill=(80, 80, 80), font=font_small)
+        else:
+            draw.text((x + 6, y + SWATCH_H + 6),  code, fill=TEXT_COL)
+            draw.text((x + 6, y + SWATCH_H + 26), name, fill=(80, 80, 80))
+
+    if output_path is None:
+        fd, output_path = tempfile.mkstemp(suffix=".png", prefix="pantone_swatches_")
+        os.close(fd)
+
+    canvas.save(output_path)
+    print(f"[render_pantone_swatches] saved {n} swatches → {output_path}")
+    return output_path
+
+
 
 
 
@@ -824,8 +950,8 @@ def format_technical_sketch(
         min_val = mid_zone[min_idx]
         split_y = mid_start + min_idx
 
-        # If explicit two_piece or clearly stacked 2-tier layout
-        has_vertical_split = (min_val < 50 and H > W * 0.9)
+        # Only assume vertically stacked if the gap is very clean (min_val < 5) and the image is very tall
+        has_vertical_split = (min_val < 5 and H > W * 1.2)
 
         if not (is_two_piece or has_vertical_split):
             # Single piece: auto-trim outer white borders

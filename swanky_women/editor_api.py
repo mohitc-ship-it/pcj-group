@@ -49,12 +49,14 @@ def save_draft(data):
 # Page → template mapping (SINGLE SOURCE OF TRUTH)
 # --------------------------------------------------
 PAGE_TEMPLATE_MAP = {
+    "header": "product_construction.html",
     "page_1": "intro_page.html",
     "page_2": "3d_cad_design_page.html",
     "page_3": "technical_sketch_page.html",
     "page_4": "accessories_page.html",
     "page_5": "product_construction.html",
-    "page_6": "measurements.html",
+    "page_6": "size_chart_page.html",
+    "page_10": "measurements.html",
     "page_7": "fabrics_quality_standards.html",
     "page_8": "reference_image_page.html",
     "page_9": "wash_and_care_label.html",
@@ -380,7 +382,7 @@ def _push_reasoning(job_id: str, step: str, decision: str, reasoning: str, progr
     })
 
 
-def _run_generation_job(job_id: str, image_paths: list, context: str, sample_size: str):
+def _run_generation_job(job_id: str, image_paths: list, context: str, sample_size: str, brand_logo_path: str = None):
     """Runs generate_techpack in a background thread, updating job state with reasoning traces."""
     try:
         import sys, os
@@ -394,7 +396,7 @@ def _run_generation_job(job_id: str, image_paths: list, context: str, sample_siz
         _push_reasoning(job_id, "Starting pipeline...", "", "Initializing AI agents and loading models.", 2)
 
         # Run the actual pipeline (blocking, in background thread)
-        pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback)
+        pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback, brand_logo_path=brand_logo_path)
 
         # Clear any stale draft so the frontend editor loads this new generation
         if DRAFT_FILE.exists():
@@ -421,6 +423,7 @@ async def start_generation(
     images: list[UploadFile] = File(...),
     context: str = Form(...),
     sample_size: Optional[str] = Form("M"),
+    brand_logo: Optional[UploadFile] = File(None),
 ):
     """
     Accepts 2+ garment images + context, starts generation in background.
@@ -445,6 +448,16 @@ async def start_generation(
             f.write(await img_file.read())
         saved_paths.append(dest)
 
+    # Save brand logo if provided
+    brand_logo_path = None
+    if brand_logo and brand_logo.filename:
+        logo_ext = os.path.splitext(brand_logo.filename)[1] or ".png"
+        logo_dest = os.path.join(ASSETS_DIR, f"brand_logo_uploaded{logo_ext}")
+        with open(logo_dest, "wb") as f:
+            f.write(await brand_logo.read())
+        brand_logo_path = logo_dest
+        print(f"[start_generation] Brand logo saved to {logo_dest}")
+
     # Create job
     job_id = uuid.uuid4().hex
     _jobs[job_id] = {
@@ -459,7 +472,7 @@ async def start_generation(
     # Start background thread
     thread = threading.Thread(
         target=_run_generation_job,
-        args=(job_id, saved_paths, context, sample_size),
+        args=(job_id, saved_paths, context, sample_size, brand_logo_path),
         daemon=True,
     )
     thread.start()
@@ -503,6 +516,208 @@ def download_pdf():
             "Expires": "0",
         }
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Feature 2 — Save draft for a specific page
+# ──────────────────────────────────────────────────────────────────────────────
+@app.post("/api/save-draft/{page_id}")
+async def save_draft_page(page_id: str, data: dict = Body(...)):
+    """Merge the submitted page data into master_draft.json and persist it."""
+    if page_id not in PAGE_TEMPLATE_MAP:
+        return JSONResponse({"error": f"Unknown page: {page_id}"}, status_code=400)
+    draft = load_draft()
+    draft[page_id] = data
+    save_draft(draft)
+    return JSONResponse({"ok": True, "page_id": page_id})
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Feature 3 — Manual crop: crop a region from an uploaded image
+# ──────────────────────────────────────────────────────────────────────────────
+@app.post("/api/manual-crop")
+async def manual_crop(payload: dict = Body(...)):
+    """
+    Crop a pixel region from a source image, save it as a new asset,
+    and update the draft for the specified field.
+    Payload: { image_path, x, y, width, height, field_key, page_id }
+    """
+    try:
+        from PIL import Image as PILImage
+        import uuid as uuid_mod
+
+        image_path = payload.get("image_path", "")
+        # Strip the base URL prefix if present
+        if "assets/" in image_path:
+            image_path = "assets/" + image_path.split("assets/")[1]
+
+        x      = int(payload["x"])
+        y      = int(payload["y"])
+        w      = int(payload["width"])
+        h      = int(payload["height"])
+        field  = payload.get("field_key", "")
+        page   = payload.get("page_id", "")
+
+        if not Path(image_path).exists():
+            return JSONResponse({"error": f"Source image not found: {image_path}"}, status_code=404)
+
+        with PILImage.open(image_path) as img:
+            cropped = img.crop((x, y, x + w, y + h))
+            out_name = f"manual_crop_{uuid_mod.uuid4().hex[:8]}.png"
+            out_path = f"assets/{out_name}"
+            cropped.save(out_path)
+
+        # Update draft if field + page provided
+        if field and page:
+            draft = load_draft()
+            if page in draft and field in draft[page]:
+                draft[page][field] = out_path
+                save_draft(draft)
+
+        return JSONResponse({"ok": True, "new_url": f"{BASE_URL}/{out_path}"})
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Feature 4 — Regenerate technical sketch via image-to-image
+# ──────────────────────────────────────────────────────────────────────────────
+@app.post("/api/regenerate-sketch")
+async def regenerate_sketch(payload: dict = Body(...)):
+    """
+    Apply a modification instruction to the current technical sketch image
+    using image-to-image generation, then update the draft.
+    Payload: { instruction }
+    """
+    try:
+        from imageGen import generate_image
+
+        instruction = payload.get("instruction", "").strip()
+        if not instruction:
+            return JSONResponse({"error": "instruction is required"}, status_code=400)
+
+        draft = load_draft()
+        current_sketch = draft.get("page_3", {}).get("technical_sketch_img", "assets/technical_sketch.png")
+        if "assets/" in current_sketch:
+            current_sketch = "assets/" + current_sketch.split("assets/")[1]
+
+        full_prompt = (
+            f"TECHNICAL SKETCH MODIFICATION REQUEST:\n"
+            f"Reference the existing technical sketch image provided.\n"
+            f"Apply the following change: {instruction}\n\n"
+            f"Preserve ALL other details of the garment exactly as shown: "
+            f"silhouette, construction lines, seam positions, collar style, sleeve design, "
+            f"pocket placement, and all other design elements that are NOT mentioned in the change request.\n"
+            f"Output a clean, black-and-white technical flat sketch on white background."
+        )
+
+        out_path = "assets/technical_sketch.png"
+        result = generate_image(full_prompt, current_sketch, out_path, use_pro=True)
+        if not result:
+            return JSONResponse({"error": "Generation failed"}, status_code=500)
+
+        draft["page_3"]["technical_sketch_img"] = result
+        save_draft(draft)
+
+        return JSONResponse({"ok": True, "new_url": f"{BASE_URL}/{result}"})
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Feature 5 — Regenerate a single table row via LLM
+# ──────────────────────────────────────────────────────────────────────────────
+@app.post("/api/regenerate-table-row")
+async def regenerate_table_row(payload: dict = Body(...)):
+    """
+    Regenerate a single row of a content table (seams, accessories, measurements)
+    using the LLM with garment context + user instruction.
+    Payload: { page_id, table_key, row_index, row_data, instruction }
+    """
+    try:
+        from llm import llm_structured
+        import json as _json
+
+        page_id    = payload.get("page_id", "")
+        table_key  = payload.get("table_key", "")
+        row_index  = int(payload.get("row_index", 0))
+        row_data   = payload.get("row_data", {})
+        instruction = payload.get("instruction", "").strip()
+
+        # Pull garment context from draft header for richer AI understanding
+        draft  = load_draft()
+        header = draft.get("header", {})
+        page1  = draft.get("page_1", {})
+        garment_desc = header.get("description", "garment")
+        style_name   = page1.get("style_number", "")
+        fabric_info  = ""
+        fabrics      = draft.get("page_7", {}).get("fabrics", [])
+        if fabrics and isinstance(fabrics, list):
+            fabric_info = ", ".join([f.get("fabric_type", "") for f in fabrics[:2] if isinstance(f, dict)])
+
+        # Build the keys schema from the row (exclude meta fields)
+        hidden = {"justification", "confidence", "requires_confirmation"}
+        row_keys = [k for k in row_data.keys() if k not in hidden]
+        keys_str = ", ".join(row_keys)
+
+        prompt = f"""You are a fashion tech pack expert editing a single row in a "{table_key}" table.
+
+GARMENT CONTEXT:
+- Style: {style_name}
+- Description: {garment_desc}
+- Fabric: {fabric_info}
+
+CURRENT ROW (JSON):
+{_json.dumps({k: row_data[k] for k in row_keys}, indent=2)}
+
+USER INSTRUCTION:
+{instruction}
+
+YOUR TASK:
+Apply the instruction to update this row. Return ONLY valid JSON with exactly these keys: {keys_str}
+Do not add extra keys. Make the change specific and technically accurate for this garment.
+Return only the JSON object, no explanation."""
+
+        # Use LLM with JSON prefill for clean output
+        from anthropic import Anthropic
+        import os
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        response = client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=2048,
+            messages=[
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": "{"},
+            ]
+        )
+        raw = "{" + response.content[0].text.strip()
+        # Clean markdown fences if any
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        updated_row = _json.loads(raw.strip())
+
+        # Preserve the hidden meta fields from original row
+        for meta in hidden:
+            if meta in row_data:
+                updated_row[meta] = row_data[meta]
+
+        # Save updated row back into draft
+        if page_id in draft and table_key in draft[page_id]:
+            table = draft[page_id][table_key]
+            if 0 <= row_index < len(table):
+                table[row_index] = updated_row
+                draft[page_id][table_key] = table
+                save_draft(draft)
+
+        return JSONResponse({"ok": True, "updated_row": updated_row})
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 
 
 if __name__ == "__main__":

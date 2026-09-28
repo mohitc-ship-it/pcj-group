@@ -1,16 +1,16 @@
 {
-    "pages" : {
-        "page_1" : "intro_page",
-        "page_2" : "technical_sketch_page", 
-        "page_3" : "3d_cad_design_page", 
-        "page_4" : "accessories_page", 
-        "page_5" : "product_construction", 
-        "page_6" : "measurements", 
-        "page_7" : "fabrics_quality_standards", 
-        "page_8" : "size_chart_page", 
-        "page_9" : "wash_and_care_label"
+    "pages": {
+        "page_1": "intro_page",
+        "page_2": "technical_sketch_page",
+        "page_3": "3d_cad_design_page",
+        "page_4": "accessories_page",
+        "page_5": "product_construction",
+        "page_6": "measurements",
+        "page_7": "fabrics_quality_standards",
+        "page_8": "size_chart_page",
+        "page_9": "wash_and_care_label"
     },
-    "header" : {
+    "header": {
         "date": "30/08/2025",
         "season": "Fall 25",
         "collection": "JC & CO",
@@ -24,16 +24,16 @@
         "sample_pre_production": "",
         "sample_production": ""
     },
-    "page_1" : {
-            "garment_back_view_url" : "assets/front.png",
-            "garment_front_view_url" : "assets/back.png",
-            "style_number" : "",
-            "date" : "",
-            "brand_name" : "Swanky",
-            "collection_name" : "JC & CO",
-            "brand_logo" : "assets/brand_logo.png"
+    "page_1": {
+        "garment_back_view_url": "assets/front.png",
+        "garment_front_view_url": "assets/back.png",
+        "style_number": "",
+        "date": "",
+        "brand_name": "Swanky",
+        "collection_name": "JC & CO",
+        "brand_logo": "assets/brand_logo.png"
     },
-    "page_2" : {
+    "page_2": {
         "front_image_url": "",
         "back_image_url": "",
         "detail_image_1_url": "",
@@ -44,242 +44,235 @@
         "color_hex": "#000000",
         "details": "som details her in proper formate"
     },
-    "page_3" : {
+    "page_3": {
         "technical_sketch_img": "assets/sketches/front.png",
-  
         "brand_label": {
-        "image_url": "assets/labels/brand_label.png",
-        "size": "Approx 5 cm (W) × 3 cm (H)",
-        "placement": "Inner back neck seam"
+            "image_url": "assets/labels/brand_label.png",
+            "size": "Approx 5 cm (W) \u00d7 3 cm (H)",
+            "placement": "Inner back neck seam"
         },
-    
         "size_label": {
-        "image_url": "assets/labels/size_label.png",
-        "size": "Approx 2.5 cm × 2.5 cm",
-        "placement": "Below or beside the brand label"
+            "image_url": "assets/labels/size_label.png",
+            "size": "Approx 2.5 cm \u00d7 2.5 cm",
+            "placement": "Below or beside the brand label"
         },
-    
         "care_label": {
-        "image_url": "assets/care_label.png",
-        "size": "Approx 5 cm × 8 cm",
-        "placement": "Inner left side seam, above 10–15 cm from the hem"
+            "image_url": "assets/care_label.png",
+            "size": "Approx 5 cm \u00d7 8 cm",
+            "placement": "Inner left side seam, above 10\u201315 cm from the hem"
         },
-        
-        "care_label_img" : "assets/care_label.png",
         "label_notes": "The color of the labels is white. Type of: 100% Recycled polyester woven label."
     },
-    "page_4" : {
+    "page_4": {
         "accessories": [
             {
-            "description": "Concealed/Invisible Zipper (22–24 cm)",
-            "qty": "1 pc",
-            "color": "Black",
-            "position": "Center Back"
+                "description": "Concealed/Invisible Zipper (22\u201324 cm)",
+                "qty": "1 pc",
+                "color": "Black",
+                "position": "Center Back"
             }
         ]
     },
-    "page_5" : {
+    "page_5": {
         "seams": [
             {
-            "type": "Superimposed Seam",
-            "symbol": "SSa-1",
-            "allowance": "10",
-            "description": "Shoulder Seam",
-            "stitch_type": "Lockstitch (301)",
-            "stitch_symbol": "301",
-            "stitch_size": "3 mm",
-            "machine": "Single needle machine"
+                "type": "Superimposed Seam",
+                "symbol": "SSa-1",
+                "allowance": "10",
+                "description": "Shoulder Seam",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3 mm",
+                "machine": "Single needle machine"
             },
             {
-            "type": "Superimposed Seam",
-            "symbol": "SSb-2",
-            "allowance": "6",
-            "description": "Side Seam",
-            "stitch_type": "Lockstitch (301)",
-            "stitch_symbol": "301",
-            "stitch_size": "3 mm",
-            "machine": "Single needle machine"
+                "type": "Superimposed Seam",
+                "symbol": "SSb-2",
+                "allowance": "6",
+                "description": "Side Seam",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "3 mm",
+                "machine": "Single needle machine"
             },
             {
-            "type": "Superimposed Seam",
-            "symbol": "SSa",
-            "allowance": "8",
-            "description": "Side seams, shoulder seams, center back seam",
-            "stitch_type": "Overlock (504)",
-            "stitch_symbol": "504",
-            "stitch_size": "4 mm",
-            "machine": "4-thread Overlock"
+                "type": "Superimposed Seam",
+                "symbol": "SSa",
+                "allowance": "8",
+                "description": "Side seams, shoulder seams, center back seam",
+                "stitch_type": "Overlock (504)",
+                "stitch_symbol": "504",
+                "stitch_size": "4 mm",
+                "machine": "4-thread Overlock"
             },
             {
-            "type": "Edge Finish",
-            "symbol": "EFa",
-            "allowance": "10",
-            "description": "Hem stitching, neckline topstitch (if needed)",
-            "stitch_type": "Lockstitch (301)",
-            "stitch_symbol": "301",
-            "stitch_size": "2–2.5 mm",
-            "machine": "Lockstitch Machine"
+                "type": "Edge Finish",
+                "symbol": "EFa",
+                "allowance": "10",
+                "description": "Hem stitching, neckline topstitch (if needed)",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "2\u20132.5 mm",
+                "machine": "Lockstitch Machine"
             },
             {
-            "type": "Edge Finish Seam",
-            "symbol": "EFb",
-            "allowance": "10",
-            "description": "Hem (if lined or unlined stretch hem)",
-            "stitch_type": "Coverstitch (406)",
-            "stitch_symbol": "406",
-            "stitch_size": "3 mm",
-            "machine": "Coverstitch Machine"
+                "type": "Edge Finish Seam",
+                "symbol": "EFb",
+                "allowance": "10",
+                "description": "Hem (if lined or unlined stretch hem)",
+                "stitch_type": "Coverstitch (406)",
+                "stitch_symbol": "406",
+                "stitch_size": "3 mm",
+                "machine": "Coverstitch Machine"
             },
             {
-            "type": "Lapped Seam (invisible zip)",
-            "symbol": "LSb",
-            "allowance": "10",
-            "description": "Center back zipper insertion",
-            "stitch_type": "Lockstitch (301)",
-            "stitch_symbol": "301",
-            "stitch_size": "",
-            "machine": "Invisible Zipper Foot"
+                "type": "Lapped Seam (invisible zip)",
+                "symbol": "LSb",
+                "allowance": "10",
+                "description": "Center back zipper insertion",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_symbol": "301",
+                "stitch_size": "",
+                "machine": "Invisible Zipper Foot"
             }
         ]
     },
-    "page_6" : {
-    "measurement_image_url" : "",
-
-    "measurements": [
-        {
-            "point_of_measurement": "Chest",
-            "code": "A",
-            "description": "1\" below armhole, across front & back",
-            "measurement_cm": 84,
-            "tolerance_cm": "±1.27"
-        },
-        {
-            "point_of_measurement": "Waist",
-            "code": "B",
-            "description": "Narrowest part of the body",
-            "measurement_cm": 68,
-            "tolerance_cm": "±1.27"
-        },
-        {
-            "point_of_measurement": "Shoulder to Shoulder",
-            "code": "C",
-            "description": "Across back shoulder seam to seam",
-            "measurement_cm": 37,
-            "tolerance_cm": "±0.64"
-        },
-        {
-            "point_of_measurement": "Dress Length (back)",
-            "code": "D",
-            "description": "Front (deep V)",
-            "measurement_cm": 135,
-            "tolerance_cm": "±0.67"
-        },
-        {
-            "point_of_measurement": "Dress Length (front)",
-            "code": "E",
-            "description": "High Point Shoulder to bottom hem",
-            "measurement_cm": 132,
-            "tolerance_cm": "±1.27"
-        },
-        {
-            "point_of_measurement": "Hips",
-            "code": "F",
-            "description": "18 cm below natural waist (widest part)",
-            "measurement_cm": 92,
-            "tolerance_cm": "±1.27"
-        },
-        {
-            "point_of_measurement": "Armhole depth",
-            "code": "G",
-            "description": "Armhole depth",
-            "measurement_cm": 19,
-            "tolerance_cm": "±0.64"
-        },
-        {
-            "point_of_measurement": "Sleeve Length",
-            "code": "H",
-            "description": "From shoulder seam",
-            "measurement_cm": 61,
-            "tolerance_cm": "±0.27"
-        },
-        {
-            "point_of_measurement": "Slit Length",
-            "code": "I",
-            "description": "From high point to hem",
-            "measurement_cm": 80,
-            "tolerance_cm": ""
-        }
+    "page_6": {
+        "measurement_image_url": "",
+        "measurements": [
+            {
+                "point_of_measurement": "Chest",
+                "code": "A",
+                "description": "1\" below armhole, across front & back",
+                "measurement_cm": 84,
+                "tolerance_cm": "\u00b11.27"
+            },
+            {
+                "point_of_measurement": "Waist",
+                "code": "B",
+                "description": "Narrowest part of the body",
+                "measurement_cm": 68,
+                "tolerance_cm": "\u00b11.27"
+            },
+            {
+                "point_of_measurement": "Shoulder to Shoulder",
+                "code": "C",
+                "description": "Across back shoulder seam to seam",
+                "measurement_cm": 37,
+                "tolerance_cm": "\u00b10.64"
+            },
+            {
+                "point_of_measurement": "Dress Length (back)",
+                "code": "D",
+                "description": "Front (deep V)",
+                "measurement_cm": 135,
+                "tolerance_cm": "\u00b10.67"
+            },
+            {
+                "point_of_measurement": "Dress Length (front)",
+                "code": "E",
+                "description": "High Point Shoulder to bottom hem",
+                "measurement_cm": 132,
+                "tolerance_cm": "\u00b11.27"
+            },
+            {
+                "point_of_measurement": "Hips",
+                "code": "F",
+                "description": "18 cm below natural waist (widest part)",
+                "measurement_cm": 92,
+                "tolerance_cm": "\u00b11.27"
+            },
+            {
+                "point_of_measurement": "Armhole depth",
+                "code": "G",
+                "description": "Armhole depth",
+                "measurement_cm": 19,
+                "tolerance_cm": "\u00b10.64"
+            },
+            {
+                "point_of_measurement": "Sleeve Length",
+                "code": "H",
+                "description": "From shoulder seam",
+                "measurement_cm": 61,
+                "tolerance_cm": "\u00b10.27"
+            },
+            {
+                "point_of_measurement": "Slit Length",
+                "code": "I",
+                "description": "From high point to hem",
+                "measurement_cm": 80,
+                "tolerance_cm": ""
+            }
         ]
     },
-    "page_7" : {
+    "page_7": {
         "fabrics": [
             {
-              "description": "Shell Fabric, 90% Cotton / 10% Spandex, 220–260 GSM, 2-way stretch, Matte surface",
-              "color": "Black",
-              "position": "Outer body and one sleeve"
+                "description": "Shell Fabric, 90% Cotton / 10% Spandex, 220\u2013260 GSM, 2-way stretch, Matte surface",
+                "color": "Black",
+                "position": "Outer body and one sleeve"
             },
             {
-              "description": "",
-              "color": "",
-              "position": ""
+                "description": "",
+                "color": "",
+                "position": ""
             },
             {
-              "description": "",
-              "color": "",
-              "position": ""
+                "description": "",
+                "color": "",
+                "position": ""
             }
-          ],
-        
-          "quality_standards": [
+        ],
+        "quality_standards": [
             {
-              "test": "Dimensional Stability",
-              "method": "ISO 5077",
-              "requirements": "Max Shrinkage: ±2%",
-              "comments": "Ensures consistent sizing after garment is washed or dry cleaned"
+                "test": "Dimensional Stability",
+                "method": "ISO 5077",
+                "requirements": "Max Shrinkage: \u00b12%",
+                "comments": "Ensures consistent sizing after garment is washed or dry cleaned"
             },
             {
-              "test": "Color Fastness to Washing",
-              "method": "ISO 105-C06",
-              "requirements": "≥ Grade 4",
-              "comments": "Color does not bleed or fade"
+                "test": "Color Fastness to Washing",
+                "method": "ISO 105-C06",
+                "requirements": "\u2265 Grade 4",
+                "comments": "Color does not bleed or fade"
             },
             {
-              "test": "Color Fastness to Rubbing",
-              "method": "ISO 105-X12",
-              "requirements": "Dry: ≥ 4, Wet: ≥ 3.5",
-              "comments": "Critical for deep colors like 1815 C, prevents staining or color transfer"
+                "test": "Color Fastness to Rubbing",
+                "method": "ISO 105-X12",
+                "requirements": "Dry: \u2265 4, Wet: \u2265 3.5",
+                "comments": "Critical for deep colors like 1815 C, prevents staining or color transfer"
             },
             {
-              "test": "Flammability (optional)",
-              "method": "ISO 15025 (Procedure A)",
-              "requirements": "Edge ignition test",
-              "comments": "If exporting to regulated markets, not always required"
+                "test": "Flammability (optional)",
+                "method": "ISO 15025 (Procedure A)",
+                "requirements": "Edge ignition test",
+                "comments": "If exporting to regulated markets, not always required"
             },
             {
-              "test": "Tensile Strength",
-              "method": "ISO 13934-1",
-              "requirements": "Min. 150 N (warp & weft)",
-              "comments": "Fabric must not tear under tension"
+                "test": "Tensile Strength",
+                "method": "ISO 13934-1",
+                "requirements": "Min. 150 N (warp & weft)",
+                "comments": "Fabric must not tear under tension"
             },
             {
-              "test": "Seam Slippage",
-              "method": "ISO 13936-2",
-              "requirements": "Max. 5 mm @ 60 N",
-              "comments": "Important for satin which can fray or pull under tension"
+                "test": "Seam Slippage",
+                "method": "ISO 13936-2",
+                "requirements": "Max. 5 mm @ 60 N",
+                "comments": "Important for satin which can fray or pull under tension"
             },
             {
-              "test": "Tear Strength",
-              "method": "ISO 13937-2",
-              "requirements": "Min. 10 N (warp & weft)",
-              "comments": "Ensures fabric holds up under stress"
+                "test": "Tear Strength",
+                "method": "ISO 13937-2",
+                "requirements": "Min. 10 N (warp & weft)",
+                "comments": "Ensures fabric holds up under stress"
             }
-          ]
+        ]
     },
-    "page_8" : {
+    "page_8": {
         "reference_image_front": "",
         "reference_image_back": ""
     },
-    "page_9" : {
+    "page_9": {
         "wash_label": {
             "composition": "90% Cotton and 10% Spandex",
             "washing_instructions": "Dry Clean Only",
@@ -287,37 +280,34 @@
             "drying_instructions": "Do Not Tumble Dry, Hang Dry in Shade",
             "ironing_instructions": "Cool Iron if Needed",
             "dry_cleaning": {
-              "line_1": "Dry Clean with Any Solvent",
-              "line_2": "Except Trichloroethylene"
+                "line_1": "Dry Clean with Any Solvent",
+                "line_2": "Except Trichloroethylene"
             },
             "label_colors": "Black on White"
-          },
-        
-          "care_label": {
+        },
+        "care_label": {
             "image": "assets/care_label.png"
-          },
-        
-          "care_label_instructions": [
+        },
+        "care_label_instructions": [
             "The care label must contain <strong>carelabel symbols</strong> and those only.",
             "Care label must be made in recycled polyester.",
             "Care labels must contain origin: made in India.",
             "Care labels must be given the same size, font and style.",
             "Care instructions should follow <strong>ISO 3758 standard</strong>."
-          ],
-        
-          "other_standards":  [
-              {
+        ],
+        "other_standards": [
+            {
                 "title": "Standard 100 by Oekotex",
                 "description": "Label that ensures consumers that all materials used in a garment are tested for harmful substances."
-              },
-              {
+            },
+            {
                 "title": "EU Ecolabel",
                 "description": "Label that ensures consumers that textiles are made using less harmful substances, energy and water."
-              },
-              {
+            },
+            {
                 "title": "Bluesign",
                 "description": "The Bluesign System reduces impact on people and the environment in the entire textile supply chain, based on input stream management."
-              }
-          ]    
+            }
+        ]
     }
 }

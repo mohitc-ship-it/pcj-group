@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict
 
 # # ---------------- HEADER ----------------
 
@@ -36,6 +36,7 @@ class GarmentColorModel(BaseModel):
     color_name: str
     color_hex: str
     pantone_tcx: str   # MUST be marked SUGGESTED
+    pantone_options: List[dict] = Field(default_factory=list)
 
 class GarmentColorList(BaseModel):
     colors: List[GarmentColorModel]
@@ -1037,7 +1038,8 @@ class MeasurementPointDecision(BaseModel):
         "Brand Fit Block",
         "Industry Reference",
         "Derived from Similar Style",
-        "TBD / To Be Confirmed"
+        "TBD / To Be Confirmed",
+        "Pattern Block"
     ] = Field(
         ...,
         description="Source from which final numeric value should be taken"
@@ -1310,6 +1312,14 @@ class FactorySeam(StrictModel):
     requires_confirmation: bool = False
 
 
+class POMRowModel(StrictModel):
+    point_of_measurement: str = Field(..., description="The specific point of measurement (e.g. Chest, Waist, Sleeve Length)")
+    code: str = Field(..., description="A unique letter code for this measurement (e.g. A, B, C, D) corresponding to the sketch")
+    description: str = Field(..., description="A brief description of how to measure this point (e.g. 1 inch below armhole)")
+    measurement_cm: str = Field(..., description="The target measurement in cm (can be string if it includes fractions/ranges)")
+    tolerance_cm: str = Field(..., description="The accepted manufacturing tolerance in cm (e.g. ±1.27)")
+
+
 class FactoryMeasurement(StrictModel):
     size: str = Field(..., description="Size label (e.g. S, M, L, XL)")
 
@@ -1362,6 +1372,11 @@ class FactoryCareLabel(StrictModel):
 
     dry_cleaning: Optional[DryCleaningInstruction]
 
+    care_symbols: List[str] = Field(default_factory=list, description="List of standard ISO care symbols to display (e.g., 'wash_cold', 'do_not_bleach', 'tumble_dry_low', 'iron_low', 'do_not_dry_clean')")
+
+    translations: Dict[str, str] = Field(default_factory=dict, description="Translated care instructions in French, German, Portuguese, and Italian. Keys are lang codes ('fr', 'de', 'pt', 'it'), values are full translated text blocks.")
+
+
     standards: List[str]
 
     justification: str
@@ -1381,6 +1396,8 @@ class FactoryInstructionModel(StrictModel):
     seams: List[FactorySeam]
 
     measurements: List[FactoryMeasurement]
+
+    pom_measurements: List[POMRowModel]
 
     accessories: List[FactoryAccessory]
 

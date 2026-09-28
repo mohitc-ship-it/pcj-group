@@ -1,10 +1,12 @@
+import os
 import json
 import datetime
 from copy import deepcopy
+from pathlib import Path
 
 from llm import analyze_images, llm_structured, llm_query
 from generate import generatePdf
-from utils import extract_clothing_palette, map_json, combine_images_horizontally, split_into_grids, recommend_colors_from_images, nearest_pantone_tcx, ai_crop_detail_regions, format_technical_sketch
+from utils import extract_clothing_palette, map_json, combine_images_horizontally, split_into_grids, recommend_colors_from_images, nearest_pantone_tcx, ai_crop_detail_regions, format_technical_sketch, render_pantone_swatches, cluster_into_color_groups
 from imageGen import generate_image
 from image_verifier import verify_and_regenerate
 from sketch_prompter import build_normal_sketch_prompt, build_json_sketch_prompt, convert_text_to_json_prompt
@@ -71,31 +73,219 @@ def ensure_page_9_contract(page_9: dict) -> dict:
 #     ).model_dump()
 
 def extract_garment_color(images):
+    """
+    Extracts the primary garment color(s) from the images.
+
+    If MULTI_PANTONE=true in .env:
+        1. Extracts top-5 hex candidates from pixel clustering.
+        2. For each hex, scrapes the Pantone website for real TCX matches.
+        3. Renders all candidates as a labeled color-swatch grid PNG.
+        4. Passes the garment image + swatch grid to Vision AI for visual ranking.
+        5. The top-ranked Pantone goes on the slide; all ranked options go to the manual editor.
+
+    Otherwise: runs the existing simple pipeline.
+    """
+    multi_pantone = os.environ.get("MULTI_PANTONE", "false").strip().lower() == "true"
+
+    # Extract top hex candidates from image pixels (always needed)
     palette = recommend_colors_from_images(images[0], images[1] if len(images) > 1 else images[0])
+    print(f"[DEBUG] extract_garment_color: palette length={len(palette)}")
+
+    # ─────────────────────────────────────────────────────────
+    # NEW PIPELINE — Vision-grounded Pantone ranking
+    # ─────────────────────────────────────────────────────────
+    if multi_pantone:
+        print("[DEBUG] extract_garment_color: MULTI_PANTONE=true → using vision-grounded pipeline")
+        from pantone_scraper import get_tcx_options
+        import re, json as _json
+
+        # ─── PHASE 1: Vision Gatekeeper — how many FABRIC colors? ───────────────
+        gatekeeper_prompt = """Look at this garment image carefully.
+
+Count how many distinct COLORS are used for the main fabrics and prominent trims.
+
+STRICT RULES:
+- DO NOT count: small isolated hardware (buttons, zippers, rivets, buckles, clasps, eyelets).
+- DO NOT count: model skin, hair, background, shadows, or lighting effects.
+- DO NOT count: labels or tags.
+- YES, DO COUNT: Prominent trims, edgings, piping, braiding, or continuous chain details that outline the garment (collar, front opening, cuffs, hem), even if they appear metallic. These are considered secondary textile/trim colors.
+- YES, DO COUNT: Large color-blocked fabric areas.
+
+Examples:
+- Navy blazer with gold buttons → 1 (buttons are isolated hardware, ignored)
+- Navy jacket with gold chain/braid trim outlining the collar, front, and cuffs → 2 (the gold trim is a prominent continuous detail)
+- Black and white color-block dress → 2 (both are distinct fabric areas)
+
+Return ONLY a raw JSON object with no explanation:
+{"fabric_color_count": 1, "fabric_color_notes": ["Navy main body"]}
+or
+{"fabric_color_count": 2, "fabric_color_notes": ["Navy main body", "Gold chain trim on collar, cuffs, and hem"]}
+"""
+        gatekeeper_text, _ = analyze_images(images, gatekeeper_prompt, enable_thinking=False)
+        print(f"[DEBUG] MULTI_PANTONE: gatekeeper response: {gatekeeper_text[:200]}")
+
+        fabric_color_count = 1  # safe default
+        fabric_color_notes = []
+        try:
+            m = re.search(r'\{.*?\}', gatekeeper_text, re.DOTALL)
+            if m:
+                parsed = _json.loads(m.group())
+                fabric_color_count = int(parsed.get("fabric_color_count", 1))
+                fabric_color_notes = parsed.get("fabric_color_notes", [])
+        except Exception as e:
+            print(f"[DEBUG] MULTI_PANTONE: gatekeeper parse error: {e}, defaulting to 1 color")
+
+        print(f"[DEBUG] MULTI_PANTONE: gatekeeper → {fabric_color_count} fabric color(s): {fabric_color_notes}")
+
+        # ─── PHASE 2: Helper to run the scrape→swatch→rank pipeline for one color group ─
+        def _run_single_color_pipeline(hex_candidates, color_label="primary"):
+            """Takes a list of hex strings, scrapes Pantone, ranks, and returns one color result dict."""
+            all_scraped = []
+            parent_hex_map = {}
+
+            for hex_color in hex_candidates:
+                print(f"[DEBUG] MULTI_PANTONE [{color_label}]: scraping website for hex {hex_color}")
+                options = get_tcx_options(hex_color)
+                for opt in options:
+                    code = str(opt.get("code") or opt.get("name", ""))
+                    if code and " TCX" not in code:
+                        code = f"{code} TCX"
+                    if code and code not in parent_hex_map:
+                        parent_hex_map[code] = hex_color
+                    opt["code"] = code
+                all_scraped.extend(options)
+
+            seen_codes = set()
+            pantone_pool = []
+            for opt in all_scraped:
+                code = opt["code"]
+                if code and code not in seen_codes:
+                    seen_codes.add(code)
+                    pantone_pool.append({
+                        "code": code,
+                        "name": opt.get("name", ""),
+                        "hex":  parent_hex_map.get(code, "#888888"),
+                    })
+
+            if not pantone_pool:
+                print(f"[DEBUG] MULTI_PANTONE [{color_label}]: scraper returned 0 options")
+                return None
+
+            print(f"[DEBUG] MULTI_PANTONE [{color_label}]: {len(pantone_pool)} unique Pantone options")
+
+            swatch_path = render_pantone_swatches(pantone_pool)
+            print(f"[DEBUG] MULTI_PANTONE [{color_label}]: swatch grid → {swatch_path}")
+
+            comparison_prompt = f"""You are a professional textile color specialist.
+
+You will see:
+1. The original garment photo(s) — examine the **{color_label} fabric** color carefully.
+2. A grid of labeled Pantone TCX color swatches.
+
+Your task:
+Rank the swatches from CLOSEST to FURTHEST match to the **{color_label} fabric** color.
+Consider: hue, value (lightness/darkness), and saturation.
+
+Return ONLY a raw JSON array of Pantone codes in ranked order. Example:
+["19-3921 TCX", "19-3953 TCX", "19-4024 TCX"]
+
+No explanation. Only the JSON array.
+"""
+            comparison_images = images + [swatch_path]
+            ranked_text, _ = analyze_images(comparison_images, comparison_prompt, enable_thinking=False)
+            print(f"[DEBUG] MULTI_PANTONE [{color_label}]: vision ranked: {ranked_text[:200]}")
+
+            ranked_codes = []
+            try:
+                json_match = re.search(r'\[.*?\]', ranked_text, re.DOTALL)
+                if json_match:
+                    ranked_codes = _json.loads(json_match.group())
+            except Exception as e:
+                print(f"[DEBUG] MULTI_PANTONE [{color_label}]: JSON parse error: {e}")
+
+            if not ranked_codes:
+                ranked_codes = [p["code"] for p in pantone_pool]
+
+            winner_code = ranked_codes[0]
+            winning_parent_hex = parent_hex_map.get(winner_code, hex_candidates[0])
+            print(f"[DEBUG] MULTI_PANTONE [{color_label}]: winner = {winner_code} hex={winning_parent_hex}")
+
+            filtered_ranked_codes = [c for c in ranked_codes if parent_hex_map.get(c) == winning_parent_hex]
+
+            code_to_name = {p["code"]: p["name"] for p in pantone_pool}
+            code_to_hex  = {p["code"]: p["hex"]  for p in pantone_pool}
+
+            return {
+                "color_name":   code_to_name.get(winner_code, ""),
+                "color_hex":    winning_parent_hex,
+                "pantone_tcx":  winner_code,
+                "pantone_options": [
+                    {"code": c, "name": code_to_name.get(c, ""), "hex": code_to_hex.get(c, "")}
+                    for c in filtered_ranked_codes
+                ],
+                "pantone_accuracy_note": f"Vision-grounded ranking — parent hex filter ({winning_parent_hex})"
+            }
+
+        # ─── PHASE 3: Branch on color count ──────────────────────────────────────
+        final_colors = []
+
+        if fabric_color_count == 1:
+            # Single-color path: take top 3 hexes from the dominant cluster
+            top_3_hex = [c["hex"] for c in palette[:3]]
+            result = _run_single_color_pipeline(top_3_hex, color_label="main fabric")
+            if result:
+                final_colors.append(result)
+
+        else:
+            # Multi-color path: split palette into 2 distinct color groups
+            color_groups = cluster_into_color_groups(palette, n_groups=2, min_lab_distance=22.0)
+            print(f"[DEBUG] MULTI_PANTONE: split into {len(color_groups)} color groups")
+
+            labels = ["primary fabric", "secondary fabric"]
+            for i, group in enumerate(color_groups):
+                if not group:
+                    continue
+                # Take top 2 hexes from this group as candidates for the scraper
+                group_sorted = sorted(group, key=lambda x: x.get("confidence", 0), reverse=True)
+                hex_candidates = [c["hex"] for c in group_sorted[:2]]
+                label = labels[i] if i < len(labels) else f"fabric {i+1}"
+                result = _run_single_color_pipeline(hex_candidates, color_label=label)
+                if result:
+                    # Override color_name with the gatekeeper's note if available
+                    if i < len(fabric_color_notes):
+                        result["color_note"] = fabric_color_notes[i]
+                    final_colors.append(result)
+
+        if not final_colors:
+            print("[DEBUG] MULTI_PANTONE: all pipelines failed, falling back to simple pipeline")
+            multi_pantone = False  # fall through below
+        else:
+            return {"colors": final_colors}
+
+
+    # ─────────────────────────────────────────────────────────
+    # EXISTING PIPELINE — simple LLM-based extraction
+    # ─────────────────────────────────────────────────────────
     palette_with_pantone = []
     for color in palette[:6]:
         tcx_matches = nearest_pantone_tcx(color["hex"], top_k=1)
-        best_match = tcx_matches[0] if tcx_matches else None
+        best_match  = tcx_matches[0] if tcx_matches else None
         palette_with_pantone.append({
             **color,
             "verified_pantone_code": best_match["code"] if best_match else "N/A",
             "verified_pantone_name": best_match["name"] if best_match else "N/A",
-            "delta_e": best_match["delta_e"] if best_match else None,
+            "delta_e":               best_match["delta_e"] if best_match else None,
         })
-    palette_summary = "\n".join([f"  HEX {c['hex']} | Confidence {c['confidence']:.2f} | → VERIFIED TCX: {c['verified_pantone_code']} ({c['verified_pantone_name']}) | ΔE={c['delta_e']}" for c in palette_with_pantone])
-    prompt = f"""ROLE: Textile Color Matching Specialist\nYou are working for a fashion brand color lab.\nThe Pantone TCX codes below are VERIFIED.\nVERIFIED COLOR PALETTE:\n{palette_summary}\nSelect TOP 3-5 dominant garment colors. Set pantone_accuracy_note = "Verified – Delta-E TCX lookup"\nReturn a GarmentColorList JSON."""
-
-    # palette = extract_clothing_palette(images[0])
 
     prompt = f"""
-ROLE: Textile Color Matching Specialist  
+ROLE: Textile Color Matching Specialist
 
-You are working for a **fashion brand color lab**.  
-Your job is to identify the **primary garment color** from the provided images and palette.
+You are working for a **fashion brand color lab**.
+Your job is to identify the **primary garment colors** from the provided images and palette.
 
 This color will be used in a **factory tech pack**, so accuracy and conservatism are critical.
 
-You are NOT allowed to invent colors.  
+You are NOT allowed to invent colors.
 You must work only from:
 • The garment pixels in the images
 • The extracted HEX palette provided
@@ -104,10 +294,10 @@ You must work only from:
 INPUTS
 ────────────────────────────────────────────
 
-GARMENT IMAGES  
+GARMENT IMAGES
 (Visual reference of the actual garment)
 
-EXTRACTED COLOR PALETTE (from garment pixels)  
+EXTRACTED COLOR PALETTE (from garment pixels)
 {palette}
 
 ────────────────────────────────────────────
@@ -118,26 +308,27 @@ You must determine ALL prominent colors on the garment:
 
 1. The **Primary Garment Color** (Main Fabric)
    - The color that covers the **largest surface area** of the garment.
-   
-2. Any **Secondary / Trim Colors** (e.g., Piping, Contrast Collar, Buttons, Placket trim)
-   - Colors used for specific details.
+
+2. Any **Secondary / Trim Colors** (e.g., Piping, Contrast Collar, lining)
+   - Colors used for specific FABRIC details.
+   - STRICTLY IGNORE colors of buttons, zippers, hardware, metallic trims, and non-textile accessories.
    - Ignore shadows, highlights, and lighting bias.
 
 ────────────────────────────────────────────
 OUTPUT
 ────────────────────────────────────────────
 
-Return a JSON list of **GarmentColorModel** containing only the actually present primary and secondary colors. Do not output 5-8 variations of the same color. Only output distinct functional colors (e.g., 1 main color, 1 trim color).
-"""""
+Return a JSON list of **GarmentColorModel** containing only the actually present primary and secondary FABRIC colors.
+Do not output variations of the same color. Only output distinct functional colors.
+"""
 
-    print(f"[DEBUG] extract_garment_color: palette length={len(palette) if hasattr(palette,'__len__') else 'N/A'}")
-    # only print a small sample of the prompt to avoid huge logs
-    print(f"[DEBUG] extract_garment_color: calling analyze_images + llm_structured with prompt preview: {prompt[:200].replace('\n',' ')}...")
+    print(f"[DEBUG] extract_garment_color: simple pipeline — calling analyze_images...")
     _analysis, _analysis_think = analyze_images(images, prompt, enable_thinking=True)
     _obj, _think = llm_structured(_analysis, GarmentColorList, enable_thinking=True)
     result = _obj.model_dump()
     print(f"[DEBUG] extract_garment_color: got {len(result.get('colors', []))} colors")
     return result
+
 
 # =========================================================
 # AGENT 1 — VISION (OBSERVE ONLY)
@@ -612,6 +803,10 @@ OUTPUT:
 #     return llm_structured(prompt, ConstructionDecisionModel,model="gpt-5.2").model_dump()
 
 def construction_decision_agent(classification, fabric_decision, structure):
+    # Load the external seam knowledge base for richer, more accurate seam decisions
+    _kb_path = Path(__file__).resolve().parent / "data" / "seam_knowledge_base.md"
+    seam_kb = _kb_path.read_text(encoding="utf-8") if _kb_path.exists() else "(seam knowledge base not found)"
+
     prompt = f"""
 ROLE: Construction Decision Agent  
 You are a **Senior Apparel Technical Designer & Factory Process Engineer**.  
@@ -785,6 +980,17 @@ You must return a **ConstructionDecisionModel** containing:
    - “Requires careful handling due to slippery fabric”
    - “High precision required at zipper insertion”
    - “Multiple curved seams increase sewing difficulty”
+
+────────────────────────────────────────────
+SEAM KNOWLEDGE BASE (USE THIS AS YOUR REFERENCE)
+────────────────────────────────────────────
+
+The following is a professional garment construction seam reference document.
+You MUST use these definitions, visual identifiers, fabric-seam pairings, and few-shot
+examples to guide every seam decision you make. Do not guess — look up the correct seam
+type from this reference and justify your choices using it.
+
+{seam_kb}
 
 ────────────────────────────────────────────
 STRICT RULES
@@ -1084,22 +1290,24 @@ SECTION 2 — SEAMS
 ────────────────────────────────────────────
 
 For each seam, provide:
-- seam_type: Superimposed Seam, Edge Finish, Lapped Seam, etc
-- seam_symbol: SSa-1, SSb-2, SSa, EFa, EFb, LSb, etc (each seam MUST have a DISTINCT symbol)
-- seam_allowance_mm: realistic values (6-15mm range typically)
+- type: Superimposed Seam, Edge Finish, Lapped Seam, etc
+- symbol: N/A
+- allowance: e.g. "1 cm", "3 cm", etc.
 - description: Shoulder Seam, Side Seam, Hem stitching, Center back zipper insertion, etc
-- stitch_type: Lockstitch (301), Overlock (504), Coverstitch (406), etc
-- stitch_symbol: 301, 504, 406, etc
+- stitch_type: Lockstitch, Overlock, Coverstitch, Blind stitch, etc
+- stitch_symbol: N/A
 - stitch_size: 2-4mm typically
 - machine_type: Single needle machine, 4-thread Overlock, Coverstitch Machine, Invisible Zipper Foot, etc
 
-REFERENCE EXAMPLE (Women's Asymmetrical Dress):
-1. Superimposed Seam | SSa-1 | 10mm | Shoulder Seam | Lockstitch (301) | 301 | 3mm | Single needle machine
-2. Superimposed Seam | SSb-2 | 6mm | Side Seam | Lockstitch (301) | 301 | 3mm | Single needle machine
-3. Superimposed Seam | SSa | 8mm | Side seams, shoulder seams, center back seam | Overlock (504) | 504 | 4mm | 4-thread Overlock
-4. Edge Finish | EFa | 10mm | Hem stitching, neckline topstitch (if needed) | Lockstitch (301) | 301 | 2-2.5mm | Lockstitch Machine
-5. Edge Finish Seam | EFb | 10mm | Hem (if lined or unlined stretch hem) | Coverstitch (406) | 406 | 3mm | Coverstitch Machine
-6. Lapped Seam (invisible zip) | LSb | 10mm | Center back zipper insertion | Lockstitch (301) | 301 | - | Invisible Zipper Foot
+CRITICAL: Do NOT use technical ISO/ASTM codes (no SSa-1, no 301). Follow the exact terminology and unit formatting in these examples perfectly:
+
+REFERENCE EXAMPLE 1 (Blazer):
+1. type: Plain seam | symbol: N/A | allowance: 1 cm | description: Shoulder seam | stitch_type: Lockstitch | stitch_symbol: N/A | stitch_size: 2.5 mm | machine: Single-needle lockstitch
+2. type: Plain seam + overlock | symbol: N/A | allowance: 1 cm | description: Side seam | stitch_type: Lockstitch + 3-thread overlock | stitch_symbol: N/A | stitch_size: 2.5 mm | machine: Single-needle & overlock
+3. type: Blind hem | symbol: N/A | allowance: 3 cm | description: Hem (jacket bottom & sleeves) | stitch_type: Blind stitch | stitch_symbol: N/A | stitch_size: — | machine: Blind-stitch machine
+
+REFERENCE EXAMPLE 2 (Skirt):
+1. type: Lapped/concealed seam | symbol: N/A | allowance: 1 cm | description: Zipper insertion | stitch_type: Lockstitch | stitch_symbol: N/A | stitch_size: 2.5 mm | machine: Zipper foot machine
 
 ────────────────────────────────────────────
 SECTION 3 — MEASUREMENTS
@@ -1128,6 +1336,21 @@ Include garment-specific POMs:
 - All: Bust, Waist, Hip, Sleeve Length, Jacket Length
 
 Each measurement MUST have a UNIQUE justification — do NOT use the same justification for all sizes.
+
+────────────────────────────────────────────
+SECTION 3B — GARMENT MEASUREMENTS (POM SHEET)
+────────────────────────────────────────────
+
+Generate the `pom_measurements` list to be used for the technical sketch callouts.
+This is a detailed Point of Measure (POM) sheet for the Base Size (Sample Size).
+
+1. Identify 6-12 critical Points of Measurement (POM) for this garment.
+2. Assign a UNIQUE uppercase letter code to each (A, B, C, D, E, etc.).
+3. Provide a clear, short description of how to measure it (e.g. "1 inch below armhole").
+4. Provide the exact target measurement in cm (e.g. "84").
+5. Provide a standard manufacturing tolerance in cm (e.g. "±1.27" or "±0.64").
+
+Ensure you include typical POMs like Chest, Waist, Hip, Shoulder to Shoulder, Sleeve Length, Front Length, Back Length, Armhole depth, etc., depending on the garment.
 
 ────────────────────────────────────────────
 SECTION 4 — ACCESSORIES
@@ -1171,6 +1394,10 @@ Care instructions must be appropriate for the primary fabric:
 
 Standards: ISO 3758
 Must include: "Made in India"
+
+NEW REQUIREMENTS FOR CARE LABEL:
+- `care_symbols`: Provide EXACTLY 5 strings representing the ISO care symbols applicable to this garment, chosen from this exact list: ['wash', 'bleach', 'dry', 'iron', 'dry_clean']. (e.g. if you shouldn't bleach, just provide 'bleach', the UI handles the 'do not' symbol variant based on the text. For simplicity, ALWAYS provide these 5 exact strings: ["wash", "bleach", "dry", "iron", "dry_clean"]).
+- `translations`: Provide short translated care instructions for the wash label in French ('fr'), German ('de'), Portuguese ('pt'), and Italian ('it'). Format as multi-line strings with HTML `<br>` tags separating composition, wash, and bleach instructions. Example for 'fr': "100% Coton<br>Lavage en machine à froid<br>Ne pas utiliser d'eau de javel"
 
 ────────────────────────────────────────────
 RULES
@@ -1457,7 +1684,7 @@ Return ONLY valid JSON — a list of objects with these exact fields:
 # MAIN PIPELINE
 # =========================================================
 
-def generate_techpack(images, context, generate=False, sample_size="M", progress_callback=None):
+def generate_techpack(images, context, generate=False, sample_size="M", progress_callback=None, brand_logo_path=None):
     def _report(step, decision, reasoning, progress):
         print(f"[AGENT] {step} → {decision}")
         if progress_callback:
@@ -1470,7 +1697,7 @@ def generate_techpack(images, context, generate=False, sample_size="M", progress
     with open("data/master.json") as f:
         master = deepcopy(json.load(f))
     print(f"[DEBUG] generate_techpack: loaded master.json, top-level keys={list(master.keys())}")
-    for i in range(1, 10):
+    for i in range(1, 11):
         ensure_page(master, f"page_{i}")
 
     # 2. Header
@@ -1563,20 +1790,48 @@ def generate_techpack(images, context, generate=False, sample_size="M", progress
 
     print(f"[DEBUG] generate_techpack: page_1 populated -> brand={master['page_1']['brand_name']} collection={master['page_1']['collection_name']}")
 
-    first_page_logo_prompt = f"""replace swanky by collection name {master['page_1']['brand_name']},also replace collection name to {master['page_1']['collection_name']}"""
-    
-    if generate==True:
-        generate_image(first_page_logo_prompt,"assets/first_page_logo.png","assets/first_page_logo_current.png")
-
-    master["page_1"]["brand_logo"] = "assets/first_page_logo_current.png"
+    # Brand logo: use user-uploaded logo if provided, otherwise AI-generate one
+    if brand_logo_path and os.path.exists(brand_logo_path):
+        print(f"[DEBUG] generate_techpack: using uploaded brand logo from {brand_logo_path}")
+        master["page_1"]["brand_logo"] = brand_logo_path
+    else:
+        first_page_logo_prompt = f"""replace swanky by collection name {master['page_1']['brand_name']},also replace collection name to {master['page_1']['collection_name']}"""
+        if generate == True:
+            generate_image(first_page_logo_prompt, "assets/first_page_logo.png", "assets/first_page_logo_current.png")
+        master["page_1"]["brand_logo"] = "assets/first_page_logo_current.png"
+        print(f"[DEBUG] generate_techpack: using AI-generated brand logo")
 
     # 4. Color
-    colors = extract_garment_color(images)
-    colors = colors['colors']
+    colors_result = extract_garment_color(images)
+    colors = colors_result['colors']
+    
+    # Import scraper here to avoid circular imports or slow startup
+    from pantone_scraper import get_tcx_options
+    
+    for c in colors:
+        # Only run the scraper here if the new MULTI_PANTONE pipeline didn't already populate options
+        if not c.get('pantone_options'):
+            print(f"[DEBUG] generate_techpack: Scrape Pantone options for {c['color_hex']} ({c['color_name']})")
+            scraped_options = get_tcx_options(c['color_hex'])
+            
+            if scraped_options:
+                # Enrich scraped options with the parent hex so the UI color block doesn't break
+                for opt in scraped_options:
+                    code = opt.get("code", "")
+                    if " TCX" not in code: code += " TCX"
+                    opt["hex"] = c['color_hex']
+
+                c['pantone_options'] = scraped_options
+                # Override LLM guess with actual top match from Pantone API
+                c['pantone_tcx'] = scraped_options[0]['code']
+                print(f"[DEBUG] generate_techpack: Selected TCX {c['pantone_tcx']} from scraped options")
+            else:
+                print(f"[DEBUG] generate_techpack: No options found, falling back to LLM guess: {c['pantone_tcx']}")
+
     master['page_2']['optional_colors'] = colors
     color = colors[0]
     master["page_2"].update(color)
-    print(f"[DEBUG] generate_techpack: extracted color -> name={color.get('color_name')} hex={color.get('hex')}")
+    print(f"[DEBUG] generate_techpack: extracted color -> name={color.get('color_name')} hex={color.get('color_hex')} options_count={len(color.get('pantone_options', []))}")
 
     # 5. AGENTS EXECUTION
     print("--- Executing Vision Agent ---")
@@ -1599,7 +1854,7 @@ def generate_techpack(images, context, generate=False, sample_size="M", progress
     print("--- Executing Measurement Decision Agent ---")
     measurement_decisions = measurement_decision_agent(classification, {
         "market": "US Women",
-        "sample_size": "M", # Defaulting to S as per designer mindset "Sample size = S"
+        "sample_size": sample_size,
         "size_range": ["S", "M", "L", "XL"] # Default range
     },context)
     print(f"[DEBUG] generate_techpack: measurement_decisions sample_size={measurement_decisions.get('sample_size')}")
@@ -1740,14 +1995,18 @@ For Outerwear/Coats/Trench Coats/Jackets:
   [Top Wear Front]  [Bottom Wear Front]  [Top Wear Back]  [Bottom Wear Back]
 - Both upper wear and bottom wear must be clearly depicted front and back without model or human body."""
     else:
-        layout_instruction = """Layout Requirements:
-- Create the technical sketch showing Front and Back views side by side."""
+        layout_instruction = """Layout Requirements (CRITICAL):
+- Create the technical sketch showing Front and Back views SIDE-BY-SIDE horizontally on a wide landscape canvas.
+- DO NOT draw them stacked vertically top-to-bottom.
+- Left side: [Front View]
+- Right side: [Back View]"""
 
     technical_sketch_prompt = f"""Convert the provided image of a model wearing a garment into a professional fashion technical sketch suitable for a production tech pack.
 
 Output Requirements:
-- Create clean 2D vector-style black line art on pure white body (#ffffff)
-- White background, no color, no background textures (collar/stand may have contrast shading if visible in reference)
+- STRICTLY BLACK AND WHITE LINE ART ONLY. ABSOLUTELY NO COLOR in the garment drawing.
+- Create clean 2D vector-style black line art on pure white body (#ffffff). DO NOT fill the garment with solid colors like blue, red, etc.
+- White background, no color, no background textures (collar/stand may have subtle grayscale shading if visible in reference)
 - Garment only (remove model facial and body features)
 
 {layout_instruction}
@@ -1769,12 +2028,14 @@ Strict Feature & Count Accuracy:
   * DO NOT draw 6 placket buttons and then add an extra collar button (which erroneously totals 7).
 - Zipper Placement: Check closure location precisely. If the garment has a side invisible zipper, place it at the side seam and leave the center back as a clean vertical seam. Only draw a center back zipper if it genuinely opens at center back.
 - Sleeve cuffs: Accurately show buttons on barrel cuffs AND sleeve gauntlet plackets (e.g. 2 cuff + 1 gauntlet = 3 per sleeve).
-- Back construction: Clean horizontal back yoke with subtle central knife pleats/tucks only if present on reference. Completely smooth back with NO random extra vertical lines or pleats.
+- Construction accuracy: Draw all seams, darts, and construction details (like center back seams or princess seams) exactly as described in the Seams & Construction document.
 
-Annotation & Labeling:
+Annotation & Labeling (CRITICAL ACCURACY):
 - BRAND & SIZE LABEL: In the Front View, inside the inner back neckline/collar opening, always illustrate the small rectangular brand neck tag, labeled with a leader line: 'BRAND & SIZE LABEL'.
-- Use clean, thin RED LEADER LINES connecting each uppercase label text directly to its corresponding garment feature.
-- CONCISE CALLOUT LABELS: Use standard short 1-4 word fashion tech pack callouts (e.g. 'BRAND & SIZE LABEL', 'COLLAR', 'FRONT PLACKET', 'LONG SLEEVES WITH CUFF', 'BACK YOKE', 'CUFFS PLACKET', 'CENTER BACK SEAM'). Do NOT write long paragraphs or descriptive sentences as labels.
+- Use clean, straight, thin RED LEADER LINES connecting each uppercase label text EXACTLY to its corresponding garment feature.
+- The tip of the leader line MUST touch the exact feature being described. Do not let lines float aimlessly or point to the wrong area.
+- DO NOT let leader lines cross or intersect each other. Ensure text is clearly legible without overlapping.
+- CONCISE CALLOUT LABELS: Use standard short 1-4 word fashion tech pack callouts (e.g. 'COLLAR', 'FRONT PLACKET', 'LONG SLEEVES WITH CUFF', 'BACK YOKE', 'CENTER BACK SEAM'). Do NOT write long paragraphs.
 - CRITICAL: Keep ONLY the garment drawings, leader lines, and callout label text in the image.
   DO NOT include any bottom specification bars, SEAMS & TRIMS note boxes, borders, titles, 'FRONT VIEW'/'BACK VIEW' text, or headers in the image.
 
@@ -1867,25 +2128,8 @@ Do not invent details. Only label what is explicitly provided.
         print("going in else for brand label")
         master['page_3']['brand_label_img'] = "assets/brand_label_final.png"
 
-    care_label_prompt = f"""generate care label for garment with fabric description: {factory_output.get("fabrics", [])}
-        accessories include {factory_output.get("accessories", [])}
-            and dress description as {page2_details}"""
-
-    if generate:
-        generate_image(care_label_prompt, "assets/care_label.png", "assets/care_label_final.png", use_pro=False)
-        care_path, care_log = verify_and_regenerate(
-            image_path="assets/care_label_final.png",
-            image_type="care_label",
-            original_prompt=care_label_prompt,
-            generate_fn=lambda p, ref, out, use_pro=False: generate_image(p, ref, out, use_pro=use_pro),
-            ref_image="assets/care_label.png",
-        )
-        master["page_3"]["care_label_img"] = care_path
-        care_result = care_log[-1]
-        _report("Care Label Verification", f"{'✅ Passed' if care_result['valid'] else '⚠️ Regenerated'}", care_result.get('thinking', ''), 89)
-    else:
-        print("going in else for care label")
-        master['page_3']['care_label_img'] = "assets/care_label_final.png"
+    # Care Label image generation removed. Now rendering natively in HTML.
+    _report("Care Label Verification", "✅ Using Native HTML", "Switched to HTML-based Care Label layout", 89)
 
 
 
@@ -1906,7 +2150,7 @@ Do not invent details. Only label what is explicitly provided.
     Layout must look like a factory-ready fashion tech pack page used for clothing manufacturing.
 
     measurement details:
-    {master['page_6']['measurements']}"""
+    {factory_output.get('pom_measurements', [])}"""
 
     if generate:
         generate_image(measurement_diagram, combined_image, "assets/measurement_diagram.png", use_pro=False)
@@ -1917,16 +2161,16 @@ Do not invent details. Only label what is explicitly provided.
             generate_fn=lambda p, ref, out, use_pro=False: generate_image(p, ref, out, use_pro=use_pro),
             ref_image=combined_image,
         )
-        master["page_6"]["measurement_image_url"] = meas_path
+        master["page_10"]["measurement_image_url"] = meas_path
         meas_result = meas_log[-1]
         _report("Measurement Diagram Verification", f"{'✅ Passed' if meas_result['valid'] else '⚠️ Regenerated'}", meas_result.get('thinking', ''), 91)
     else:
-        master['page_6']['measurement_image_url'] = "assets/measurement_diagram.png"
+        master['page_10']['measurement_image_url'] = "assets/measurement_diagram.png"
 
-    
     master["page_4"]["accessories"] = verify_accessories(factory_output.get("accessories", []), images, _report, 79)
     master["page_5"]["seams"] = factory_output.get("seams", [])
-    master["page_6"]["measurements"] = factory_output.get("measurements", [])
+    master["page_6"]["measurements"] = factory_output.get("measurements", []) # Graded Size Chart (S, M, L, XL)
+    master["page_10"]["measurements"] = factory_output.get("pom_measurements", []) # Detailed POM table
     master["page_7"]["fabrics"] = factory_output.get("fabrics", [])
     
     # # Page 7 Quality Standards (Agent call)
@@ -2198,7 +2442,6 @@ Do not invent details. Only label what is explicitly provided.
     
     # Page 9 Care
     master["page_9"]["wash_label"] = factory_output.get("care_label", {})
-    master['page_9']['wash_care_label_img'] = master['page_3']['care_label_img']
     ensure_page_9_contract(master["page_9"])
     
 
@@ -2207,6 +2450,9 @@ Do not invent details. Only label what is explicitly provided.
 
     # 9. Save
     with open("data/master_filled.json", "w") as f:
+        json.dump(final_json, f, indent=4)
+        
+    with open("data/master_draft.json", "w") as f:
         json.dump(final_json, f, indent=4)
 
     return generatePdf()

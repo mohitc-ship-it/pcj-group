@@ -19,6 +19,7 @@ Check ALL of the following:
 4. NO MODEL — Is the model face/body removed? (FAIL if human face/skin prominently visible)
 5. FLAT SKETCH — Does it look like a flat technical drawing?
 6. HEMLINE BALANCE — For garments with level hemlines (T-shirts, shirts, nightdresses, tops, dresses), are front and back views EQUAL in vertical length/height? (FAIL if the back view has been artificially extended, dropped, or lengthened lower than the front view when they should be equal).
+7. TEXT & TYPOGRAPHY SCALE — Are callout labels small, neat, and proportional to the drawing? (FAIL if there are giant, oversized words, huge floating letters, or massive text blocking the canvas).
 
 Respond ONLY in this exact JSON format (no markdown):
 {"valid": true, "issues": [], "score": 8, "corrective_hint": ""}

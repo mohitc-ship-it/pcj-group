@@ -283,10 +283,65 @@
                     </div>
                 </div>
 
-                <!-- CARE LABEL IMAGE -->
-                <div class="label-box">
-                    <div class="care-label-wrapper">
-                        <img src="{{ page_9.wash_care_label_img }}" alt="Care Label">
+                <!-- CARE LABEL MOCKUP -->
+                <div class="label-box" style="display: flex; justify-content: center; align-items: center; gap: 20px; background-color: #f9f9f9; padding: 20px;">
+                    <!-- LEFT TAG -->
+                    <div style="width: 200px; min-height: 280px; background: white; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 15px; font-size: 10px; line-height: 1.3;">
+                        <strong>English</strong><br>
+                        {{ page_9.wash_label.composition }}<br>
+                        {{ page_9.wash_label.washing_instructions }}<br>
+                        {{ page_9.wash_label.bleaching }}<br>
+                        {{ page_9.wash_label.drying_instructions }}<br>
+                        {{ page_9.wash_label.ironing_instructions }}<br>
+                        {% if page_9.wash_label.dry_cleaning %}
+                        {{ page_9.wash_label.dry_cleaning.line_1 }}<br>
+                        {% endif %}
+                        Made in India<br>
+                        Style: {{ header.style_name }}<br>
+                        Size: {{ header.size_range }}<br>
+                        <br>
+                        <strong>Français</strong><br>
+                        {{ page_9.wash_label.get('translations', {}).get('fr', '100% Coton<br>Lavage en machine à froid<br>Ne pas utiliser d\'eau de javel') | safe }}<br>
+                    </div>
+
+                    <!-- RIGHT TAG -->
+                    <div style="width: 200px; min-height: 280px; background: white; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 15px; font-size: 10px; line-height: 1.3; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <strong>Deutsch</strong><br>
+                            {{ page_9.wash_label.get('translations', {}).get('de', '100% Baumwolle<br>Maschinenwäsche kalt<br>Nicht bleichen') | safe }}<br>
+                            <br>
+                            <strong>Italiano</strong><br>
+                            {{ page_9.wash_label.get('translations', {}).get('it', '100% Cotone<br>Lavare in lavatrice a freddo<br>Non candeggiare') | safe }}<br>
+                        </div>
+                        
+                        <!-- SYMBOLS -->
+                        <div style="text-align: center; margin-top: 15px; display: flex; flex-direction: column; align-items: center;">
+                            <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+                                {% set symbols = page_9.wash_label.get('care_symbols', ['wash', 'bleach', 'dry', 'iron', 'dry_clean']) %}
+                                
+                                {% if 'wash' in symbols %}
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M4 8l2 10h12l2-10H4z"/><path d="M4 11h16"/></svg>
+                                {% endif %}
+                                
+                                {% if 'bleach' in symbols %}
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M12 4l9 16H3z"/></svg>
+                                {% endif %}
+                                
+                                {% if 'dry' in symbols %}
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="5"/></svg>
+                                {% endif %}
+                                
+                                {% if 'iron' in symbols %}
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M6 16h13a3 3 0 0 0 3-3v-1a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v4z"/><path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+                                {% endif %}
+                                
+                                {% if 'dry_clean' in symbols %}
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><circle cx="12" cy="12" r="8"/><text x="12" y="16" font-size="10" font-family="Arial" text-anchor="middle" stroke="none" fill="black">P</text></svg>
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 14px; font-weight: bold; letter-spacing: 2px;">{{ header.brand | upper }}</div>
+                            <div style="font-size: 6px;">By {{ header.collection }}</div>
+                        </div>
                     </div>
                 </div>
 

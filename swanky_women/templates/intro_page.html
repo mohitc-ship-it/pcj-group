@@ -36,7 +36,7 @@
         .garment-back {
             position: absolute;
             top: 50px;
-            left: 450px;
+            left: 360px; /* Shifted left to avoid collision with the box */
             width: 320px;
             max-height: 700px;
             object-fit: contain;
@@ -46,7 +46,7 @@
         .garment-front {
             position: absolute;
             bottom: 20px;
-            left: 50px;
+            left: 20px;
             width: 350px;
             max-height: 700px;
             object-fit: contain;
@@ -56,36 +56,37 @@
         /* Dark Info Box */
         .info-box {
             position: absolute;
-            top: 230px;
+            top: 250px;
             right: 0;
-            width: 450px;
-            background-color: #6d6363; /* Muted brown/grey from image */
+            width: 480px;
+            background-color: #9a9591; /* Adjusted to match target taupe/grey */
             color: #fff;
-            padding: 30px 40px;
+            padding: 25px 40px;
             text-align: right;
             z-index: 12;
         }
 
         .info-box h1 {
-            font-size: 42px;
-            font-weight: 300;
-            margin-bottom: 10px;
+            font-size: 40px;
+            font-family: Arial, sans-serif;
+            font-weight: normal;
+            margin-bottom: 15px;
             letter-spacing: 1px;
         }
 
         .info-box .details {
-            font-size: 20px;
-            line-height: 1.6;
+            font-size: 18px;
+            line-height: 1.8;
             font-family: Arial, sans-serif;
         }
 
         /* Logo Branding */
         .brand-branding {
             position: absolute;
-            bottom: 180px;
-            left: 30%;
+            top: 480px;
+            right: 40px;
             text-align: right;
-         
+            z-index: 10;
         }
 
         .logo-main {
@@ -114,21 +115,24 @@
 
     <img src="{{ page_1.garment_back_view_url }}" alt="Back View" class="garment-back">
     <img src="{{ page_1.garment_front_view_url }}" alt="Front View" class="garment-front">
-    <!-- <img src="../assets/a.png" alt="Back View" class="garment-back">
-    <img src="../assets/b.png" alt="Front View" class="garment-front"> -->
 
     <div class="info-box">
         <h1>Technical Package</h1>
         <div class="details">
-            <p>{{ page_1.style_number }}</p>
-            <p>{{ page_1.date }}</p>
-            <p>{{ page_1.brand_name }}</p>
+            <p>{{ header.style_name | default(page_1.style_number) }}</p>
+            <p>{{ header.date | default(page_1.date) }}</p>
+            <p>{{ header.brand | default(page_1.brand_name) }}</p>
         </div>
     </div>
 
-    <div class="brand-branding" style="position: absolute; right: 50px; bottom: 50px; text-align: right;">
-        <div class="logo-main" style="font-family: Arial, sans-serif; font-weight: normal; font-size: 60px; letter-spacing: 2px;">{{ page_1.brand_name | upper }}</div>
-        <div class="logo-subtext" style="font-weight: normal; font-size: 14px; margin-top: -5px;">By {{ page_1.collection_name }}</div>
+    <div class="brand-branding">
+        {% if page_1.brand_logo %}
+            <img src="{{ page_1.brand_logo }}" alt="Brand Logo"
+                 style="max-width: 320px; max-height: 150px; object-fit: contain; display: block; margin-left: auto;" />
+        {% else %}
+            <div class="logo-main" style="font-family: Arial, sans-serif; font-weight: normal; font-size: 60px; letter-spacing: 2px;">{{ header.brand | upper }}</div>
+            <div class="logo-subtext" style="font-weight: normal; font-size: 14px; margin-top: -5px;">By {{ header.collection }}</div>
+        {% endif %}
     </div>
 
 </div>

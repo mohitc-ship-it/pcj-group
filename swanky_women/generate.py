@@ -91,7 +91,16 @@ def generatePdf():
     # --------------------------------------------------
     # Load MASTER DATA
     # --------------------------------------------------
-    with open(DATA_DIR / "master_filled.json") as f:
+    # We read from master_draft.json so that Manual Editor UI changes are reflected.
+    # If no manual edits exist, fallback to master_filled.json (the AI generated output).
+    # If that doesn't exist, fallback to master.json.
+    target_json = DATA_DIR / "master_draft.json"
+    if not target_json.exists():
+        target_json = DATA_DIR / "master_filled.json"
+        if not target_json.exists():
+            target_json = DATA_DIR / "master.json"
+        
+    with open(target_json) as f:
         data = json.load(f)
 
     # --------------------------------------------------
@@ -103,7 +112,8 @@ def generatePdf():
         ("technical_sketch_page.html", "page_2.pdf"),
         ("accessories_page.html", "page_4.pdf"),
         ("product_construction.html", "page_5.pdf"),
-        ("measurements.html", "page_6.pdf"),
+        ("size_chart_page.html", "page_6.pdf"),
+        ("measurements.html", "page_10.pdf"),
         ("fabrics_quality_standards.html", "page_7.pdf"),
         ("reference_image_page.html", "page_8.pdf"),
         ("wash_and_care_label.html", "page_9.pdf"),

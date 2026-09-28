@@ -82,17 +82,37 @@ import ColorField from "./fields/ColorField"
 import TableEditor from "./tables/TableEditor"
 import DetailImageSelector from "./fields/DetailImageSelector"
 import ColorSelector from "./fields/ColorSelector"
-import ColorOptionSelector from "./fields/ColorOptionSelector"
+import MultiColorEditor from "./fields/MultiColorEditor"
+import SketchEditor from "./fields/SketchEditor"
 
 
 export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
   function update(key, value) {
-    onChange({ ...data, [key]: value })
+    let finalValue = value
+    if (pageId === "header" && typeof value === "string") {
+      finalValue = value.toUpperCase()
+    }
+    onChange({ ...data, [key]: finalValue })
   }
 
   return (
     <div className="space-y-6">
       {Object.entries(data).map(([key, value]) => {
+
+        if (
+          pageId === "page_2" &&
+          key === "optional_colors" &&
+          Array.isArray(value)
+        ) {
+          return (
+            <MultiColorEditor
+              key={key}
+              colors={value}
+              pageId={pageId}
+              onUpdated={reloadPage}
+            />
+          )
+        }
 
         if (Array.isArray(value) && value.length && typeof value[0] === "object") {
           return (
@@ -101,6 +121,18 @@ export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
               label={key}
               value={value}
               onChange={v => update(key, v)}
+              pageId={pageId}
+            />
+          )
+        }
+
+        // Feature 4 — Technical sketch: show SketchEditor for image-to-image editing
+        if (pageId === "page_3" && key === "technical_sketch_img") {
+          return (
+            <SketchEditor
+              key={key}
+              value={value}
+              onUpdated={reloadPage}
             />
           )
         }
@@ -122,24 +154,11 @@ export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
         //     />
         //   )
         // }
-        if (
-          pageId === "page_2" &&
-          key === "color_hex" &&
-          Array.isArray(data.optional_colors)
-        ) {
-          return (
-            <ColorOptionSelector
-              key={key}
-              current={{
-                color_hex: data.color_hex,
-                pantone_tcx: data.pantone_tcx,
-                color_name: data.color_name,
-              }}
-              options={data.optional_colors}
-              pageId={pageId}
-              onUpdated={reloadPage}
-            />
-          )
+
+        
+        // Hide color_hex and pantone_tcx at root since we edit them via optional_colors
+        if (pageId === "page_2" && (key === "color_hex" || key === "pantone_tcx" || key === "color_name")) {
+          return null
         }
         
 

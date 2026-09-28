@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Swanky Tech Pack - Measurements</title>
+    <title>Swanky Tech Pack - Size Chart</title>
     <style>
         @page { size: 1240px 790px; margin: 0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,13 +23,14 @@
         .info-row { border-top: 1px solid #000; padding: 4px 8px; font-size: 12px; height: 26px; line-height: 18px; }
         .info-row.desc { height: 52px; border-bottom: none; overflow: hidden; }
         .brand-label { padding: 4px 8px; font-size: 12px; height: 26px; line-height: 18px; }
-        .meas-image-section { width: 100%; padding: 12px 20px 6px 20px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid #ddd; }
-        .meas-image-section img { max-height: 260px; max-width: 96%; object-fit: contain; }
-        .pom-table-wrapper { width: 100%; padding: 10px 20px 14px 20px; }
-        .pom-table { width: 100%; border-collapse: collapse; border: 1.5px solid #333; font-size: 11.5px; color: #222; }
-        .pom-table th, .pom-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; vertical-align: middle; line-height: 1.3; }
-        .pom-table thead th { font-weight: 600; background-color: #f2f2f2; color: #222; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px; }
-        .text-center { text-align: center; }
+        .size-chart-wrapper { width: 100%; padding: 30px 30px 20px 30px; }
+        .section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #333; margin-bottom: 14px; border-bottom: 1.5px solid #333; padding-bottom: 6px; }
+        .size-table { width: 100%; border-collapse: collapse; border: 1.5px solid #333; font-size: 12px; color: #222; }
+        .size-table th, .size-table td { border: 1px solid #555; padding: 6px 10px; text-align: center; vertical-align: middle; line-height: 1.3; }
+        .size-table thead th { font-weight: 600; background-color: #f2f2f2; color: #222; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px; }
+        .size-table tbody tr:nth-child(even) { background-color: #fafafa; }
+        .pom-col { text-align: left !important; font-weight: 500; }
+        .unit-note { font-size: 10px; color: #777; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -44,7 +45,7 @@
                 <div class="info-row desc">Description: {{ header.description }}</div>
             </td>
             <td class="header-center">
-                <div class="header-title-container"><h1>Measurements</h1></div>
+                <div class="header-title-container"><h1>Size Chart</h1></div>
                 <div class="category">{{ header.category }}</div>
             </td>
             <td class="header-right">
@@ -73,34 +74,38 @@
     </table>
 </td></tr></thead>
 <tbody><tr><td style="vertical-align: top;">
-    {% if page_10.measurement_image_url %}
-    <div class="meas-image-section">
-        <img src="{{ page_10.measurement_image_url }}" alt="Measurement Diagram">
-    </div>
-    {% endif %}
-    <div class="pom-table-wrapper">
-        <table class="pom-table">
+    <div class="size-chart-wrapper">
+        <!-- <div class="section-title">Graded Size Chart — All measurements in cm</div> -->
+        {% if page_6.measurements and page_6.measurements|length > 0 %}
+        <table class="size-table">
             <thead>
                 <tr>
-                    <th>Point of Measurement</th>
-                    <th class="text-center" style="width:60px;">Code</th>
-                    <th>Description</th>
-                    <th class="text-center" style="width:110px;">Measurement (cm)</th>
-                    <th class="text-center" style="width:110px;">Tolerance (± cm)</th>
+                    <th>Size</th>
+                    {% set first_row = page_6.measurements[0] %}
+                    {% for key in first_row.keys() %}
+                        {% if key not in ['size', 'justification', 'confidence', 'requires_confirmation'] %}
+                        <th>{{ key | replace('_', ' ') | title }}</th>
+                        {% endif %}
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
-                {% for item in page_10.measurements %}
+                {% for row in page_6.measurements %}
                 <tr>
-                    <td>{{ item.point_of_measurement or '' }}</td>
-                    <td class="text-center">{{ item.code or '' }}</td>
-                    <td>{{ item.description or '' }}</td>
-                    <td class="text-center">{{ item.measurement_cm or '' }}</td>
-                    <td class="text-center">{{ item.tolerance_cm or '' }}</td>
+                    <td class="text-center font-bold">{{ row.size or '' }}</td>
+                    {% for key, val in row.items() %}
+                        {% if key not in ['size', 'justification', 'confidence', 'requires_confirmation'] %}
+                        <td class="text-center">{{ val if val is not none else '' }}</td>
+                        {% endif %}
+                    {% endfor %}
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        <!-- <p class="unit-note">* All measurements are body measurements in centimetres (cm). Add ease as per garment fit category.</p> -->
+        {% else %}
+        <p style="color:#999; font-size:12px; padding:20px;">No size chart data available.</p>
+        {% endif %}
     </div>
 </td></tr></tbody></table>
 </body>

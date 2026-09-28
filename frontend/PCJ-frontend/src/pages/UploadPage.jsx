@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { triggerGeneration } from "../api/editorApi"
-import { Upload, Sparkles, ChevronRight, X, Plus, ImageIcon } from "lucide-react"
+import { Upload, Sparkles, ChevronRight, X, Plus, ImageIcon, History } from "lucide-react"
 
 // Single image card (after upload)
 function ImageCard({ file, preview, label, onRemove, index }) {
@@ -98,9 +98,99 @@ export default function UploadPage() {
   const [sizeRange, setSizeRange] = useState("")
   const [sampleSize, setSampleSize] = useState("")
   const [notes, setNotes] = useState("")
+  const [brandLogo, setBrandLogo] = useState(null)   // { file, preview }
+  const [hasPreviousInput, setHasPreviousInput] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // On mount: check if there's a previous saved input
+  useEffect(() => {
+    const saved = localStorage.getItem("pcj_last_input")
+    if (saved) setHasPreviousInput(true)
+  }, [])
+
+  // Save all fields (+ logo as base64) to localStorage
+  async function saveInputToStorage() {
+    try {
+      let logoDataUrl = null
+      if (brandLogo?.file) {
+        logoDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onload = (e) => resolve(e.target.result)
+          reader.readAsDataURL(brandLogo.file)
+        })
+      }
+      localStorage.setItem("pcj_last_input", JSON.stringify({
+        brand, collection, season, fabric, sizeRange, sampleSize, notes,
+        logoDataUrl, logoName: brandLogo?.file?.name || null
+      }))
+    } catch (e) {
+      console.warn("[pcj] Could not save input to localStorage:", e)
+    }
+  }
+
+  // Restore all fields from localStorage
+  async function loadPreviousInput() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("pcj_last_input") || "{}")
+      if (saved.brand) setBrand(saved.brand)
+      if (saved.collection) setCollection(saved.collection)
+      if (saved.season) setSeason(saved.season)
+      if (saved.fabric) setFabric(saved.fabric)
+      if (saved.sizeRange) setSizeRange(saved.sizeRange)
+      if (saved.sampleSize) setSampleSize(saved.sampleSize)
+      if (saved.notes) setNotes(saved.notes)
+      // Reconstruct brand logo from data URL
+      if (saved.logoDataUrl) {
+        const res = await fetch(saved.logoDataUrl)
+        const blob = await res.blob()
+        const file = new File([blob], saved.logoName || "brand_logo.png", { type: blob.type })
+        setBrandLogo({ file, preview: URL.createObjectURL(file) })
+      }
+    } catch (e) {
+      console.warn("[pcj] Could not restore previous input:", e)
+    }
+  }
+
+  // Auto-save text fields as user types (skipping logo to avoid lag)
+  useEffect(() => {
+    if (!brand && !collection && !season && !fabric) return // don't overwrite if entirely empty on load
+    try {
+      const saved = JSON.parse(localStorage.getItem("pcj_last_input") || "{}")
+      localStorage.setItem("pcj_last_input", JSON.stringify({
+        ...saved,
+        brand, collection, season, fabric, sizeRange, sampleSize, notes
+      }))
+      setHasPreviousInput(true)
+    } catch (e) {
+      // ignore
+    }
+  }, [brand, collection, season, fabric, sizeRange, sampleSize, notes])
+
+  // Auto-save logo specifically when it changes
+  useEffect(() => {
+    if (!brandLogo?.file) return
+    const saveLogo = async () => {
+      try {
+        const logoDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onload = (e) => resolve(e.target.result)
+          reader.readAsDataURL(brandLogo.file)
+        })
+        const saved = JSON.parse(localStorage.getItem("pcj_last_input") || "{}")
+        localStorage.setItem("pcj_last_input", JSON.stringify({
+          ...saved,
+          logoDataUrl, 
+          logoName: brandLogo.file.name
+        }))
+        setHasPreviousInput(true)
+      } catch (e) {
+        // ignore
+      }
+    }
+    saveLogo()
+  }, [brandLogo])
 
   function addImage(file) {
     setImages(prev => {
@@ -111,7 +201,6 @@ export default function UploadPage() {
 
   function removeImage(index) {
     setImages(prev => {
-      // Revoke the object URL to free memory
       URL.revokeObjectURL(prev[index].preview)
       return prev.filter((_, i) => i !== index)
     })
@@ -135,8 +224,9 @@ export default function UploadPage() {
     setError(null)
     setLoading(true)
     try {
+      await saveInputToStorage()  // persist fields before navigating away
       const imageFiles = images.map(img => img.file)
-      const { job_id } = await triggerGeneration(imageFiles, buildContext(), sampleSize)
+      const { job_id } = await triggerGeneration(imageFiles, buildContext(), sampleSize, brandLogo?.file || null)
       navigate(`/generating?job_id=${job_id}`)
     } catch (err) {
       setError(err.message || "Failed to start generation. Is the backend running?")
@@ -259,9 +349,21 @@ export default function UploadPage() {
 
             {/* RIGHT — Context Form */}
             <div className="flex flex-col gap-5">
-              <div>
-                <h2 className="text-sm font-bold text-white/80 uppercase tracking-widest mb-1">Garment Context</h2>
-                <p className="text-white/30 text-xs">This shapes every page of the tech pack.</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-white/80 uppercase tracking-widest mb-1">Garment Context</h2>
+                  <p className="text-white/30 text-xs">This shapes every page of the tech pack.</p>
+                </div>
+                {/* Use Previous Input button */}
+                {hasPreviousInput && (
+                  <button
+                    onClick={loadPreviousInput}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-violet-300 hover:text-violet-200 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 rounded-full px-3 py-1.5 transition-all"
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    Use Previous Input
+                  </button>
+                )}
               </div>
 
               <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-6 flex flex-col gap-5">
@@ -285,6 +387,43 @@ export default function UploadPage() {
                     rows={4}
                     className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500 transition-all duration-200 resize-none"
                   />
+                </div>
+
+                {/* Brand Logo Upload */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-white/60 uppercase tracking-widest">
+                    Brand Logo <span className="text-white/30 font-normal normal-case tracking-normal">(optional — used on cover page)</span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor="brandLogoInput"
+                      className="flex items-center gap-2 cursor-pointer bg-white/5 border border-white/10 hover:border-violet-500/50 rounded-xl px-4 py-2.5 text-sm text-white/60 hover:text-white/90 transition-all"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      {brandLogo ? "Change Logo" : "Upload Logo"}
+                    </label>
+                    <input
+                      id="brandLogoInput"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) setBrandLogo({ file, preview: URL.createObjectURL(file) })
+                      }}
+                    />
+                    {brandLogo && (
+                      <div className="flex items-center gap-2">
+                        <img src={brandLogo.preview} alt="Logo preview" className="h-10 w-auto rounded border border-white/10 bg-white p-1" />
+                        <button
+                          onClick={() => { URL.revokeObjectURL(brandLogo.preview); setBrandLogo(null) }}
+                          className="text-white/30 hover:text-red-400 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

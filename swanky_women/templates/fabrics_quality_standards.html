@@ -236,7 +236,7 @@
                 {% for fabric in page_7.fabrics %}
                 <tr>
                     <td class="text-center">{{ loop.index }}.</td>
-                    <td>{{ fabric.description }}</td>
+                    <td>{{ fabric.description }}, {{ fabric.construction }}, {{ fabric.composition }}, {{ fabric.weight_gsm }} GSM, {{ fabric.finish }}, {{ fabric.care | default('Standard Wash') }}</td>
                     <td class="text-center">{{ fabric.color }}</td>
                     <td class="text-center">{{ fabric.position }}</td>
                 </tr>

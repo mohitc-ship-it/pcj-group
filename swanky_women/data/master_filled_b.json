@@ -62,7 +62,6 @@
             "size": "Approx 5 cm \u00d7 8 cm",
             "placement": "Inner left side seam, above 10\u201315 cm from the hem"
         },
-        "care_label_img": "assets/care_label.png",
         "label_notes": "The color of the labels is white. Type of: 100% Recycled polyester woven label."
     },
     "page_4": {
@@ -426,7 +425,6 @@
                 "title": "Bluesign",
                 "description": "The Bluesign System reduces impact on people and the environment in the entire textile supply chain, based on input stream management."
             }
-        ],
-        "wash_care_label_img": ""
+        ]
     }
 }

@@ -1,5 +1,6 @@
 import os
 import json
+import json_repair
 import base64
 from typing import List, Tuple, Optional
 from pydantic import BaseModel
@@ -48,32 +49,59 @@ def _extract_text(response) -> str:
 
 import requests
 
+import time
+
 def _call_openrouter(model: str, messages: list, max_tokens: int = 4096, temperature: float = 0.2) -> Tuple[str, str]:
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    is_gemini = "gemini" in model.lower()
+
+    if gemini_key and is_gemini:
+        api_key = gemini_key
+        base_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        # Google's native API doesn't use the 'google/' prefix that OpenRouter uses
+        if model.startswith("google/"):
+            model = model.replace("google/", "")
+    else:
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        base_url = OPENROUTER_BASE_URL
+
     if not api_key:
-        raise ValueError("OPENROUTER_API_KEY not found in environment")
+        raise ValueError("No API Key found! Please set GEMINI_API_KEY or OPENROUTER_API_KEY in your .env file")
+
     payload = {
         "model": model,
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": temperature,
     }
-    response = requests.post(
-        OPENROUTER_BASE_URL,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=120,
-    )
-    if response.status_code != 200:
-        raise RuntimeError(f"OpenRouter API error {response.status_code}: {response.text}")
-    res_data = response.json()
-    msg = res_data.get("choices", [{}])[0].get("message", {})
-    text = msg.get("content", "") or ""
-    thinking = msg.get("reasoning", "") or ""
-    return text, thinking
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        response = requests.post(
+            base_url,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=120,
+        )
+        
+        if response.status_code == 429:
+            print(f"[API Rate Limit Hit] Waiting 35 seconds before retrying (Attempt {attempt + 1}/{max_retries})...")
+            time.sleep(35)
+            continue
+            
+        if response.status_code != 200:
+            raise RuntimeError(f"API error {response.status_code} from {base_url}: {response.text}")
+            
+        res_data = response.json()
+        msg = res_data.get("choices", [{}])[0].get("message", {})
+        text = msg.get("content", "") or ""
+        thinking = msg.get("reasoning", "") or ""
+        return text, thinking
+        
+    raise RuntimeError("API Rate Limit (429) exceeded maximum retries. Please try again later or upgrade your API key.")
 
 
 # ---------- Normal text output ----------
@@ -149,7 +177,7 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                         lines = lines[:-1]
                     raw_text = "\n".join(lines).strip()
 
-                parsed = json.loads(raw_text)
+                parsed = json_repair.loads(raw_text)
                 return output_schema.model_validate(parsed), thinking
             except Exception as e:
                 last_error = e
@@ -195,7 +223,7 @@ Keep responses concise — do not add unnecessary whitespace or verbose justific
                     lines = lines[:-1]
                 raw_text = "\n".join(lines)
 
-            parsed = json.loads(raw_text)
+            parsed = json_repair.loads(raw_text)
             return output_schema.model_validate(parsed), last_thinking
 
         except Exception as e:
@@ -228,6 +256,7 @@ def analyze_images(
     prompt: str,
     model: str = DEFAULT_MODEL,
     enable_thinking: bool = False,
+
 ) -> Tuple[str, str]:
     """
     Analyze images with Claude or Gemini vision.

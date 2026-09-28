@@ -26,17 +26,19 @@ def build_normal_sketch_prompt(
 - Create the technical sketch showing 4 parts horizontally: [Top Front] [Top Back] [Bottom Front] [Bottom Back].
 - Both upper wear and bottom wear must be clearly depicted front and back without model or human body."""
     else:
-        layout_instruction = """CANVAS & LAYOUT:
-- Wide landscape canvas (21:9 aspect ratio).
-- Create the technical sketch showing exactly TWO views arranged horizontally side-by-side:
-  * Left side: [Front View]
-  * Right side: [Back View]"""
+        layout_instruction = """CANVAS & LAYOUT (CRITICAL FAILURE WARNING):
+- You MUST draw the Front View and Back View horizontally SIDE-BY-SIDE on a very wide canvas (e.g., 16:9 or 21:9 aspect ratio).
+- DO NOT draw them stacked vertically (one on top of the other).
+- If you draw them stacked vertically, the image will be REJECTED.
+- Left side: [Front View]
+- Right side: [Back View]"""
 
     return f"""Convert the provided image of a model wearing a garment into a professional fashion technical sketch suitable for a production tech pack.
 
 Output Requirements:
-- 2D fashion CAD vector line illustration on pure white body (#ffffff) with thin black technical contour lines.
-- Pure white background (#ffffff). NO gray or colored body fills (collar stand or cuffs may have subtle contrast shading ONLY if present in reference).
+- STRICTLY BLACK AND WHITE LINE ART ONLY. ABSOLUTELY NO COLOR in the garment drawing.
+- 2D fashion CAD vector line illustration on pure white body (#ffffff) with thin black technical contour lines. DO NOT fill the garment with solid colors.
+- Pure white background (#ffffff). (collar stand or cuffs may have subtle grayscale shading ONLY if present in reference).
 - Garment only (remove model facial and body features, no mannequin).
 
 {layout_instruction}
@@ -58,12 +60,14 @@ Strict Feature & Count Accuracy:
   * DO NOT draw 6 placket buttons and then add an extra collar button (which erroneously totals 7).
 - Zipper Placement: Check closure location precisely. If the garment has a side invisible zipper, place it at the side seam and leave the center back as a clean vertical seam. Only draw a center back zipper if it genuinely opens at center back.
 - Sleeve cuffs: Accurately show buttons on barrel cuffs AND sleeve gauntlet plackets (e.g. 2 cuff + 1 gauntlet = 3 per sleeve).
-- Back construction: Clean horizontal back yoke with subtle central knife pleats/tucks only if present on reference. Completely smooth back with NO random extra vertical lines or pleats.
+- Construction accuracy: Draw all seams, darts, and construction details (like center back seams or princess seams) exactly as described in the Seams & Construction document.
 
-Annotation & Labeling:
+Annotation & Labeling (CRITICAL ACCURACY):
 - BRAND & SIZE LABEL: In the Front View, inside the inner back neckline/collar opening, always illustrate the small rectangular brand neck tag, labeled with a leader line: 'BRAND & SIZE LABEL'.
-- Use clean, thin RED LEADER LINES connecting each uppercase label text directly to its corresponding garment feature.
-- CONCISE CALLOUT LABELS: Use standard short 1-4 word fashion tech pack callouts (e.g. 'BRAND & SIZE LABEL', 'COLLAR', 'FRONT PLACKET', 'LONG SLEEVES WITH CUFF', 'BACK YOKE', 'CUFFS PLACKET', 'CENTER BACK SEAM'). Do NOT write long paragraphs or descriptive sentences as labels.
+- Use clean, straight, thin RED LEADER LINES connecting each uppercase label text EXACTLY to its corresponding garment feature.
+- The tip of the leader line MUST touch the exact feature being described. Do not let lines float aimlessly or point to the wrong area.
+- DO NOT let leader lines cross or intersect each other. Ensure text is clearly legible without overlapping.
+- CONCISE CALLOUT LABELS: Use standard short 1-4 word fashion tech pack callouts (e.g. 'COLLAR', 'FRONT PLACKET', 'LONG SLEEVES WITH CUFF', 'BACK YOKE', 'CENTER BACK SEAM'). Do NOT write long paragraphs.
 - CRITICAL: Keep ONLY the garment drawings, leader lines, and callout label text in the image.
   DO NOT include any bottom specification bars, SEAMS & TRIMS note boxes, borders, titles, 'FRONT VIEW'/'BACK VIEW' text, or headers in the image.
 
@@ -148,7 +152,7 @@ def build_json_sketch_prompt(
             "clarification": "If the garment has 6 front buttons total, the breakdown is: 1 collar stand button + 5 front placket buttons = 6 buttons total. DO NOT draw 6 placket buttons and then add an extra collar button."
         },
         "layout": {
-            "arrangement": "4 parts horizontally: [Top Front] [Top Back] [Bottom Front] [Bottom Back]" if is_two_piece else "2 views side-by-side: Front View on left, Back View on right",
+            "arrangement": "4 parts horizontally: [Top Front] [Top Back] [Bottom Front] [Bottom Back]" if is_two_piece else "CRITICAL STRICT RULE: 2 views SIDE-BY-SIDE horizontally: Front View on left, Back View on right. NEVER STACK THEM VERTICALLY.",
             "view_count": 4 if is_two_piece else 2,
             "canvas_padding": "Generous horizontal margins ensuring full visibility of both sleeves and cuffs on both views without edge clipping."
         },

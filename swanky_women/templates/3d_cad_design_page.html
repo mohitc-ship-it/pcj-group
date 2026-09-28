@@ -358,8 +358,25 @@
                         <tr>
                             <td class="color-col">
                                 <div class="info-section-title">COLORS</div>
-                                <div class="color-swatch" style="background-color: {{ page_2.color_hex }}"></div>
-                                <div class="pantone-label">PANTONE@<br>{{ page_2.pantone_tcx }}</div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    {% if page_2.optional_colors %}
+                                        {% for color in page_2.optional_colors %}
+                                        <div style="width: 45%;">
+                                            <div class="color-swatch" style="background-color: {{ color.color_hex }}; width: 100%; height: 50px;"></div>
+                                            <div class="pantone-label" style="font-size: 8px; padding: 3px; word-wrap: break-word;">
+                                                {{ color.pantone_tcx }}<br>{{ color.color_name }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div style="width: 45%;">
+                                            <div class="color-swatch" style="background-color: {{ page_2.color_hex }}; width: 100%; height: 50px;"></div>
+                                            <div class="pantone-label" style="font-size: 8px; padding: 3px; word-wrap: break-word;">
+                                                PANTONE®<br>{{ page_2.pantone_tcx }}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </td>
 
                             <td class="details-col">
