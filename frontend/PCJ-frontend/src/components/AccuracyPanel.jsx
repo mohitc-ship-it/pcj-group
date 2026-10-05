@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { BarChart3, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, HelpCircle, RefreshCw } from "lucide-react"
+import { BarChart3, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, HelpCircle, RefreshCw, Wand2, Loader2 } from "lucide-react"
 
 const API_BASE = "http://localhost:8000"
 
@@ -51,6 +51,8 @@ function ComponentCard({ component }) {
 export default function AccuracyPanel() {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [fixing, setFixing] = useState(false)
+  const [fixResult, setFixResult] = useState(null)
 
   async function fetchReport() {
     setLoading(true)
@@ -62,6 +64,22 @@ export default function AccuracyPanel() {
       setReport(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function runAutoFix() {
+    setFixing(true)
+    setFixResult(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/auto-correct`, { method: "POST" })
+      const data = await res.json()
+      setFixResult(data)
+      // Refresh report after fixes
+      await fetchReport()
+    } catch {
+      setFixResult({ error: "Auto-fix failed" })
+    } finally {
+      setFixing(false)
     }
   }
 
@@ -104,6 +122,44 @@ export default function AccuracyPanel() {
               </p>
             </div>
           </div>
+
+          {/* Auto-fix button */}
+          {report.needs_review > 0 && (
+            <button
+              onClick={runAutoFix}
+              disabled={fixing}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-violet-600/20 hover:bg-violet-600/30 text-violet-200 border border-violet-500/30 transition-all"
+            >
+              {fixing
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Auto-fixing issues...</>
+                : <><Wand2 className="w-4 h-4" /> Auto-Fix {report.needs_review} Issues</>
+              }
+            </button>
+          )}
+
+          {/* Auto-fix results */}
+          {fixResult && (
+            <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3 text-xs space-y-2">
+              {fixResult.corrections_made?.map((c, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-green-300 font-medium">{c.action}</p>
+                    <p className="text-white/40">{c.reason}</p>
+                  </div>
+                </div>
+              ))}
+              {fixResult.needs_manual_review?.map((n, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-yellow-300 font-medium">{n.field}: {n.issue}</p>
+                    {n.suggestion && <p className="text-white/40">{n.suggestion}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Component breakdown */}
           <div className="flex flex-col gap-1.5">

@@ -1080,6 +1080,208 @@ def get_accuracy_report():
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Feature 7B — Auto-correct: detect and fix issues found in accuracy report
+# ──────────────────────────────────────────────────────────────────────────────
+@app.post("/api/auto-correct")
+async def auto_correct():
+    """
+    Analyzes the current tech pack, detects issues, and auto-fixes what's possible.
+    Returns a list of corrections made and issues that need manual review.
+    """
+    try:
+        from llm import llm_query, analyze_images
+        import time
+
+        draft = load_draft()
+        header = draft.get("header", {})
+        description = header.get("description", "garment")
+        category = header.get("category", "")
+        corrections_made = []
+        needs_manual = []
+
+        # ── 1. CLOSURE CHECK ──
+        accessories = draft.get("page_4", {}).get("accessories", [])
+        has_closure = any(
+            any(kw in str(a).lower() for kw in ["zipper", "button", "hook", "snap", "closure", "pull-on", "pull on"])
+            for a in accessories
+        )
+        if not has_closure:
+            # Use LLM to infer closure from garment type
+            closure_prompt = f"""What closure mechanism does a {description} ({category}) typically have?
+Options: invisible back zipper, invisible side zipper, front buttons, pull-on (no closure), hook and bar, front fly zipper.
+If it's a fitted woven/satin garment → likely invisible zipper.
+If it's stretch knit → likely pull-on.
+If it's a coat/blazer → front buttons.
+If it's pants → front fly zipper + hook and bar.
+Reply with ONLY the closure type and quantity, e.g. "INVISIBLE BACK ZIPPER, YKK, 1" or "PULL-ON STYLE (NO CLOSURE)". Nothing else."""
+
+            closure_result, _ = llm_query(closure_prompt)
+            closure_result = closure_result.strip()
+
+            if closure_result:
+                new_accessory = {
+                    "description": closure_result,
+                    "quantity_per_style": "1",
+                    "color": "MATCHING",
+                    "position": ""
+                }
+                accessories.append(new_accessory)
+                draft["page_4"]["accessories"] = accessories
+                corrections_made.append({
+                    "field": "accessories",
+                    "action": f"Added missing closure: {closure_result}",
+                    "reason": "No closure was listed. Inferred from garment type."
+                })
+
+        # ── 2. CONSTRUCTION ROW COUNT ──
+        seams = draft.get("page_5", {}).get("seams", [])
+        min_rows = {"blazer": 10, "jacket": 10, "coat": 10, "pant": 10, "trouser": 10,
+                     "blouse": 8, "shirt": 8, "dress": 8, "suit": 10, "cardigan": 10,
+                     "skirt": 6, "vest": 6}
+        expected_min = 6
+        for kw, count in min_rows.items():
+            if kw in description.lower():
+                expected_min = max(expected_min, count)
+
+        if len(seams) < expected_min:
+            # Ask LLM to generate additional construction rows
+            existing_parts = [s.get("part", s.get("part_component", "")) for s in seams]
+            construction_prompt = f"""A {description} tech pack has {len(seams)} construction rows but should have at least {expected_min}.
+Existing parts: {', '.join(existing_parts)}
+
+What construction rows are MISSING? Common rows for {description}:
+- For blazer/jacket: shoulder, side seam, sleeve, lapel/collar, pocket, hem, lining, buttonhole, button attach, back vent
+- For pants: side seam, inseam, rise, waistband, fly, hem, belt loops, pocket bags, bartacks
+- For blouse/shirt: shoulder, side, sleeve, collar, cuff, buttonhole, hem, yoke
+
+Return ONLY a JSON array of missing rows. Each row: {{"part": "...", "seam_type": "...", "seam_allowance": "...", "stitch_type": "", "stitch_size_spi": "10-12", "machine_type": "..."}}
+Return ONLY the JSON array, nothing else."""
+
+            try:
+                raw_result, _ = llm_query(construction_prompt)
+                raw_result = raw_result.strip()
+                if raw_result.startswith("```"):
+                    lines = raw_result.split("\n")
+                    raw_result = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+                import json as _json
+                new_rows = _json.loads(raw_result)
+                if isinstance(new_rows, list) and new_rows:
+                    seams.extend(new_rows[:expected_min - len(seams)])
+                    draft["page_5"]["seams"] = seams
+                    corrections_made.append({
+                        "field": "construction",
+                        "action": f"Added {len(new_rows)} missing construction rows (total now: {len(seams)})",
+                        "reason": f"Had {len(seams) - len(new_rows)} rows, minimum for {description} is {expected_min}."
+                    })
+            except Exception as e:
+                needs_manual.append({
+                    "field": "construction",
+                    "issue": f"Only {len(seams)} rows (expected {expected_min}+). Auto-fix failed: {str(e)[:80]}",
+                })
+
+        # ── 3. SKETCH vs ORIGINAL COMPARISON ──
+        sketch_path = draft.get("page_3", {}).get("technical_sketch_img", "")
+        if sketch_path and "assets/" in sketch_path:
+            sketch_local = "assets/" + sketch_path.split("assets/")[-1]
+        else:
+            sketch_local = sketch_path
+
+        front_path = None
+        for key in ["front_image_url", "garment_front_view_url"]:
+            p = draft.get("page_2", draft.get("page_1", {})).get(key, "")
+            if p and "assets/" in p:
+                front_path = "assets/" + p.split("assets/")[-1]
+                break
+
+        if sketch_local and front_path and Path(sketch_local).exists() and Path(front_path).exists():
+            try:
+                compare_prompt = f"""Compare these two images:
+Image 1: Technical sketch of a {description}
+Image 2: Original garment photo
+
+Check for these specific issues:
+1. Are there any features in the SKETCH that DON'T exist in the ORIGINAL photo? (hallucinated features)
+2. Are there any visible features in the ORIGINAL that are MISSING from the sketch?
+3. Are buttons, pockets, collar/neckline drawn correctly matching the original?
+
+If everything matches well, respond: "OK — sketch matches original"
+If there are issues, list them briefly. Example: "Sketch shows 3 buttons but original has 2. Sketch missing back vent."
+"""
+                comparison_result, _ = analyze_images([sketch_local, front_path], compare_prompt)
+                comparison_result = comparison_result.strip()
+
+                if "OK" not in comparison_result.upper():
+                    needs_manual.append({
+                        "field": "technical_sketch",
+                        "issue": comparison_result,
+                        "suggestion": "Use the sketch editor to apply modifications, or regenerate."
+                    })
+                else:
+                    corrections_made.append({
+                        "field": "technical_sketch",
+                        "action": "Verified — sketch matches original garment",
+                        "reason": comparison_result
+                    })
+            except Exception as e:
+                needs_manual.append({
+                    "field": "technical_sketch",
+                    "issue": f"Could not compare: {str(e)[:80]}"
+                })
+
+        # ── 4. PANTONE — add more options if only 1 ──
+        optional_colors = draft.get("page_2", {}).get("optional_colors", [])
+        if len(optional_colors) <= 1:
+            primary_hex = draft.get("page_2", {}).get("color_hex", "")
+            if primary_hex:
+                try:
+                    from utils import nearest_pantone_tcx
+                    extra = nearest_pantone_tcx(primary_hex, top_k=5)
+                    new_colors = []
+                    existing_codes = {c.get("pantone_tcx", "") for c in optional_colors}
+                    for r in extra:
+                        if r["code"] not in existing_codes:
+                            new_colors.append({
+                                "color_name": r["name"],
+                                "color_hex": r["hex"],
+                                "pantone_tcx": r["code"]
+                            })
+                    if new_colors:
+                        optional_colors.extend(new_colors[:4])
+                        draft["page_2"]["optional_colors"] = optional_colors
+                        corrections_made.append({
+                            "field": "pantone",
+                            "action": f"Added {len(new_colors[:4])} additional Pantone options for designer to choose from",
+                            "reason": "Only 1 color option was available. Added nearest matches."
+                        })
+                except Exception:
+                    pass
+
+        # ── 5. FABRIC — search for better info ──
+        fabric_score = draft.get("_confidence", {}).get("fabric_identification", 0.5)
+        if fabric_score < 0.7:
+            needs_manual.append({
+                "field": "fabric",
+                "issue": f"Fabric confidence is low ({int(fabric_score*100)}%). AI identified from visual cues only.",
+                "suggestion": "Please verify fabric composition. Check the garment tag or ask the designer."
+            })
+
+        # ── Save corrections ──
+        if corrections_made:
+            save_draft(draft)
+
+        return JSONResponse({
+            "corrections_made": corrections_made,
+            "needs_manual_review": needs_manual,
+            "total_auto_fixed": len(corrections_made),
+            "total_needs_review": len(needs_manual),
+        })
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Feature 8 — Feedback Loop / Correction Learning
 # ──────────────────────────────────────────────────────────────────────────────
 CORRECTIONS_FILE = DATA_DIR / "corrections_log.json"
