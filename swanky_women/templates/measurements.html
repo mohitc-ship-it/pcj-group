@@ -79,6 +79,10 @@
     </div>
     {% endif %}
     <div class="pom-table-wrapper">
+        {% if page_10.measurements and page_10.measurements|length > 0 %}
+        {% set first_row = page_10.measurements[0] %}
+        {% if first_row.point_of_measurement is defined %}
+        {# POM-based format (old style) #}
         <table class="pom-table">
             <thead>
                 <tr>
@@ -101,6 +105,36 @@
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        {# Size-based format (new style) #}
+        <table class="pom-table">
+            <thead>
+                <tr>
+                    <th>Size</th>
+                    {% for key in first_row.keys() %}
+                        {% if key not in ['size', 'justification', 'confidence', 'requires_confirmation'] %}
+                        <th class="text-center">{{ key | replace('_', ' ') | title }}</th>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in page_10.measurements %}
+                <tr>
+                    <td class="text-center" style="font-weight:bold;">{{ row.size or '' }}</td>
+                    {% for key, val in row.items() %}
+                        {% if key not in ['size', 'justification', 'confidence', 'requires_confirmation'] %}
+                        <td class="text-center">{{ val if val is not none else '' }}</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        {% else %}
+        <p style="color:#999; font-size:12px; padding:20px;">No measurement data available.</p>
+        {% endif %}
     </div>
 </td></tr></tbody></table>
 </body>

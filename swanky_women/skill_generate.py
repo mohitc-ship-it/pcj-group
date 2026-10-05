@@ -641,12 +641,16 @@ NO markdown, NO bold, NO headers."""
 
         sketch_prompt = f"""Professional technical flat sketch of a {description}.
 LAYOUT: {layout}
-Draw ONLY features VISIBLE in the reference photo. Do NOT draw invisible zippers or hidden closures.
-Visible accessories: {json.dumps(visible_accessories, default=str)[:500]}
+Draw ONLY the garment flat sketches with callout labels pointing to construction features.
 Details: {details_text[:300]}
 
-LABEL PLACEMENT: SIDE SEAM → outer edge, SHOULDER → top, HEM → bottom, CUFF → wrist.
-Pure black line art on white background. ALL-CAPS callout labels with thin leader lines."""
+STRICT RULES:
+- Draw ONLY garment outline + callout labels with leader lines
+- Do NOT draw any accessories section, accessories grid, button icons, thread icons, label mockups, or any "VISIBLE ACCESSORIES" panel
+- Do NOT draw any boxes or panels showing buttons, thread, labels as separate items
+- The image should contain ONLY the flat garment sketches and text callout labels
+- LABEL PLACEMENT: SIDE SEAM → outer edge, SHOULDER → top, HEM → bottom, CUFF → wrist
+- Pure black line art on white background. ALL-CAPS callout labels with thin leader lines."""
 
         generate_image(sketch_prompt, reference_image_path=front_img, output_path="assets/technical_sketch.png")
 
@@ -683,7 +687,8 @@ Pure black line art on white background. ALL-CAPS callout labels with thin leade
         else:
             meas_prompt = f"Measurement diagram for {description}. Measurements: A=Bust, B=Waist, C=Shoulder, D=Sleeve, E=Total length, F=Front length."
 
-        generate_image(meas_prompt + " Black line art on white. Double-headed arrows with letter labels.",
+        meas_prompt += " Black line art on white. Double-headed arrows with letter labels. Draw ONLY garment sketches with measurement lines and legend. Do NOT draw any accessories, buttons, thread, labels, or any items that are not measurement indicators."
+        generate_image(meas_prompt,
                        reference_image_path=front_img, output_path="assets/measurement_diagram.png")
         _report(progress_callback, "Measurement Diagram", "Generated", "", 93)
 
