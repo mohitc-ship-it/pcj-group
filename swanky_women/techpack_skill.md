@@ -89,51 +89,41 @@ Read both garment images using your vision capabilities. Identify:
 
 Write your analysis before proceeding. This analysis drives ALL subsequent content.
 
-### STEP 2: Match Pantone Colors
+### STEP 2: Match Pantone Colors (TCX only)
 
-**Three-stage Pantone matching for maximum accuracy:**
+**Three-stage Pantone TCX matching:**
 
-**Stage 1 — Local Delta-E lookup (fast, free):**
-Run ALL hex samples from Step 1 through the local Pantone TCX database:
+**Stage 1 — Get candidates from pantone.com + local Delta-E:**
 
-```bash
-cd swanky_women && python3 -c "
-from utils import nearest_pantone_tcx
-hexes = [('HEX_1', 'bright flat'), ('HEX_2', 'mid-tone'), ('HEX_3', 'sleeve')]
-for hex_val, desc in hexes:
-    results = nearest_pantone_tcx(hex_val, top_k=3)
-    print(f'=== {desc}: {hex_val} ===')
-    for r in results:
-        print(f\"  {r['code']} — {r['name']} — ΔE: {r['delta_e']}\")
-    print()
-"
-```
-
-Pick the Pantone with the lowest Delta-E from the BRIGHTEST hex sample. If multiple hex samples point to the same Pantone code, that's high confidence.
-
-**Stage 2 — Pantone.com cross-verification (if available):**
-To verify the Delta-E result against official Pantone data, run the scraper on the brightest hex:
+Run the Pantone matcher script for each distinct color (primary, secondary, accent):
 
 ```bash
-cd swanky_women && python3 -c "
-from pantone_scraper import get_tcx_options
-results = get_tcx_options('BRIGHT_HEX_WITHOUT_HASH')
-for r in results:
-    print(f\"{r.get('code', '')} — {r.get('name', '')}\")
-"
+cd swanky_women && python3 pantone_matcher.py --hex "BRIGHT_HEX_1" "BRIGHT_HEX_2" --output assets/pantone_grid.png
 ```
 
-If the scraper returns results, compare with Stage 1. If they agree → high confidence. If they differ → present both options and let designer pick.
+This script:
+- Tries pantone.com/color-finder first (official TCX results)
+- Falls back to local Delta-E matching against 2,300 TCX entries
+- Creates a visual swatch grid image at `assets/pantone_grid.png`
+- Outputs JSON with all candidates
 
-Note: The scraper opens a browser window and takes ~10 seconds. Skip if running in headless/server environment.
+**Stage 2 — Visual verification with Claude Vision:**
 
-**Stage 3 — Final selection:**
-- If Stage 1 and Stage 2 agree → use that Pantone code (confidence: high)
-- If they differ → present BOTH as options in the JSON `optional_colors` array
-- If Delta-E > 5 for all samples → flag as "approximate match" and present top 3
-- Always include top 3 candidates in `optional_colors` so designer can pick
+Read BOTH the generated `assets/pantone_grid.png` AND the original garment front image. Compare the color swatches against the actual garment fabric and pick the BEST match for each color.
 
-**Why this matters:** Shadows shift hex by 20-40% darker, which shifts Pantone by 2-4 code numbers. Example: shadowed berry (#9B3A5E) → 19-2045 Vivacious (WRONG). True-color berry (#D03C77) → 17-2036 Magenta (CORRECT).
+When comparing:
+- Look at the FABRIC areas, not shadows or highlights
+- The best Pantone should look like "the same color" as the garment in direct light
+- If two candidates look equally close, prefer the one from pantone.com over local Delta-E
+
+**Stage 3 — Record final selection:**
+
+Use ONLY TCX codes. The final Pantone selections go into:
+- `page_2.pantone_tcx` — primary color
+- `page_2.optional_colors[]` — all colors with their TCX codes
+- `page_7.fabrics[].color` — Pantone reference for fabric page
+
+**Why pantone.com first:** The client uses pantone.com/color-finder to get their TCX codes. Our scraper replicates their exact workflow. Local Delta-E is a fallback when the scraper can't run (headless server, Cloudflare blocking).
 
 **Note on fabric identification:** AI cannot determine exact fabric composition from images alone. When writing fabric details:
 - Make your best assessment based on visual texture, drape, sheen, and season
@@ -683,11 +673,19 @@ Only assert 100% certain closures. For uncertain ones, add as "likely" in access
 - Blazer → front button(s) as visible + 3-4 decorative/functional cuff buttons per sleeve
 - Suit jacket → same as blazer
 
+**Button count for coats (IMPORTANT):**
+- If model's hands are in pockets or arms crossed, buttons below may be HIDDEN from view
+- Single-breasted coat/overcoat: typically 3 buttons (even if only 1-2 visible in photo)
+- Double-breasted coat: typically 6 buttons (3x2 arrangement)
+- Count visible buttons, then CHECK: is this a long coat? If yes, there are likely more buttons below what's visible
+- When uncertain, state "3 (1 visible, 2 likely hidden by pose)" in accessories
+
 **Highly likely (add unless evidence against):**
 - Fitted blouse with no visible front buttons → invisible side seam OR back zipper (add to accessories as "INVISIBLE ZIPPER, SIDE/BACK, YKK")
 - Fitted dress with no visible closure → invisible center back zipper
 - Fitted skirt → invisible side or back zipper
 - Coat with visible front buttons → internal wind flap button (sometimes)
+- Long coat/overcoat → more buttons than visible (typically 3 for single-breasted)
 
 **Research when uncertain:** Use WebSearch to check: "standard closures for [garment type]"
 
