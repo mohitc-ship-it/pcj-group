@@ -1858,9 +1858,41 @@ def generate_techpack(images, context, generate=False, sample_size="M", progress
     print(f"[DEBUG] generate_techpack: classification -> {classification}")
     
     print("--- Executing Fabric Decision Agent ---")
-    fabric_decision = fabric_decision_agent(classification, vision["structure"], context,color)
-    print("fabiorc decisionj ", fabric_decision)
+    fabric_decision = fabric_decision_agent(classification, vision["structure"], context, color)
     print(f"[DEBUG] generate_techpack: fabric_decision -> {fabric_decision}")
+
+    # Fabric research: verify AI guess against garment type conventions
+    try:
+        garment_type = classification.get("category", "").lower() + " " + classification.get("garment_type", "").lower()
+        fabric_family = fabric_decision.get("fabric_family", "")
+        fabric_verify_prompt = f"""For a {garment_type} in {master.get('header',{}).get('season','Fall/Winter')} season:
+
+The AI identified the fabric as: {fabric_family}
+Composition: {fabric_decision.get('fabric_composition', '')}
+GSM: {fabric_decision.get('gsm_range', '')}
+
+Is this a reasonable fabric choice? What fabric is MOST COMMONLY used for this type of garment?
+
+Common fabric conventions:
+- Blouse/Top: Silk, Polyester, Cotton, Chiffon
+- Coat/Trench: Wool gabardine, Cotton gabardine, Wool blend
+- Blazer/Suit: Wool suiting, Poly-wool blend, Cotton suiting
+- Pants/Trousers: Wool suiting, Cotton twill, Chino cotton
+- Dress (evening): Silk, Satin, Chiffon, Crepe
+- Dress (casual): Cotton, Linen, Viscose
+- Knitwear: Merino wool, Cotton knit, Cashmere blend
+- T-shirt: Cotton jersey, Poly-cotton blend
+
+Reply with ONLY the most likely fabric name and GSM. Example: "SILK, 90-110 GSM" or "WOOL SUITING, 250-300 GSM".
+If the AI's guess seems correct, reply with the same fabric.
+"""
+        fabric_check, _ = llm_query(fabric_verify_prompt)
+        fabric_check = fabric_check.strip()
+        if fabric_check and len(fabric_check) < 100:
+            fabric_decision["_verified_fabric"] = fabric_check
+            print(f"[FABRIC RESEARCH] Verified: {fabric_check}")
+    except Exception as e:
+        print(f"[FABRIC RESEARCH] Verification failed: {e}")
     
     print("--- Executing Construction Decision Agent ---")
     construction_decisions = construction_decision_agent(classification, fabric_decision, vision["structure"])
@@ -1902,27 +1934,23 @@ def generate_techpack(images, context, generate=False, sample_size="M", progress
 
     # ── SKILL IMPROVEMENTS: Closure inference + Construction KB + Confidence ──
 
-    # Closure inference: check if accessories have a closure
+    # Closure inference: ONLY for closures that are CERTAIN for the garment type
+    # Rule: Don't guess. Only add when 100% certain (pants ALWAYS have fly zipper)
     accessories = factory_output.get("accessories", [])
     has_closure = any(
         any(kw in str(a).lower() for kw in ["zipper", "button", "hook", "snap", "closure", "pull-on", "pull on"])
         for a in accessories
     )
+    inferred_closure = None
     if not has_closure:
         garment_desc = master.get("header", {}).get("description", "").lower()
-        inferred_closure = None
+        # ONLY infer for 100% certain cases
         if any(kw in garment_desc for kw in ["pant", "trouser"]):
+            # Pants ALWAYS have fly zipper — this is 100% certain
             inferred_closure = {"description": "ZIPPER, YKK NYLON COIL, FRONT FLY + HOOK AND BAR AT WAISTBAND", "quantity_per_style": "1 SET", "color": "MATCHING", "position": "FRONT FLY"}
-        elif any(kw in garment_desc for kw in ["blazer", "jacket", "coat"]):
-            inferred_closure = None  # buttons already counted by agents
-        elif any(kw in garment_desc for kw in ["blouse", "shirt", "top"]):
-            fabric_desc = str(fabric_decision.get("fabric_family", "")).lower()
-            if "knit" in fabric_desc or "jersey" in fabric_desc:
-                inferred_closure = {"description": "PULL-ON STYLE (NO CLOSURE)", "quantity_per_style": "", "color": "", "position": ""}
-            else:
-                inferred_closure = {"description": "INVISIBLE ZIPPER, YKK, CENTER BACK OR SIDE SEAM", "quantity_per_style": "1", "color": "MATCHING", "position": "CENTER BACK / SIDE SEAM"}
-        elif any(kw in garment_desc for kw in ["dress", "skirt"]):
-            inferred_closure = {"description": "INVISIBLE ZIPPER, YKK, CENTER BACK", "quantity_per_style": "1", "color": "MATCHING", "position": "CENTER BACK"}
+        # For everything else — DON'T infer. Let the vision agent + auto-correct handle it.
+        # Wrong inference (adding invisible zipper to a pull-on top) is WORSE than missing it.
+        # The auto-correct + accuracy report will flag it for the designer.
 
         if inferred_closure:
             if isinstance(accessories, list):
@@ -2136,7 +2164,12 @@ Annotation & Labeling (CRITICAL ACCURACY):
 - CRITICAL: Keep ONLY the garment drawings, leader lines, and callout label text in the image.
   DO NOT include any bottom specification bars, SEAMS & TRIMS note boxes, borders, titles, 'FRONT VIEW'/'BACK VIEW' text, or headers in the image.
 
-Don't draw any lines or zippers or buttons or any other details, until specified in accessories.
+CRITICAL DRAWING RULE:
+- Draw ONLY features that are VISIBLE in the original garment photo.
+- Do NOT draw invisible/hidden closures (invisible zippers, internal hooks, hidden snaps) even if they are listed in accessories.
+- Invisible zippers, internal linings, fusible interfacing = in ACCESSORIES TABLE only, NOT on the sketch.
+- Draw buttons, visible zippers, belts, pockets, collars — ONLY if you can see them in the reference photo.
+- If in doubt whether something is visible → DON'T draw it on the sketch.
 
 Garment Details to Label:
 {page2_details}
@@ -2144,8 +2177,8 @@ Garment Details to Label:
 Seams & Construction:
 {construction_decisions}
 
-Accessories / Trims / Hardware:
-{factory_output.get("accessories", [])}
+VISIBLE Accessories Only (draw these if visible in reference photo):
+{[a for a in factory_output.get("accessories", []) if not any(kw in str(a).lower() for kw in ["invisible", "hidden", "internal", "fusible", "interfacing", "lining", "interlining"])]}
 
 Style Guidance:
 - Technical flat illustration (fashion CAD)
@@ -2587,8 +2620,13 @@ Do not invent details. Only label what is explicitly provided.
         {"test": "Seam Strength & Durability", "method": "ISO 13935-2", "requirements": ">= 180 N", "comments": ""}
     ]
 
-    # 5. Simplify fabric description
+    # 5. Use verified fabric if available, then simplify
+    verified_fabric = fabric_decision.get("_verified_fabric", "")
     fabrics = master.get("page_7", {}).get("fabrics", [])
+    if verified_fabric and fabrics and isinstance(fabrics, list) and fabrics[0].get("description"):
+        # Replace first fabric with verified version
+        fabrics[0]["description"] = verified_fabric
+        print(f"[FABRIC] Using verified: {verified_fabric}")
     if fabrics and isinstance(fabrics, list):
         for fab in fabrics:
             desc = fab.get("description", "")
