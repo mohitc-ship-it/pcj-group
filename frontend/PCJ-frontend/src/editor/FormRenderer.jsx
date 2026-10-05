@@ -84,6 +84,8 @@ import DetailImageSelector from "./fields/DetailImageSelector"
 import ColorSelector from "./fields/ColorSelector"
 import MultiColorEditor from "./fields/MultiColorEditor"
 import SketchEditor from "./fields/SketchEditor"
+import MeasurementEditor from "./fields/MeasurementEditor"
+import WhyButton from "./fields/WhyButton"
 
 
 export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
@@ -116,13 +118,17 @@ export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
 
         if (Array.isArray(value) && value.length && typeof value[0] === "object") {
           return (
-            <TableEditor
-              key={key}
-              label={key}
-              value={value}
-              onChange={v => update(key, v)}
-              pageId={pageId}
-            />
+            <div key={key} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <WhyButton pageId={pageId} fieldKey={key} />
+              </div>
+              <TableEditor
+                label={key}
+                value={value}
+                onChange={v => update(key, v)}
+                pageId={pageId}
+              />
+            </div>
           )
         }
 
@@ -136,6 +142,20 @@ export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
             />
           )
         }
+
+        // Measurement diagram: show MeasurementEditor for image-to-image editing
+        if ((pageId === "page_6" || pageId === "page_10") && key === "measurement_image_url") {
+          return (
+            <MeasurementEditor
+              key={key}
+              value={value}
+              onUpdated={reloadPage}
+            />
+          )
+        }
+
+        // Hide internal fields (reasoning, confidence, options)
+        if (key.startsWith("_")) return null
 
         // if (
         //   pageId === "page_2" &&

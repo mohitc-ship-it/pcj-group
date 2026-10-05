@@ -48,9 +48,24 @@ export default function DetailImageSelector({
     }
   }
 
+  // Map detail image index to crop region description
+  const cropRegionMap = {
+    "detail_image_1_url": "Top section — collar / neckline / upper detail",
+    "detail_image_2_url": "Mid section — buttons / belt / closure area",
+    "detail_image_3_url": "Back / lower section — hem / back detail",
+    "detail_image_4_url": "Additional detail — pocket / trim / cuff",
+    "detail_image_5_url": "Extra detail crop 5",
+    "detail_image_6_url": "Extra detail crop 6",
+  }
+
   return (
     <div className="space-y-2 border border-white/10 p-3 rounded-xl bg-white/[0.02]">
       <div className="text-xs font-semibold text-white/50 uppercase tracking-widest">{label}</div>
+      {cropRegionMap[fieldKey] && (
+        <div className="text-[10px] text-violet-400/60 bg-violet-600/5 border border-violet-500/10 rounded-lg px-2 py-1">
+          Crop region: {cropRegionMap[fieldKey]}
+        </div>
+      )}
 
       {value && (
         <img src={value} alt={label} className="max-h-28 rounded-lg border border-white/10 bg-white/5 object-contain" />
