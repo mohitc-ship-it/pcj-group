@@ -1014,7 +1014,11 @@ def get_accuracy_report():
 
         # --- 6. Technical Sketch ---
         sketch_path = draft.get("page_3", {}).get("technical_sketch_img", "")
-        sketch_exists = bool(sketch_path) and Path(sketch_path.split("assets/")[-1] if "assets/" in sketch_path else sketch_path).exists() if sketch_path else False
+        # Check sketch file existence — handle both "assets/x.png" and "http://localhost:8000/assets/x.png"
+        sketch_local = sketch_path
+        if sketch_local and "assets/" in sketch_local:
+            sketch_local = "assets/" + sketch_local.split("assets/")[-1]
+        sketch_exists = bool(sketch_local) and Path(sketch_local).exists() if sketch_local else False
         sketch_score = 0.88 if sketch_exists else 0.0
         sketch_reason = "Technical sketch generated via GPT Image 2.5 Flare with reference image input."
         sketch_reason += "\nLabel placement verified by Gemini Flash Vision."
