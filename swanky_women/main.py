@@ -7,7 +7,22 @@ from pathlib import Path
 from llm import analyze_images, llm_structured, llm_query
 from generate import generatePdf
 from utils import extract_clothing_palette, map_json, combine_images_horizontally, split_into_grids, recommend_colors_from_images, nearest_pantone_tcx, ai_crop_detail_regions, format_technical_sketch, render_pantone_swatches, cluster_into_color_groups
-from imageGen import generate_image
+from imageGen import generate_image as _old_generate_image
+from skill_image_gen import generate_image as _skill_generate_image
+
+# Use GPT Image 2.5 Flare (skill) as PRIMARY, fall back to old Gemini if it fails
+def generate_image(prompt, ref_image=None, output_path=None, use_pro=False, seed=None, image_paths=None):
+    """Wrapper: tries GPT Image 2.5 Flare first, falls back to Gemini."""
+    # Map old args to skill args
+    out = output_path or "assets/output.png"
+    ref = ref_image
+    if image_paths and len(image_paths) > 0 and not ref:
+        ref = image_paths[0]
+    try:
+        return _skill_generate_image(prompt, reference_image_path=ref, output_path=out)
+    except Exception as e:
+        print(f"[generate_image] GPT Image 2.5 failed: {e}. Falling back to Gemini...")
+        return _old_generate_image(prompt, ref_image, out, use_pro=use_pro, seed=seed, image_paths=image_paths)
 from image_verifier import verify_and_regenerate
 from sketch_prompter import build_normal_sketch_prompt, build_json_sketch_prompt, convert_text_to_json_prompt
 
@@ -1885,6 +1900,68 @@ def generate_techpack(images, context, generate=False, sample_size="M", progress
     else:
         print("✅ Verification Passed")
 
+    # ── SKILL IMPROVEMENTS: Closure inference + Construction KB + Confidence ──
+
+    # Closure inference: check if accessories have a closure
+    accessories = factory_output.get("accessories", [])
+    has_closure = any(
+        any(kw in str(a).lower() for kw in ["zipper", "button", "hook", "snap", "closure", "pull-on", "pull on"])
+        for a in accessories
+    )
+    if not has_closure:
+        garment_desc = master.get("header", {}).get("description", "").lower()
+        inferred_closure = None
+        if any(kw in garment_desc for kw in ["pant", "trouser"]):
+            inferred_closure = {"description": "ZIPPER, YKK NYLON COIL, FRONT FLY + HOOK AND BAR AT WAISTBAND", "quantity_per_style": "1 SET", "color": "MATCHING", "position": "FRONT FLY"}
+        elif any(kw in garment_desc for kw in ["blazer", "jacket", "coat"]):
+            inferred_closure = None  # buttons already counted by agents
+        elif any(kw in garment_desc for kw in ["blouse", "shirt", "top"]):
+            fabric_desc = str(fabric_decision.get("fabric_family", "")).lower()
+            if "knit" in fabric_desc or "jersey" in fabric_desc:
+                inferred_closure = {"description": "PULL-ON STYLE (NO CLOSURE)", "quantity_per_style": "", "color": "", "position": ""}
+            else:
+                inferred_closure = {"description": "INVISIBLE ZIPPER, YKK, CENTER BACK OR SIDE SEAM", "quantity_per_style": "1", "color": "MATCHING", "position": "CENTER BACK / SIDE SEAM"}
+        elif any(kw in garment_desc for kw in ["dress", "skirt"]):
+            inferred_closure = {"description": "INVISIBLE ZIPPER, YKK, CENTER BACK", "quantity_per_style": "1", "color": "MATCHING", "position": "CENTER BACK"}
+
+        if inferred_closure:
+            if isinstance(accessories, list):
+                accessories.append(inferred_closure)
+                factory_output["accessories"] = accessories
+                print(f"[SKILL] Inferred closure: {inferred_closure['description']}")
+
+    # Construction KB: ensure minimum row count
+    seams = factory_output.get("seams", [])
+    min_construction = {"blazer": 10, "jacket": 10, "coat": 10, "pant": 10, "trouser": 10,
+                        "blouse": 8, "shirt": 8, "dress": 8, "suit": 10, "cardigan": 10, "skirt": 6}
+    expected_min = 6
+    garment_desc_lower = master.get("header", {}).get("description", "").lower()
+    for kw, count in min_construction.items():
+        if kw in garment_desc_lower:
+            expected_min = max(expected_min, count)
+    if len(seams) < expected_min:
+        print(f"[SKILL] Construction has {len(seams)} rows, minimum is {expected_min}. LLM will add missing rows in auto-correct.")
+
+    # Confidence scoring
+    pantone_conf = 0.85 if len(master.get("page_2", {}).get("optional_colors", [])) > 1 else 0.7
+    fabric_conf = 0.5  # always uncertain from image
+    construction_conf = 0.9 if len(seams) >= expected_min else 0.7
+    accessories_conf = 0.9 if has_closure else 0.7
+    master["_confidence"] = {
+        "pantone_match": pantone_conf,
+        "fabric_identification": fabric_conf,
+        "construction_completeness": construction_conf,
+        "measurement_accuracy": 0.85,
+        "accessories_completeness": accessories_conf,
+        "overall": round((pantone_conf + fabric_conf + construction_conf + 0.85 + accessories_conf) / 5, 2),
+        "_notes": [
+            f"Closure: {'Found in accessories' if has_closure else 'Inferred — ' + str(inferred_closure.get('description', '') if inferred_closure else 'none')}",
+            f"Construction: {len(seams)} rows (min {expected_min} for {garment_desc_lower})",
+            f"Fabric: {fabric_decision.get('fabric_family', 'unknown')} (visual inference only)",
+        ]
+    }
+    master["page_7"]["_fabric_reasoning"] = fabric_decision.get("reason", "Identified from visual analysis.")
+
     # 8. Fill pages
     # Page 2 Details (keep legacy prompt or use vision text - using legacy prompt for specific formatting)
     page2_prompt = f"""
@@ -1987,13 +2064,22 @@ For Outerwear/Coats/Trench Coats/Jackets:
 
     desc_str = (master.get("header", {}).get("description", "") + " " + classification.get("category", "") + " " + master.get("header", {}).get("style_name", "")).lower()
     is_two_piece = any(kw in desc_str for kw in ("suit", "set", "two-piece", "2-piece", "skirt suit", "pant suit", "co-ord", "tracksuit", "sut"))
+    is_three_piece = any(kw in desc_str for kw in ("3-piece", "3 piece", "three piece", "3ps"))
 
-    if is_two_piece:
-        layout_instruction = """Layout Requirements:
-- This garment consists of two separate segments (separate upper wear and separate bottom wear).
-- Present the four garment parts horizontally side-by-side:
-  [Top Wear Front]  [Bottom Wear Front]  [Top Wear Back]  [Bottom Wear Back]
-- Both upper wear and bottom wear must be clearly depicted front and back without model or human body."""
+    if is_three_piece:
+        layout_instruction = """Layout Requirements (3-PIECE SUIT — CRITICAL):
+- Draw each piece as a SEPARATE FLAT GARMENT, NOT worn together on a body.
+- Arrange as 6 individual flat sketches in a grid:
+  TOP ROW: [Blazer Front] [Blazer Back] [Vest Front] [Vest Back]
+  BOTTOM ROW: [Trouser Front] [Trouser Back]
+- Label each piece below it: "BLAZER FRONT VIEW", "VEST BACK VIEW", etc.
+- Each piece drawn independently as a flat lay, showing all construction details."""
+    elif is_two_piece:
+        layout_instruction = """Layout Requirements (2-PIECE — CRITICAL):
+- Draw each piece as a SEPARATE FLAT GARMENT, NOT worn together on a body.
+- Arrange as 4 individual flat sketches:
+  [Top Wear Front] [Top Wear Back] [Bottom Wear Front] [Bottom Wear Back]
+- Label each piece. Both must be clearly depicted as flat garments without model or human body."""
     else:
         layout_instruction = """Layout Requirements (CRITICAL):
 - Create the technical sketch showing Front and Back views SIDE-BY-SIDE horizontally on a wide landscape canvas.
@@ -2029,6 +2115,17 @@ Strict Feature & Count Accuracy:
 - Zipper Placement: Check closure location precisely. If the garment has a side invisible zipper, place it at the side seam and leave the center back as a clean vertical seam. Only draw a center back zipper if it genuinely opens at center back.
 - Sleeve cuffs: Accurately show buttons on barrel cuffs AND sleeve gauntlet plackets (e.g. 2 cuff + 1 gauntlet = 3 per sleeve).
 - Construction accuracy: Draw all seams, darts, and construction details (like center back seams or princess seams) exactly as described in the Seams & Construction document.
+
+LABEL PLACEMENT RULES (CRITICAL — labels must point to CORRECT locations):
+- SIDE SEAM: leader line must point to the OUTER EDGE of the garment (left or right side), NOT the center
+- SHOULDER SEAM: leader line must point to the TOP of the shoulder where sleeve meets body
+- ARMHOLE SEAM: leader line must point to where the sleeve attaches to the body (armpit area)
+- CENTER BACK SEAM: leader line must point to the CENTER LINE of the back view
+- HEM: leader line must point to the BOTTOM EDGE of the garment
+- COLLAR/NECKLINE: leader line must point to the TOP/NECK area
+- CUFF: leader line must point to the END of the sleeve (wrist area)
+- Labels on the LEFT side → leader lines go LEFT toward garment. Labels on RIGHT → go RIGHT toward garment.
+- AVOID "epaulettes" — use "DECORATIVE SHOULDER STRAPS" (prevents button hallucination)
 
 Annotation & Labeling (CRITICAL ACCURACY):
 - BRAND & SIZE LABEL: In the Front View, inside the inner back neckline/collar opening, always illustrate the small rectangular brand neck tag, labeled with a leader line: 'BRAND & SIZE LABEL'.
