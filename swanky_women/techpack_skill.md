@@ -398,7 +398,8 @@ Columns: Waist, Hip, Inseam, Outseam, Leg Opening (5 columns minimum)
 | XL | 38-40.5 | 43.5 | 32.5 | 42.5 | 15.5 |
 
 **Coats/Jackets/Blazers (Menswear):**
-Columns: Chest, Waist, Shoulder Width, Sleeve Length, Coat Length
+Columns: Chest, Waist, Shoulder Width, Sleeve Length, Coat/Blazer/Jacket Length
+(Use "Arm Length" as alternative to "Sleeve Length" — client uses both)
 
 | Size | Chest | Waist | Shoulder Width | Sleeve Length | Coat Length |
 |------|-------|-------|---------------|-------------|-------------|
@@ -406,6 +407,30 @@ Columns: Chest, Waist, Shoulder Width, Sleeve Length, Coat Length
 | M | 38-40 | 32-34 | 18 | 33-34 | 40 |
 | L | 41-43 | 35-37 | 18.5 | 34-35 | 41 |
 | XL | 44-46 | 38-40 | 19 | 35-36 | 42 |
+
+**Coats/Jackets (Womenswear):**
+Columns: Bust, Waist, Hip, Shoulder Width, Sleeve Length, Coat/Jacket Length
+
+| Size | Bust | Waist | Hip | Shoulder Width | Sleeve Length | Length |
+|------|------|-------|-----|---------------|-------------|--------|
+| S (4-6) | 35-36 | 27-28 | 37-38 | 15.5-16 | 23.5-24 | varies |
+| M (8-10) | 37-38 | 29-30 | 38-39 | 16-16.5 | 24-24.5 | varies |
+| L (12-14) | 39.5-41 | 31.5-33 | 41.5-43 | 16.5-17 | 24.5-25 | varies |
+| XL (16-18) | 43.5 | 35.5 | 45.5 | 17-17.5 | 25-25.5 | varies |
+
+Note: Length varies by garment — Jacket: 23-25", Coat: 39-42", Long coat: 44-48"
+
+**3-Piece Suit (combines blazer + vest + pant):**
+Columns: Bust, Waist, Hip, Blazer Length, Sleeve Length, Pant Waist, Pant Hip, Pant Inseam
+
+| Size | Bust | Waist | Hip | Blazer Length | Sleeve | Pant Waist | Pant Hip | Pant Inseam |
+|------|------|-------|-----|-------------|--------|-----------|----------|-------------|
+| XS (2) | 32-33 | 24-25 | 34-35 | 25.5 | 23.5 | 24-25 | 34-35 | 29 |
+| S (4-6) | 34-35 | 26-27 | 36-37 | 26 | 24 | 26-27 | 36-37 | 29.5 |
+| M (8-10) | 36-37 | 28-29 | 38-39 | 26.5 | 24.5 | 28-29 | 38-39 | 30 |
+| L (12-14) | 38.5-40 | 30.5-32 | 40.5-42 | 27 | 25 | 30.5-32 | 40.5-42 | 30.5 |
+| XL (16) | 41.5 | 34 | 43.5 | 27.5 | 25.5 | 34 | 43.5 | 31 |
+| XXL (18) | 43 | 36 | 45 | 28 | 26 | 36 | 45 | 31.5 |
 
 **Coats/Jackets (Womenswear):**
 Columns: Bust, Waist, Hip, Shoulder Width, Sleeve Length, Coat Length
@@ -605,6 +630,10 @@ Use ALL-CAPS labels with leader lines. Include "BRAND & SIZE LABEL" on every gar
 **Skirt Suit:** BRAND & SIZE LABEL, NOTCH LAPEL, PRINCESS PANEL, PLASTIC BUTTONS, DOUBLE BREASTED WITH THREE COLUMN, DECORATIVE FLAP POCKET, WAISTBAND, FRONT DART, INVISIBLE ZIPPER, CENTER BACK SEAM
 **Hooded Coat:** BRAND & SIZE LABEL, WHITE FAUX FUR SHAWL LIKE COLLAR, BELT, SIDE POCKET, WHITE FAUX FUR CUFF, WHITE FAUX FUR PLACKET, OVERSIZED HOOD
 **Turtle Neck:** TURTLENECK, FLATLOCK STITCHING IN CURVED LINE FOR SHAPING, EXTENDED SLEEVE CUFFS WITH THUMBHOLE OPENING, PRINCESS SEAM, COVER STITCHED HEM AT STRAIGHT BOTTOM
+**Hooded Coat:** BRAND & SIZE LABEL, WIDE NOTCH LAPEL, SINGLE BREASTED WITH BUTTON PLACKET, SELF FABRIC BELT AT WAIST, TIED IN A KNOT FOR ADJUSTABLE CLOSURE, DECORATIVE ADJUSTABLE STRAPS FOR CUFF, ATTACHED HOOD (back)
+**Light Jacket:** BRAND & SIZE LABEL, WIDE SCULPTURAL COLLAR, OVERSIZED NOTCH LAPELS, EXAGGERATED SHOULDER WITH 3D EFFECT, HOOD (back), CENTER BACK SEAM, PEPLUM EFFECT BELOW WAIST, ASYMMETRICAL FRONT HEM
+**3-Piece Suit:** Show ALL pieces — BLAZER front/back + VEST front/back + PANT front/back. Callouts per piece: BLAZER: notch lapel, button closure, welt pocket, cuff buttons. VEST: button front, welt pockets. PANT: waistband, fly, crease, pockets
+**Bodycon/Pull-on Dress:** NECKLINE, BODY-HUGGING SILHOUETTE, NO CLOSURE (PULL-ON STYLE), HEM LENGTH, any ruching/draping detail
 
 ## REFERENCE: FABRIC DECISION SYSTEM
 
@@ -681,11 +710,16 @@ Only assert 100% certain closures. For uncertain ones, add as "likely" in access
 - When uncertain, state "3 (1 visible, 2 likely hidden by pose)" in accessories
 
 **Highly likely (add unless evidence against):**
-- Fitted blouse with no visible front buttons → invisible side seam OR back zipper (add to accessories as "INVISIBLE ZIPPER, SIDE/BACK, YKK")
+- Fitted blouse with no visible front buttons → invisible side seam OR back zipper
 - Fitted dress with no visible closure → invisible center back zipper
+- Bodycon/stretch dress with no visible closure → "PULL ON STYLE (NO CLOSURE)" — explicitly state this in accessories
 - Fitted skirt → invisible side or back zipper
 - Coat with visible front buttons → internal wind flap button (sometimes)
 - Long coat/overcoat → more buttons than visible (typically 3 for single-breasted)
+
+**3-Piece Suit button counting:**
+Total buttons split across pieces. Example: 12 total = 2 blazer front + 4 blazer cuff + 5 waistcoat + 1 pant fly.
+List as ONE accessories row: "BUTTONS, [type], [total count], [breakdown per piece]"
 
 **Research when uncertain:** Use WebSearch to check: "standard closures for [garment type]"
 
@@ -698,6 +732,12 @@ Main body panels, Shoulder seams, Sleeve setting, Side seams, Back vent, Collar 
 
 **Coat/Trench (10-12 rows):**
 Main seams, Shoulder, Sleeve setting, Side seams, Collar/lapel, Storm flap, Belt loops, Pocket (flap/welt), Hem, Lining, Buttonholes, Back vent
+
+**Hooded Coat (12-14 rows):**
+Main body seams, Shoulder, Side seams, Sleeve attachments, Hood attachment, Hood center seam, Hood edge finish, Lining seams, Hemline, Cuff tabs, Belt (tubular seam), Buttonholes, Button sewing, Label attachment
+
+**Light Jacket (8-10 rows):**
+Main body panels, Side seams, Sleeve attachments, Shoulder seams (reinforced), Hood attachment, Hood center seam, Hemline, Sleeve hem, Edge finish (collar), Label attachment
 
 **Pant/Trouser (12-15 rows):**
 Side seams, Inseam, Front rise (fly), Fly facing, Waistband attachment, Waistband topstitch, Pleat stitching, Pocket bags, Welt pocket construction, Hem, Belt loops, Button attachment, Zipper installation, Bartacks (stress points)
