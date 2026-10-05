@@ -1180,7 +1180,7 @@ Return ONLY the JSON array, nothing else."""
                     "issue": f"Only {len(seams)} rows (expected {expected_min}+). Auto-fix failed: {str(e)[:80]}",
                 })
 
-        # ── 3. SKETCH vs ORIGINAL COMPARISON ──
+        # ── 3. SKETCH vs ORIGINAL — COMPARE + AUTO-RETRY ──
         sketch_path = draft.get("page_3", {}).get("technical_sketch_img", "")
         if sketch_path and "assets/" in sketch_path:
             sketch_local = "assets/" + sketch_path.split("assets/")[-1]
@@ -1204,6 +1204,7 @@ Check for these specific issues:
 1. Are there any features in the SKETCH that DON'T exist in the ORIGINAL photo? (hallucinated features)
 2. Are there any visible features in the ORIGINAL that are MISSING from the sketch?
 3. Are buttons, pockets, collar/neckline drawn correctly matching the original?
+4. Are label leader lines pointing to the CORRECT locations on the garment?
 
 If everything matches well, respond: "OK — sketch matches original"
 If there are issues, list them briefly. Example: "Sketch shows 3 buttons but original has 2. Sketch missing back vent."
@@ -1212,11 +1213,63 @@ If there are issues, list them briefly. Example: "Sketch shows 3 buttons but ori
                 comparison_result = comparison_result.strip()
 
                 if "OK" not in comparison_result.upper():
-                    needs_manual.append({
-                        "field": "technical_sketch",
-                        "issue": comparison_result,
-                        "suggestion": "Use the sketch editor to apply modifications, or regenerate."
-                    })
+                    # AUTO-RETRY: Regenerate sketch with correction prompt + original image
+                    try:
+                        from skill_image_gen import generate_image as skill_gen_image
+
+                        correction_prompt = (
+                            f"TECHNICAL SKETCH CORRECTION for {description}:\n"
+                            f"The previous sketch had these issues: {comparison_result}\n\n"
+                            f"Generate a CORRECTED technical flat sketch that fixes ALL listed issues.\n"
+                            f"Match the original garment photo exactly — same silhouette, same features, same button count.\n"
+                            f"Pure black line art on white background. Professional fashion technical flat drawing.\n"
+                            f"Include ALL-CAPS callout labels with thin leader lines pointing to correct locations."
+                        )
+
+                        new_sketch_path = "assets/technical_sketch_corrected.png"
+                        skill_gen_image(
+                            correction_prompt,
+                            reference_image_path=front_path,
+                            output_path=new_sketch_path
+                        )
+
+                        # Verify the corrected sketch
+                        if Path(new_sketch_path).exists():
+                            verify_result, _ = analyze_images([new_sketch_path, front_path], compare_prompt)
+                            verify_result = verify_result.strip()
+
+                            corrected_is_better = "OK" in verify_result.upper() or len(verify_result) < len(comparison_result)
+
+                            if corrected_is_better:
+                                # Use corrected version
+                                import shutil
+                                shutil.copy2(new_sketch_path, sketch_local)
+                                draft["page_3"]["technical_sketch_img"] = sketch_local
+                                corrections_made.append({
+                                    "field": "technical_sketch",
+                                    "action": f"Auto-regenerated sketch to fix: {comparison_result[:100]}",
+                                    "reason": f"Original issues: {comparison_result}. Corrected version verified."
+                                })
+                            else:
+                                # Keep original, flag remaining issues
+                                needs_manual.append({
+                                    "field": "technical_sketch",
+                                    "issue": f"Original: {comparison_result}. Retry still has: {verify_result[:100]}",
+                                    "suggestion": "Use sketch editor to manually fix remaining differences."
+                                })
+                        else:
+                            needs_manual.append({
+                                "field": "technical_sketch",
+                                "issue": comparison_result,
+                                "suggestion": "Auto-regeneration failed. Use sketch editor to fix."
+                            })
+
+                    except Exception as regen_err:
+                        needs_manual.append({
+                            "field": "technical_sketch",
+                            "issue": f"{comparison_result}. Auto-retry failed: {str(regen_err)[:60]}",
+                            "suggestion": "Use sketch editor to apply modifications."
+                        })
                 else:
                     corrections_made.append({
                         "field": "technical_sketch",
