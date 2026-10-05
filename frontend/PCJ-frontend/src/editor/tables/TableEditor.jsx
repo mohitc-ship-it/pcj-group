@@ -1,4 +1,4 @@
-import { useState } from "react"
+import React, { useState } from "react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -72,8 +72,8 @@ export default function TableEditor({ label, value, onChange, pageId }) {
           </thead>
           <tbody>
             {value.map((row, i) => (
-              <>
-                <tr key={i} className="border-b border-white/5 align-top hover:bg-white/[0.02]">
+              <React.Fragment key={i}>
+                <tr className="border-b border-white/5 align-top hover:bg-white/[0.02]">
                   {columns.map((c, colIndex) => {
                     const cellId = `${i}-${c}`
                     const isFocused = focusedCell === cellId
@@ -178,7 +178,7 @@ export default function TableEditor({ label, value, onChange, pageId }) {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
