@@ -98,6 +98,9 @@ export default function UploadPage() {
   const [sizeRange, setSizeRange] = useState("")
   const [sampleSize, setSampleSize] = useState("")
   const [notes, setNotes] = useState("")
+  const [closureType, setClosureType] = useState("")
+  const [wearCategory, setWearCategory] = useState("Womenswear")
+  const [buttonCount, setButtonCount] = useState("")
   const [brandLogo, setBrandLogo] = useState(null)   // { file, preview }
   const [hasPreviousInput, setHasPreviousInput] = useState(false)
 
@@ -122,7 +125,7 @@ export default function UploadPage() {
         })
       }
       localStorage.setItem("pcj_last_input", JSON.stringify({
-        brand, collection, season, fabric, sizeRange, sampleSize, notes,
+        brand, collection, season, fabric, sizeRange, sampleSize, notes, closureType, wearCategory, buttonCount,
         logoDataUrl, logoName: brandLogo?.file?.name || null
       }))
     } catch (e) {
@@ -138,6 +141,9 @@ export default function UploadPage() {
       if (saved.collection) setCollection(saved.collection)
       if (saved.season) setSeason(saved.season)
       if (saved.fabric) setFabric(saved.fabric)
+      if (saved.closureType) setClosureType(saved.closureType)
+      if (saved.wearCategory) setWearCategory(saved.wearCategory)
+      if (saved.buttonCount) setButtonCount(saved.buttonCount)
       if (saved.sizeRange) setSizeRange(saved.sizeRange)
       if (saved.sampleSize) setSampleSize(saved.sampleSize)
       if (saved.notes) setNotes(saved.notes)
@@ -155,18 +161,18 @@ export default function UploadPage() {
 
   // Auto-save text fields as user types (skipping logo to avoid lag)
   useEffect(() => {
-    if (!brand && !collection && !season && !fabric) return // don't overwrite if entirely empty on load
+    if (!brand && !collection && !season && !fabric) return
     try {
       const saved = JSON.parse(localStorage.getItem("pcj_last_input") || "{}")
       localStorage.setItem("pcj_last_input", JSON.stringify({
         ...saved,
-        brand, collection, season, fabric, sizeRange, sampleSize, notes
+        brand, collection, season, fabric, sizeRange, sampleSize, notes, closureType, wearCategory, buttonCount
       }))
       setHasPreviousInput(true)
     } catch (e) {
       // ignore
     }
-  }, [brand, collection, season, fabric, sizeRange, sampleSize, notes])
+  }, [brand, collection, season, fabric, sizeRange, sampleSize, notes, closureType, wearCategory, buttonCount])
 
   // Auto-save logo specifically when it changes
   useEffect(() => {
@@ -211,7 +217,10 @@ export default function UploadPage() {
     if (brand) lines.push(`Brand: ${brand}`)
     if (collection) lines.push(`Collection: ${collection}`)
     if (season) lines.push(`Season: ${season}`)
-    if (fabric) lines.push(`Fabric preference: ${fabric}`)
+    if (wearCategory) lines.push(`Category: ${wearCategory}`)
+    if (fabric) lines.push(`Fabric: ${fabric}`)
+    if (closureType) lines.push(`Closure type: ${closureType}`)
+    if (buttonCount) lines.push(`Button count: ${buttonCount}`)
     if (sizeRange) lines.push(`Size Range: ${sizeRange}`)
     if (notes) lines.push(`\nAdditional Notes:\n${notes}`)
     return lines.join("\n")
@@ -372,7 +381,28 @@ export default function UploadPage() {
                   <FormField id="collection" label="Collection" value={collection} onChange={setCollection} placeholder="e.g. Grandiose" />
                   <FormField id="season" label="Season" value={season} onChange={setSeason} placeholder="e.g. FW25" />
                 </div>
-                <FormField id="fabric" label="Fabric Preference" value={fabric} onChange={setFabric} placeholder="e.g. Wool blend / Gabardine" />
+                {/* Wear Category */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="wearCategory" className="text-xs font-semibold text-white/60 uppercase tracking-widest">Wear Category</label>
+                  <select
+                    id="wearCategory"
+                    value={wearCategory}
+                    onChange={(e) => setWearCategory(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 transition-all duration-200"
+                  >
+                    <option value="Womenswear">Womenswear</option>
+                    <option value="Menswear">Menswear</option>
+                    <option value="Kidswear">Kidswear</option>
+                  </select>
+                </div>
+
+                <FormField id="fabric" label="Fabric (improves accuracy)" value={fabric} onChange={setFabric} placeholder="e.g. 100% Silk / Wool Gabardine / Cotton Poplin" />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField id="closureType" label="Closure Type" value={closureType} onChange={setClosureType} placeholder="e.g. Invisible back zipper / 5 buttons / Pull-on" />
+                  <FormField id="buttonCount" label="Button Count" value={buttonCount} onChange={setButtonCount} placeholder="e.g. 3 front + 4 cuff" />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField id="sizeRange" label="Size Range" value={sizeRange} onChange={setSizeRange} placeholder="e.g. XS – XL" />
                   <FormField id="sampleSize" label="Sample Size" value={sampleSize} onChange={setSampleSize} placeholder="e.g. M" />

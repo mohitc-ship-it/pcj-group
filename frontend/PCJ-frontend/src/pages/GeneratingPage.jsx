@@ -76,6 +76,7 @@ export default function GeneratingPage() {
   const [currentStep, setCurrentStep] = useState("Starting pipeline...")
   const [stepLog, setStepLog] = useState([])
   const [error, setError] = useState(null)
+  const [cost, setCost] = useState(null)
 
   const logEndRef = useRef(null)
   const pollingRef = useRef(null)
@@ -96,8 +97,9 @@ export default function GeneratingPage() {
 
         if (data.status === "done") {
           setStatus("done")
+          setCost(data.cost)
           clearInterval(pollingRef.current)
-          setTimeout(() => navigate("/editor"), 1500)
+          // Don't auto-redirect — let user see cost and choose
         } else if (data.status === "error") {
           setStatus("error")
           setError(data.error || "An unknown error occurred.")
@@ -217,8 +219,36 @@ export default function GeneratingPage() {
           {/* Done state */}
           {status === "done" && (
             <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-              <p className="text-green-300 text-sm font-semibold mb-1">Tech Pack Ready!</p>
-              <p className="text-white/40 text-xs">Redirecting to editor…</p>
+              <p className="text-green-300 text-sm font-semibold mb-2">Tech Pack Ready!</p>
+              {cost && (
+                <div className="bg-black/30 rounded-lg p-3 mb-3 text-xs">
+                  <p className="text-white/60 mb-1 font-semibold">Generation Cost</p>
+                  <div className="flex justify-between text-white/40">
+                    <span>Image Generation</span>
+                    <span>${cost.image_generation?.toFixed(3)}</span>
+                  </div>
+                  <div className="flex justify-between text-white/40">
+                    <span>Text / Vision LLM</span>
+                    <span>${cost.text_vision_llm?.toFixed(3)}</span>
+                  </div>
+                  <div className="flex justify-between text-white font-bold mt-1 pt-1 border-t border-white/10">
+                    <span>Total</span>
+                    <span>${cost.total?.toFixed(3)}</span>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => navigate("/editor")}
+                className="w-full text-xs bg-green-600 hover:bg-green-500 text-white rounded-lg py-2 mb-2 transition-colors"
+              >
+                View & Edit Tech Pack
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="w-full text-xs bg-white/5 hover:bg-white/10 text-white/60 rounded-lg py-2 transition-colors"
+              >
+                Generate Another
+              </button>
             </div>
           )}
         </div>
@@ -258,14 +288,20 @@ export default function GeneratingPage() {
 
           {/* Done CTA */}
           {status === "done" && (
-            <div className="shrink-0 px-8 py-5 border-t border-white/5">
+            <div className="shrink-0 px-8 py-5 border-t border-white/5 flex gap-3">
               <button
                 onClick={() => navigate("/editor")}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold rounded-2xl py-4 transition-all duration-300 hover:-translate-y-0.5"
+                className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold rounded-2xl py-4 transition-all duration-300 hover:-translate-y-0.5"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 View & Edit Tech Pack
                 <ChevronRight className="w-5 h-5 opacity-60" />
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="px-6 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white font-medium rounded-2xl py-4 transition-all duration-300"
+              >
+                + New
               </button>
             </div>
           )}

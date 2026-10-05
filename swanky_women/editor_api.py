@@ -409,7 +409,19 @@ def _run_generation_job(job_id: str, image_paths: list, context: str, sample_siz
         _jobs[job_id]["progress"] = 100
         _jobs[job_id]["current_step"] = "Tech Pack ready!"
         _jobs[job_id]["pdf_path"] = str(pdf_path) if pdf_path else None
-        _push_reasoning(job_id, "Complete", "Tech Pack generated", "All 9 pages rendered and merged into PDF.", 100)
+
+        # Calculate estimated cost
+        image_gen_cost = 0.14  # 4 images × ~$0.035 avg via GPT Image 2.5 Flare
+        text_llm_cost = 0.03   # ~13 calls via Gemini Flash
+        total_cost = image_gen_cost + text_llm_cost
+        _jobs[job_id]["cost"] = {
+            "image_generation": round(image_gen_cost, 3),
+            "text_vision_llm": round(text_llm_cost, 3),
+            "total": round(total_cost, 3),
+            "currency": "USD"
+        }
+
+        _push_reasoning(job_id, "Complete", "Tech Pack generated", f"All pages rendered. Estimated cost: ${total_cost:.2f}", 100)
 
     except Exception as e:
         _jobs[job_id]["status"] = "error"
@@ -493,6 +505,7 @@ def get_generation_status(job_id: str):
         "current_step": job["current_step"],
         "step_log": job.get("step_log", []),  # reasoning trace entries
         "error": job.get("error"),
+        "cost": job.get("cost"),            # cost breakdown when done
     })
 
 
