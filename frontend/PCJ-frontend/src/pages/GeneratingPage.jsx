@@ -225,16 +225,31 @@ export default function GeneratingPage() {
                   <p className="text-white/60 mb-1 font-semibold">Generation Cost</p>
                   <div className="flex justify-between text-white/40">
                     <span>Image Generation</span>
-                    <span>${cost.image_generation?.toFixed(3)}</span>
+                    <span>${cost.image_generation?.toFixed(4)}</span>
                   </div>
                   <div className="flex justify-between text-white/40">
                     <span>Text / Vision LLM</span>
-                    <span>${cost.text_vision_llm?.toFixed(3)}</span>
+                    <span>${cost.text_vision_llm?.toFixed(4)}</span>
                   </div>
+                  {cost.verification > 0 && (
+                    <div className="flex justify-between text-white/40">
+                      <span>Verification</span>
+                      <span>${cost.verification?.toFixed(4)}</span>
+                    </div>
+                  )}
+                  {cost.detail_crops > 0 && (
+                    <div className="flex justify-between text-white/40">
+                      <span>Detail Crops</span>
+                      <span>${cost.detail_crops?.toFixed(4)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-white font-bold mt-1 pt-1 border-t border-white/10">
                     <span>Total</span>
-                    <span>${cost.total?.toFixed(3)}</span>
+                    <span>${cost.total?.toFixed(4)}</span>
                   </div>
+                  {cost.breakdown && (
+                    <p className="text-white/20 mt-1">{cost.breakdown}</p>
+                  )}
                 </div>
               )}
               <button
