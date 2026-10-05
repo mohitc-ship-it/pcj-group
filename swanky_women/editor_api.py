@@ -1075,6 +1075,92 @@ def get_accuracy_report():
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Feature 8 — Feedback Loop / Correction Learning
+# ──────────────────────────────────────────────────────────────────────────────
+CORRECTIONS_FILE = DATA_DIR / "corrections_log.json"
+
+def _load_corrections():
+    if CORRECTIONS_FILE.exists():
+        with open(CORRECTIONS_FILE) as f:
+            return json.load(f)
+    return []
+
+def _save_correction(entry):
+    corrections = _load_corrections()
+    corrections.append(entry)
+    with open(CORRECTIONS_FILE, "w") as f:
+        json.dump(corrections, f, indent=2)
+
+
+@app.post("/api/log-correction")
+async def log_correction(payload: dict = Body(...)):
+    """
+    Log a designer's correction for future learning.
+    Payload: {
+        page_id: "page_5",
+        field_key: "seams",
+        original_value: "...",
+        corrected_value: "...",
+        reason: "Changed seam type because...",
+        garment_type: "blazer",
+        category: "Menswear"
+    }
+    """
+    import time
+    entry = {
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "page_id": payload.get("page_id", ""),
+        "field_key": payload.get("field_key", ""),
+        "original_value": str(payload.get("original_value", ""))[:500],
+        "corrected_value": str(payload.get("corrected_value", ""))[:500],
+        "reason": payload.get("reason", ""),
+        "garment_type": payload.get("garment_type", ""),
+        "category": payload.get("category", ""),
+    }
+    _save_correction(entry)
+    return JSONResponse({"ok": True, "total_corrections": len(_load_corrections())})
+
+
+@app.get("/api/corrections")
+def get_corrections():
+    """Get all logged corrections for review."""
+    corrections = _load_corrections()
+    # Group by field
+    by_field = {}
+    for c in corrections:
+        key = f"{c.get('garment_type', 'unknown')}:{c.get('field_key', 'unknown')}"
+        if key not in by_field:
+            by_field[key] = []
+        by_field[key].append(c)
+
+    return JSONResponse({
+        "total": len(corrections),
+        "corrections": corrections[-50:],  # last 50
+        "patterns": {k: len(v) for k, v in by_field.items()},
+    })
+
+
+@app.get("/api/corrections/for-garment/{garment_type}")
+def get_corrections_for_garment(garment_type: str):
+    """Get corrections relevant to a specific garment type for re-learning."""
+    corrections = _load_corrections()
+    relevant = [c for c in corrections if garment_type.lower() in c.get("garment_type", "").lower()]
+
+    # Build a learning summary
+    lessons = []
+    for c in relevant:
+        if c.get("reason"):
+            lessons.append(f"- {c['field_key']}: Changed from '{c['original_value'][:100]}' to '{c['corrected_value'][:100]}'. Reason: {c['reason']}")
+
+    return JSONResponse({
+        "garment_type": garment_type,
+        "total_corrections": len(relevant),
+        "lessons": lessons,
+        "corrections": relevant[-20:],
+    })
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
