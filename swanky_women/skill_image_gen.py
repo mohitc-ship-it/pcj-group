@@ -399,7 +399,27 @@ Style:
 
     # Detect garment type for measurement-specific labels
     desc_lower = args.description.lower()
-    if any(w in desc_lower for w in ["pant", "trouser", "jean", "short"]):
+    if any(w in desc_lower for w in ["3-piece", "3 piece", "suit"]) and any(w in desc_lower for w in ["pant", "trouser", "vest"]):
+        measurement_points = """Show ALL 3 pieces as SEPARATE flat garments in a grid:
+TOP ROW (smaller, with blazer measurement lines): Blazer front/back, Vest front/back
+BOTTOM ROW (larger, with trouser measurement lines): Trouser front/back
+
+BLAZER measurements:
+- G = Chest/Bust width (horizontal across chest)
+- H = Shoulder width (horizontal across shoulders)
+- I = Sleeve length (vertical shoulder to cuff)
+- J = Blazer length (vertical shoulder to hem)
+
+TROUSER measurements:
+- A = Waist width (horizontal at waistband)
+- B = Hip width (horizontal at hip)
+- C = Inseam (vertical inner leg)
+- D = Outseam (vertical outer leg)
+- E = Thigh width (horizontal at upper thigh)
+- F = Leg opening (horizontal at hem)
+
+Include a MEASUREMENT LEGEND on the right side listing A through J."""
+    elif any(w in desc_lower for w in ["pant", "trouser", "jean", "short"]):
         measurement_points = """- A = Waist width (horizontal double-arrow across waistband)
 - B = Hip width (horizontal double-arrow at fullest hip point)
 - C = Inseam (vertical line from crotch to hem, along inner leg)

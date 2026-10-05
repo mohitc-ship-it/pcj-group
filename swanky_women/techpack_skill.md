@@ -605,7 +605,8 @@ Use ALL-CAPS labels with leader lines. Include "BRAND & SIZE LABEL" on every gar
 **Turtle Neck:** TURTLENECK, FLATLOCK STITCHING IN CURVED LINE FOR SHAPING, EXTENDED SLEEVE CUFFS WITH THUMBHOLE OPENING, PRINCESS SEAM, COVER STITCHED HEM AT STRAIGHT BOTTOM
 **Hooded Coat:** BRAND & SIZE LABEL, WIDE NOTCH LAPEL, SINGLE BREASTED WITH BUTTON PLACKET, SELF FABRIC BELT AT WAIST, TIED IN A KNOT FOR ADJUSTABLE CLOSURE, DECORATIVE ADJUSTABLE STRAPS FOR CUFF, ATTACHED HOOD (back)
 **Light Jacket:** BRAND & SIZE LABEL, WIDE SCULPTURAL COLLAR, OVERSIZED NOTCH LAPELS, EXAGGERATED SHOULDER WITH 3D EFFECT, HOOD (back), CENTER BACK SEAM, PEPLUM EFFECT BELOW WAIST, ASYMMETRICAL FRONT HEM
-**3-Piece Suit:** Show ALL pieces — BLAZER front/back + VEST front/back + PANT front/back. Callouts per piece: BLAZER: notch lapel, button closure, welt pocket, cuff buttons. VEST: button front, welt pockets. PANT: waistband, fly, crease, pockets
+**3-Piece Suit:** CRITICAL — Draw each piece as a SEPARATE FLAT GARMENT, NOT worn together on a body. Layout as 6 individual flat sketches in a grid: TOP ROW: Blazer front, Blazer back, Vest front, Vest back. BOTTOM ROW: Trouser front, Trouser back. Each piece labeled below it. Callouts: BLAZER: notch lapel, buttons, welt pocket, cuff buttons. VEST: V-neckline, buttons, welt pockets, back buckle. PANT: flat front, fly, straight leg.
+**Skirt Suit:** Same — draw BLAZER front/back + SKIRT front/back as separate flat pieces, not worn together.
 **Bodycon/Pull-on Dress:** NECKLINE, BODY-HUGGING SILHOUETTE, NO CLOSURE (PULL-ON STYLE), HEM LENGTH, any ruching/draping detail
 
 ## REFERENCE: FABRIC DECISION SYSTEM
