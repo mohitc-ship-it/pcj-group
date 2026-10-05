@@ -26,9 +26,18 @@ Read both garment images using your vision capabilities. Identify:
 1. **Garment type**: dress, blouse, shirt, coat, trench coat, jacket, blazer, cardigan, pant/trouser, skirt, suit (multi-piece), turtleneck, hoodie, etc.
 2. **Silhouette**: A-line, bodycon, wrap, straight, flared, oversized, fitted, etc.
 3. **Construction features**: List EVERY visible feature — collar type, neckline, sleeves, closure mechanism (buttons/zipper/tie/wrap), pockets, belt, pleats, darts, seams, hem style, slit, lining visibility, trim/embellishments
-4. **Dominant color(s)**: Extract the hex color code(s) of the main fabric areas. Ignore skin, hair, background.
-5. **Fabric assessment**: Based on visual drape, texture, sheen, and season — what fabric is this likely? (e.g., wool gabardine, silk charmeuse, cotton poplin, chiffon)
-6. **Complexity level**: Simple (basic top), Medium (structured dress), Complex (coat/suit with lining)
+4. **Inferred closures** (IMPORTANT): If the garment is fitted but has NO visible front closure, it MUST have a hidden closure. Infer based on garment type:
+   - Fitted blouse with no front buttons → invisible SIDE SEAM zipper or BACK zipper
+   - Fitted dress with no visible closure → invisible BACK zipper
+   - Fitted skirt → invisible side or back zipper
+   - Pant/trouser → front fly zipper (always)
+   - Add inferred closures to the accessories list even if not visible in images
+5. **Dominant color(s)**: Extract hex color codes. **CRITICAL: Pick from the BRIGHTEST, most well-lit area of the fabric** — NOT from shadowed areas, folds, or dark creases. Shadows make colors appear 20-40% darker than the true fabric color. Aim for the highlight/direct-light area. Provide multiple hex samples:
+   - One from the brightest/most well-lit flat area of the fabric
+   - One from a mid-tone area
+   - One from a secondary color (if applicable)
+6. **Fabric assessment**: Based on visual drape, texture, sheen, and season — what fabric is this likely? (e.g., wool gabardine, silk charmeuse, cotton poplin, chiffon)
+7. **Complexity level**: Simple (basic top), Medium (structured dress), Complex (coat/suit with lining)
 
 Write your analysis before proceeding. This analysis drives ALL subsequent content.
 
@@ -45,9 +54,25 @@ for r in results:
 "
 ```
 
-Select the Pantone TCX code with the lowest Delta-E. If Delta-E > 5, note this as approximate.
+**CRITICAL: Run the Pantone match for the BRIGHTEST hex sample first** — this gives the most accurate match because it represents the true fabric color without shadow distortion. Always run at least 2-3 hex samples:
 
-**Important:** Run the match for MULTIPLE hex samples from different areas of the garment (e.g., center body, sleeve, collar area) since slight color variations exist. Present the top 3 candidates in the JSON so the designer can pick their preferred match in the editor.
+```bash
+cd swanky_women && python3 -c "
+from utils import nearest_pantone_tcx
+# Run for bright hex first (most accurate)
+print('=== Bright/highlight area ===')
+for r in nearest_pantone_tcx('BRIGHT_HEX', top_k=3):
+    print(f\"{r['code']} — {r['name']} — {r['hex']} — ΔE: {r['delta_e']}\")
+print()
+print('=== Mid-tone area ===')
+for r in nearest_pantone_tcx('MID_HEX', top_k=3):
+    print(f\"{r['code']} — {r['name']} — {r['hex']} — ΔE: {r['delta_e']}\")
+"
+```
+
+Select the Pantone from the BRIGHT hex results (lowest Delta-E). If Delta-E > 5, note as approximate. Present top 3 candidates in the JSON so the designer can pick.
+
+**Why bright hex matters:** A #9B3A5E (shadowed berry) gives 19-2045 TCX Vivacious. But the same fabric in direct light is #D03C77 which correctly gives 17-2036 TCX Magenta. Shadows shift Pantone codes by 2-4 numbers. Always pick from highlights.
 
 **Note on fabric identification:** AI cannot determine exact fabric composition from images alone. When writing fabric details:
 - Make your best assessment based on visual texture, drape, sheen, and season
