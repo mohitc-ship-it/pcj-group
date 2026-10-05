@@ -9,11 +9,35 @@ The user provides:
 - **Season** (e.g., Fall/Winter 2025)
 - **Wear category**: Womenswear, Menswear, or Kidswear
 - **Sample size**: S (default)
-- **Size range**: S-XL (default)
+- **Size range**: S-XL (default). Use what brand specifies — could be XS-XXL, 2-14, etc.
 - **Fabric preference** (optional — if not given, infer from garment type + season)
 - **Additional notes** (optional)
 
 If any required input is missing, ask the user before proceeding.
+
+### SPECIAL CASES
+
+**Multi-piece garments (suits):** If the user provides images showing multiple garment pieces (e.g., blazer + pant, blazer + vest + pant, jacket + skirt):
+- Identify ALL pieces visible in the images
+- Generate ONE tech pack covering all pieces
+- POM table: include measurements for ALL pieces (blazer bust/waist/shoulder + pant waist/hip/inseam)
+- Construction table: group rows by piece (e.g., "BLAZER — Shoulder Seam", "PANT — Side Seam")
+- Accessories: combine all pieces' accessories in one table
+- Technical sketch: draw ALL pieces in the front/back views
+
+**Kidswear:** If wear category is Kidswear:
+- Size range uses age-based sizing: 2T, 3T, 4T, 5, 6, 7, 8, 10, 12, 14
+- OR height-based: 92, 98, 104, 110, 116, 122, 128, 134, 140
+- Measurements are smaller — use kidswear grading (smaller increments, ~1-1.5" per size)
+- Construction is similar but simpler (fewer seams, simpler closures)
+- Safety: no small removable parts for age <3
+
+**Print/Pattern description:** If the garment has a visible print or pattern:
+- Describe the pattern: type (floral, geometric, animal, abstract, stripe, check, etc.)
+- Approximate repeat size (e.g., "2cm anchor motif, all-over repeat")
+- Print placement: all-over, placement print, engineered print
+- Number of colors in print
+- Add to `page_2.details.other_features` AND `page_7.fabrics.description`
 
 ## WORKFLOW
 
@@ -32,10 +56,34 @@ Read both garment images using your vision capabilities. Identify:
    - Fitted skirt → invisible side or back zipper
    - Pant/trouser → front fly zipper (always)
    - Add inferred closures to the accessories list even if not visible in images
-5. **Dominant color(s)**: Extract hex color codes. **CRITICAL: Pick from the BRIGHTEST, most well-lit area of the fabric** — NOT from shadowed areas, folds, or dark creases. Shadows make colors appear 20-40% darker than the true fabric color. Aim for the highlight/direct-light area. Provide multiple hex samples:
-   - One from the brightest/most well-lit flat area of the fabric
-   - One from a mid-tone area
-   - One from a secondary color (if applicable)
+5. **Color extraction — FABRIC ISOLATION METHOD** (CRITICAL for Pantone accuracy):
+
+   Do NOT just eyeball the hex. Follow this precise process:
+
+   **Step A — Isolate the fabric mentally.** Look at ONLY the garment fabric, ignoring:
+   - Model's skin, hair, background
+   - Shadows in folds and creases
+   - Reflections/highlights on shiny fabrics (for satin, look at the mid-tone, not the bright reflection)
+   - Any other garments visible (e.g., pants under a blazer)
+
+   **Step B — Find the "true color" zone.** This is a FLAT, evenly-lit area of fabric with:
+   - No deep shadows
+   - No specular highlights (white shine spots on satin/silk)
+   - Direct or diffused light hitting the fabric evenly
+   - Typically found on the front torso area, upper sleeve, or center back panel
+
+   **Step C — Extract 5-6 hex samples** from different locations:
+   - `hex_1`: Brightest flat area (no shadow, no highlight) — THIS IS THE PRIMARY
+   - `hex_2`: Center body mid-tone
+   - `hex_3`: Sleeve area
+   - `hex_4`: Secondary/contrast color (if multi-color garment)
+   - `hex_5`: Any trim/accent color
+
+   **Step D — Adjust for lighting bias.** If the overall photo has warm (yellowish) or cool (bluish) lighting:
+   - Look for a WHITE element in the photo (white shirt collar, white background area)
+   - If the "white" appears warm/yellow, the entire image has warm cast — mentally subtract warmth from your hex
+   - If the "white" appears blue/cool, subtract cool cast
+
 6. **Fabric assessment**: Based on visual drape, texture, sheen, and season — what fabric is this likely? (e.g., wool gabardine, silk charmeuse, cotton poplin, chiffon)
 7. **Complexity level**: Simple (basic top), Medium (structured dress), Complex (coat/suit with lining)
 
@@ -43,36 +91,49 @@ Write your analysis before proceeding. This analysis drives ALL subsequent conte
 
 ### STEP 2: Match Pantone Colors
 
-For each dominant hex color identified in Step 1, run:
+**Three-stage Pantone matching for maximum accuracy:**
+
+**Stage 1 — Local Delta-E lookup (fast, free):**
+Run ALL hex samples from Step 1 through the local Pantone TCX database:
 
 ```bash
 cd swanky_women && python3 -c "
 from utils import nearest_pantone_tcx
-results = nearest_pantone_tcx('HEX_COLOR_HERE', top_k=3)
+hexes = [('HEX_1', 'bright flat'), ('HEX_2', 'mid-tone'), ('HEX_3', 'sleeve')]
+for hex_val, desc in hexes:
+    results = nearest_pantone_tcx(hex_val, top_k=3)
+    print(f'=== {desc}: {hex_val} ===')
+    for r in results:
+        print(f\"  {r['code']} — {r['name']} — ΔE: {r['delta_e']}\")
+    print()
+"
+```
+
+Pick the Pantone with the lowest Delta-E from the BRIGHTEST hex sample. If multiple hex samples point to the same Pantone code, that's high confidence.
+
+**Stage 2 — Pantone.com cross-verification (if available):**
+To verify the Delta-E result against official Pantone data, run the scraper on the brightest hex:
+
+```bash
+cd swanky_women && python3 -c "
+from pantone_scraper import get_tcx_options
+results = get_tcx_options('BRIGHT_HEX_WITHOUT_HASH')
 for r in results:
-    print(f\"{r['code']} — {r['name']} — {r['hex']} — ΔE: {r['delta_e']}\")
+    print(f\"{r.get('code', '')} — {r.get('name', '')}\")
 "
 ```
 
-**CRITICAL: Run the Pantone match for the BRIGHTEST hex sample first** — this gives the most accurate match because it represents the true fabric color without shadow distortion. Always run at least 2-3 hex samples:
+If the scraper returns results, compare with Stage 1. If they agree → high confidence. If they differ → present both options and let designer pick.
 
-```bash
-cd swanky_women && python3 -c "
-from utils import nearest_pantone_tcx
-# Run for bright hex first (most accurate)
-print('=== Bright/highlight area ===')
-for r in nearest_pantone_tcx('BRIGHT_HEX', top_k=3):
-    print(f\"{r['code']} — {r['name']} — {r['hex']} — ΔE: {r['delta_e']}\")
-print()
-print('=== Mid-tone area ===')
-for r in nearest_pantone_tcx('MID_HEX', top_k=3):
-    print(f\"{r['code']} — {r['name']} — {r['hex']} — ΔE: {r['delta_e']}\")
-"
-```
+Note: The scraper opens a browser window and takes ~10 seconds. Skip if running in headless/server environment.
 
-Select the Pantone from the BRIGHT hex results (lowest Delta-E). If Delta-E > 5, note as approximate. Present top 3 candidates in the JSON so the designer can pick.
+**Stage 3 — Final selection:**
+- If Stage 1 and Stage 2 agree → use that Pantone code (confidence: high)
+- If they differ → present BOTH as options in the JSON `optional_colors` array
+- If Delta-E > 5 for all samples → flag as "approximate match" and present top 3
+- Always include top 3 candidates in `optional_colors` so designer can pick
 
-**Why bright hex matters:** A #9B3A5E (shadowed berry) gives 19-2045 TCX Vivacious. But the same fabric in direct light is #D03C77 which correctly gives 17-2036 TCX Magenta. Shadows shift Pantone codes by 2-4 numbers. Always pick from highlights.
+**Why this matters:** Shadows shift hex by 20-40% darker, which shifts Pantone by 2-4 code numbers. Example: shadowed berry (#9B3A5E) → 19-2045 Vivacious (WRONG). True-color berry (#D03C77) → 17-2036 Magenta (CORRECT).
 
 **Note on fabric identification:** AI cannot determine exact fabric composition from images alone. When writing fabric details:
 - Make your best assessment based on visual texture, drape, sheen, and season
@@ -365,6 +426,25 @@ Columns: Waist, Hip, Skirt Length
 **Suits (multi-piece):**
 Combine all measurements for each piece in one table
 
+**STRICT RULES:**
+- ONLY include columns from the lists above for each garment type. Do NOT add extra columns.
+- Knitwear: NO waist, NO hip columns (knit stretches to fit)
+- Dresses: NO sleeve length if sleeveless/strapless
+- Pants: MUST have Outseam and Leg Opening (not just Waist/Hip/Inseam)
+- Blazer POM rows should match the SIZE RANGE given (if XS-XXL, include 6 rows, not 4)
+
+**US Standard Grading Reference (inches, per size increment):**
+
+| Measurement | Womenswear Grade | Menswear Grade |
+|-------------|-----------------|---------------|
+| Bust/Chest | +2" per size | +2" per size |
+| Waist | +2" per size | +2" per size |
+| Hip | +2" per size | +2" per size |
+| Shoulder | +0.5" per size | +0.5" per size |
+| Sleeve Length | +0.5-1" per size | +0.5-1" per size |
+| Body/Garment Length | +0.5-1" per size | +0.5-1" per size |
+| Inseam (pants) | +0.5-1" per size | +0.5-1" per size |
+
 Format measurements as an array of objects, one per size:
 ```json
 {
@@ -437,6 +517,36 @@ cd swanky_women && python3 skill_image_gen.py \
 
 6. The `--do-not-draw` list is as important as the callout list — it prevents AI from hallucinating common features.
 
+7. **Category-specific DO NOT DRAW defaults:**
+   - **Blazer/Jacket:** "No double-breasted if single-button,No patch pockets if welt/flap,No belt"
+   - **Coat/Trench:** "No hood (unless visible),No fur trim (unless visible),No cuff straps if plain cuffs"
+   - **Blouse/Shirt:** "No collar if mock/stand neck,No front buttons if pullover,No pockets if none visible"
+   - **Dress:** "No pockets (unless visible),No belt (unless visible),No collar"
+   - **Pant:** "No cargo pockets,No cuffs at hem if straight cut,No belt (only belt loops)"
+   - **Knitwear:** "No collar (unless visible),No zipper,No structured shoulders"
+
+### STEP 7B: Verify Generated Images
+
+After images are generated, READ each generated image and compare against the original garment photos:
+
+1. **Read `assets/technical_sketch.png`** and check:
+   - Does the silhouette match the original garment?
+   - Are all callout features present AND correct?
+   - Are there any EXTRA features not on the original? (e.g., buttons where there shouldn't be)
+   - If issues found: regenerate with more specific prompt corrections
+
+2. **Read `assets/measurement_diagram.png`** and check:
+   - Does the garment shape match the original?
+   - Are measurement labels appropriate for this garment type? (pant labels for pants, not shirt labels)
+   - If wrong labels: regenerate with corrected garment-type-specific prompt
+
+3. **Read `assets/care_label_final.png`** and check:
+   - Does composition text match what's in master_filled.json?
+   - Are care symbols present?
+   - Is "MADE IN INDIA" visible?
+
+**Only regenerate if there's a clear factual error** (wrong feature drawn, wrong labels). Don't regenerate for minor style differences. Maximum 1 retry per image to avoid cost spiral.
+
 ### STEP 8: Render PDF
 
 ```bash
@@ -445,15 +555,36 @@ cd swanky_women && DYLD_FALLBACK_LIBRARY_PATH="$(brew --prefix)/lib" python3 -c 
 
 This renders all 9 HTML templates with the JSON data and outputs `Tech_Pack.pdf`.
 
-### STEP 9: Verify Output
+### STEP 9: Verify Output + Confidence Scoring
 
 Read the generated `Tech_Pack.pdf` and verify:
-1. All 9 pages are present
+1. All pages are present and rendered
 2. No blank or placeholder fields
-3. Fabric composition on page 7 matches care instructions on page 9
-4. Pantone code matches the actual garment color
+3. Fabric composition on page 7 matches COMPOSITE on page 9
+4. Pantone code is reasonable for the garment color
 5. Construction features in accessories match what's visible in the garment
 6. Measurement columns are appropriate for the garment type
+7. All cross-page references are consistent (same Pantone everywhere, same fabric name everywhere)
+
+**Confidence scoring:** After verification, add a `_confidence` field to the JSON root:
+
+```json
+"_confidence": {
+    "pantone_match": 0.85,
+    "fabric_identification": 0.6,
+    "construction_completeness": 0.9,
+    "measurement_accuracy": 0.8,
+    "accessories_completeness": 0.85,
+    "overall": 0.82,
+    "_notes": [
+        "Fabric: showed 3 options, top pick is silk satin (0.7 confidence)",
+        "Pantone: Delta-E 3.3, cross-verified with scraper",
+        "Closure: invisible zipper inferred (not visible in photos)"
+    ]
+}
+```
+
+Fields below 0.7 should be flagged for designer review. Report the overall confidence to the user.
 
 Report any issues found. If critical issues exist, fix the JSON and re-render.
 
@@ -484,6 +615,106 @@ Use ALL-CAPS labels with leader lines. Include "BRAND & SIZE LABEL" on every gar
 **Skirt Suit:** BRAND & SIZE LABEL, NOTCH LAPEL, PRINCESS PANEL, PLASTIC BUTTONS, DOUBLE BREASTED WITH THREE COLUMN, DECORATIVE FLAP POCKET, WAISTBAND, FRONT DART, INVISIBLE ZIPPER, CENTER BACK SEAM
 **Hooded Coat:** BRAND & SIZE LABEL, WHITE FAUX FUR SHAWL LIKE COLLAR, BELT, SIDE POCKET, WHITE FAUX FUR CUFF, WHITE FAUX FUR PLACKET, OVERSIZED HOOD
 **Turtle Neck:** TURTLENECK, FLATLOCK STITCHING IN CURVED LINE FOR SHAPING, EXTENDED SLEEVE CUFFS WITH THUMBHOLE OPENING, PRINCESS SEAM, COVER STITCHED HEM AT STRAIGHT BOTTOM
+
+## REFERENCE: FABRIC DECISION SYSTEM
+
+**Step 1 — If user provided fabric in context, USE IT. Do not override user input.**
+
+**Step 2 — If no fabric specified, use this decision tree:**
+
+```
+Is it KNIT (stretchy, visible knit loops/texture)?
+├── YES → Is it fine gauge (smooth)?
+│   ├── YES → "MERINO WOOL" or "WOOL BLEND KNIT" (FW) / "COTTON KNIT" (SS)
+│   └── NO (cable/chunky) → "WOOL BLEND CABLE KNIT" (FW) / "COTTON CABLE KNIT" (SS)
+│
+└── NO (WOVEN) → Does it have SHEEN?
+    ├── YES (shiny/lustrous) → Is it fluid/drapey?
+    │   ├── YES → "SILK SATIN" or "SILK CHARMEUSE" (lightweight) / "POLYESTER SATIN" (budget)
+    │   └── NO (structured + sheen) → "SATEEN TWILL" or "COTTON SATEEN"
+    │
+    └── NO (matte) → Is it STRUCTURED (holds shape)?
+        ├── YES → Is it HEAVY (>200 GSM feel)?
+        │   ├── YES → Season FW? → "WOOL SUITING" or "WOOL GABARDINE"
+        │   │                  SS? → "COTTON TWILL" or "LINEN BLEND"
+        │   └── NO (light + structured) → "COTTON POPLIN" or "COTTON SHIRTING"
+        │
+        └── NO (soft/fluid/drapey, matte) →
+            ├── Sheer/transparent → "CHIFFON" or "GEORGETTE"
+            └── Opaque + fluid → "VISCOSE" or "RAYON" / "CREPE"
+```
+
+**Step 3 — Present 2-3 options with confidence and reasoning:**
+```json
+"_fabric_options": [
+    {"fabric": "SILK SATIN, 90-110 GSM", "confidence": 0.7, "reasoning": "High sheen, fluid drape, smooth surface"},
+    {"fabric": "POLYESTER SATIN, 90-120 GSM", "confidence": 0.2, "reasoning": "Could be poly satin based on price point"},
+    {"fabric": "SILK CHARMEUSE, 80-100 GSM", "confidence": 0.1, "reasoning": "Similar properties but typically lighter weight"}
+]
+```
+
+**Step 4 — If uncertain, use WebSearch to verify:**
+Search for "[garment description] typical fabric composition" to check common industry conventions.
+
+**GSM Reference by fabric type:**
+| Fabric | Typical GSM Range |
+|--------|------------------|
+| Chiffon/Georgette | 40-70 |
+| Silk Satin/Charmeuse | 80-120 |
+| Cotton Poplin/Shirting | 100-150 |
+| Cotton Sateen | 130-180 |
+| Viscose/Rayon | 100-160 |
+| Wool Suiting (lightweight) | 200-260 |
+| Cotton Twill/Gabardine | 220-300 |
+| Wool Gabardine | 260-320 |
+| Wool Blend Knit | 280-350 |
+| Denim | 280-400 |
+| Wool Coating | 350-500 |
+| Fleece | 280-400 |
+
+## REFERENCE: CLOSURE INFERENCE RULES
+
+**When closures are NOT visible in images, infer based on garment type.**
+Only assert 100% certain closures. For uncertain ones, add as "likely" in accessories notes.
+
+**100% certain (always present):**
+- Pant/Trouser → front fly zipper + hook & bar at waistband
+- Jeans → front fly zipper + metal button at waistband
+- Blazer → front button(s) as visible + 3-4 decorative/functional cuff buttons per sleeve
+- Suit jacket → same as blazer
+
+**Highly likely (add unless evidence against):**
+- Fitted blouse with no visible front buttons → invisible side seam OR back zipper (add to accessories as "INVISIBLE ZIPPER, SIDE/BACK, YKK")
+- Fitted dress with no visible closure → invisible center back zipper
+- Fitted skirt → invisible side or back zipper
+- Coat with visible front buttons → internal wind flap button (sometimes)
+
+**Research when uncertain:** Use WebSearch to check: "standard closures for [garment type]"
+
+## REFERENCE: CONSTRUCTION KNOWLEDGE BASE
+
+**Minimum construction rows per garment type (from training data):**
+
+**Blazer/Jacket (10-13 rows):**
+Main body panels, Shoulder seams, Sleeve setting, Side seams, Back vent, Collar & lapel join, Pocket attachment (welt/flap), Sleeve hem, Bottom hem, Lining construction, Button attachment, Label placement
+
+**Coat/Trench (10-12 rows):**
+Main seams, Shoulder, Sleeve setting, Side seams, Collar/lapel, Storm flap, Belt loops, Pocket (flap/welt), Hem, Lining, Buttonholes, Back vent
+
+**Pant/Trouser (12-15 rows):**
+Side seams, Inseam, Front rise (fly), Fly facing, Waistband attachment, Waistband topstitch, Pleat stitching, Pocket bags, Welt pocket construction, Hem, Belt loops, Button attachment, Zipper installation, Bartacks (stress points)
+
+**Blouse/Shirt (8-10 rows):**
+Shoulder, Side seams, Sleeve insertion, Collar/neckline attachment, Cuff attachment, Buttonholes, Hem (body), Hem (sleeve), Yoke (if applicable), Ruffle/gathering (if applicable)
+
+**Dress (8-12 rows):**
+Shoulder/bodice, Side seams, Zipper insertion, Waist seam (if applicable), Skirt hem, Bodice construction, Lining (if applicable), Gathering/ruching (if applicable), Neckline finish
+
+**Knitwear — Cardigan/Sweater (10-12 rows):**
+Shoulder seams (linking), Side seams (overlock), Sleeve attachment (linking), Armhole join, Neckline rib join, Placket to body join, Buttonholes, Button attachment, Pocket attachment, Cuff rib join, Hem rib join, Label placement
+
+**Skirt (6-8 rows):**
+Side seams, Waistband, Zipper, Hem, Darts, Lining (if applicable)
 
 ## REFERENCE: WASH & CARE (CLIENT STANDARD — use exactly as-is for ALL fabrics)
 
