@@ -32,6 +32,55 @@ from utils import (
     recommend_colors_from_images
 )
 from skill_image_gen import generate_image, verify_sketch_labels
+
+# ─── CLAUDE API for critical reasoning (better than Gemini for classification/fabric) ───
+import anthropic
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+
+_claude_client = None
+CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+
+def _get_claude():
+    global _claude_client
+    if _claude_client is None:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if api_key:
+            _claude_client = anthropic.Anthropic(api_key=api_key)
+    return _claude_client
+
+def claude_query(prompt, images=None):
+    """Use Claude Haiku for critical reasoning. Falls back to Gemini if unavailable."""
+    client = _get_claude()
+    if not client:
+        return llm_query(prompt)
+
+    try:
+        content = []
+        if images:
+            import base64
+            for img_path in images:
+                if os.path.exists(img_path):
+                    with open(img_path, "rb") as f:
+                        b64 = base64.standard_b64encode(f.read()).decode()
+                    ext = img_path.lower().rsplit(".", 1)[-1]
+                    media = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}.get(ext, "image/png")
+                    content.append({"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}})
+        content.append({"type": "text", "text": prompt})
+
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=4096,
+            temperature=0,
+            messages=[{"role": "user", "content": content}]
+        )
+        text = response.content[0].text if response.content else ""
+        return text, ""
+    except Exception as e:
+        print(f"[Claude API] Failed: {e}. Falling back to Gemini.")
+        if images:
+            return analyze_images(images, prompt)
+        return llm_query(prompt)
 from models import (
     TechPackHeader, GarmentClassificationModel,
     FabricDecisionModel, ConstructionDecisionModel,
@@ -132,7 +181,8 @@ def generate_techpack(images, context, generate=False, sample_size="M",
 
 Be thorough and specific. This analysis drives the entire tech pack."""
 
-    vision_text, vision_think = analyze_images(images, vision_prompt, enable_thinking=True)
+    # Use CLAUDE for vision analysis (better garment understanding than Gemini)
+    vision_text, vision_think = claude_query(vision_prompt, images=images)
     _report(progress_callback, "Vision Analysis", f"Analysis complete ({len(vision_text)} chars)",
             vision_think[:500] if vision_think else "", 10)
 
@@ -153,7 +203,8 @@ Classify:
 
 Return JSON only: {{"category": "...", "garment_type": "...", "complexity": "...", "fit_type": "..."}}"""
 
-    class_result, class_think = llm_query(classification_prompt, enable_thinking=True)
+    # Use CLAUDE for classification (critical — Gemini misclassified suit as dress)
+    class_result, class_think = claude_query(classification_prompt)
     try:
         # Parse JSON from response
         json_match = re.search(r'\{[^}]+\}', class_result)
@@ -227,7 +278,8 @@ For each distinct color, give:
 Return JSON array: [{{"color_name": "...", "color_hex": "#..."}}]
 Only include FABRIC colors, ignore skin, background, other garments."""
 
-    color_result, _ = analyze_images(images, color_prompt)
+    # Use CLAUDE for color extraction (better hex accuracy)
+    color_result, _ = claude_query(color_prompt, images=images)
     colors = []
     try:
         json_match = re.search(r'\[.*\]', color_result, re.DOTALL)
@@ -296,7 +348,8 @@ USE SIMPLE NAMES: "SILK" not "SILK SATIN", "WOOL" not "WOOL SUITING"
 
 Return JSON: {{"fabric_name": "SILK, 90-110 GSM", "reasoning": "...", "confidence": 0.6}}"""
 
-    fabric_result, fabric_think = llm_query(fabric_prompt, enable_thinking=True)
+    # Use CLAUDE for fabric decision (better reasoning about visual cues)
+    fabric_result, fabric_think = claude_query(fabric_prompt)
     try:
         json_match = re.search(r'\{[^}]+\}', fabric_result, re.DOTALL)
         fabric_data = json.loads(json_match.group()) if json_match else {}
@@ -407,7 +460,8 @@ Do NOT guess closures — only list what's visible.
 
 Return JSON array: [{{"description": "...", "quantity_per_style": "...", "color": "...", "position": "..."}}]"""
 
-    accessories_result, _ = llm_query(accessories_prompt, enable_thinking=True)
+    # Use CLAUDE for accessories (critical — needs to see images for button counting)
+    accessories_result, _ = claude_query(accessories_prompt, images=images)
     accessories = []
     try:
         raw = accessories_result.strip()
