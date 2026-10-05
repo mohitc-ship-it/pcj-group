@@ -2540,7 +2540,108 @@ Do not invent details. Only label what is explicitly provided.
     # Page 9 Care
     master["page_9"]["wash_label"] = factory_output.get("care_label", {})
     ensure_page_9_contract(master["page_9"])
-    
+
+    # ── CLIENT CONVENTION OVERRIDES (from 26 trained PDFs) ──
+
+    # 1. Wash/care: STANDARDIZE — same instructions for ALL fabrics
+    fabric_name = fabric_decision.get("fabric_family", "FABRIC")
+    if isinstance(fabric_name, str):
+        fabric_name = fabric_name.upper().split(",")[0].split("(")[0].strip()
+        # Simplify: "SILK SATIN" → "SILK", "COTTON TWILL" → "COTTON"
+        for prefix in ["SILK", "WOOL", "COTTON", "POLYESTER", "CHIFFON", "LINEN", "GABARDINE"]:
+            if prefix in fabric_name:
+                fabric_name = prefix
+                break
+    master["page_9"]["wash_label"] = {
+        "composition": fabric_name,
+        "washing_instructions": "Machine wash cold with like colors (30°C / 85°F)",
+        "bleaching": "Do not bleach",
+        "drying_instructions": "Tumble dry low",
+        "ironing_instructions": "Warm iron if needed",
+        "dry_cleaning": {"line_1": "Do not dry clean", "line_2": ""},
+        "label_colors": "Black and White"
+    }
+
+    # 2. Care label instructions: STATIC
+    master["page_9"]["care_label_instructions"] = [
+        "The care label must contain <strong>carelabel symbols</strong> and those only.",
+        "Care label must be made in recycled polyester.",
+        "Care labels must contain origin: made in India.",
+        "Care labels must be given the same size, font and style.",
+        "Care instructions should follow <strong>ISO 3758 standard</strong>."
+    ]
+
+    # 3. Other standards: ONLY Oekotex + EU Ecolabel (no Bluesign)
+    master["page_9"]["other_standards"] = [
+        {"title": "Standard 100 by Oekotex", "description": "Label that ensures consumers that all materials used in a garment are tested for harmful substances."},
+        {"title": "EU Ecolabel", "description": "Label that ensures consumers that textiles are made using less harmful substances, energy and water."}
+    ]
+
+    # 4. Quality standards: STATIC 6 ISO tests
+    master["page_7"]["quality_standards"] = [
+        {"test": "Tensile Strength", "method": "ISO 13934-2", "requirements": "", "comments": ""},
+        {"test": "Shrinkage & Dimensional Stability", "method": "ISO 5077", "requirements": "Shrinkage < 3%", "comments": ""},
+        {"test": "Color Fastness to Washing", "method": "ISO 105-C06", "requirements": "Rating >= 4 (scale 1-5)", "comments": ""},
+        {"test": "Color Fastness to Rubbing", "method": "ISO 105-X12", "requirements": "Dry: >= Grade 4, Wet: >= Grade 3", "comments": ""},
+        {"test": "Color Fastness to Dry Cleaning", "method": "ISO 105-D01", "requirements": "Grade >= 4", "comments": ""},
+        {"test": "Seam Strength & Durability", "method": "ISO 13935-2", "requirements": ">= 180 N", "comments": ""}
+    ]
+
+    # 5. Simplify fabric description
+    fabrics = master.get("page_7", {}).get("fabrics", [])
+    if fabrics and isinstance(fabrics, list):
+        for fab in fabrics:
+            desc = fab.get("description", "")
+            if isinstance(desc, str) and desc:
+                # Simplify verbose descriptions
+                desc_upper = desc.upper()
+                for simple, keywords in [
+                    ("SILK", ["SILK SATIN", "SILK CHARMEUSE", "SILK CREPE"]),
+                    ("WOOL", ["WOOL SUITING", "WOOL GABARDINE", "WOOL BLEND"]),
+                    ("COTTON", ["COTTON TWILL", "COTTON POPLIN", "COTTON SATEEN"]),
+                ]:
+                    for kw in keywords:
+                        if kw in desc_upper and simple != desc_upper.strip():
+                            # Keep GSM if present
+                            gsm_part = ""
+                            import re
+                            gsm_match = re.search(r'(\d{2,4})\s*[-–]\s*(\d{2,4})\s*GSM', desc, re.IGNORECASE)
+                            if gsm_match:
+                                gsm_part = f", {gsm_match.group(0)}"
+                            elif re.search(r'(\d{2,4})\s*GSM', desc, re.IGNORECASE):
+                                gsm_part = f", {re.search(r'(\d{2,4}\\s*GSM)', desc, re.IGNORECASE).group(0)}"
+                            fab["description"] = f"{simple}{gsm_part}"
+                            break
+
+    # ── CONTINUOUS LEARNING: Inject corrections from past generations ──
+    try:
+        corrections_file = Path("data/corrections_log.json")
+        if corrections_file.exists():
+            with open(corrections_file) as f:
+                all_corrections = json.load(f)
+            garment_type = master.get("header", {}).get("description", "").lower()
+            relevant = [c for c in all_corrections if any(
+                kw in garment_type for kw in c.get("garment_type", "").lower().split()
+            ) and c.get("reason")]
+            if relevant:
+                print(f"[LEARNING] Found {len(relevant)} past corrections for this garment type")
+                for c in relevant[-5:]:  # last 5 relevant corrections
+                    field = c.get("field_key", "")
+                    corrected = c.get("corrected_value", "")
+                    reason = c.get("reason", "")
+                    page = c.get("page_id", "")
+
+                    # Apply learned corrections
+                    if page in master and field in master[page]:
+                        old_val = master[page][field]
+                        if isinstance(old_val, str) and isinstance(corrected, str):
+                            # If the original value matches what was corrected before, apply
+                            original_val = c.get("original_value", "")
+                            if original_val and original_val in str(old_val):
+                                master[page][field] = corrected
+                                print(f"[LEARNING] Applied correction: {field} = '{corrected}' (reason: {reason})")
+    except Exception as e:
+        print(f"[LEARNING] Could not load corrections: {e}")
 
     final_json = map_json(master)
 
