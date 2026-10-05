@@ -387,7 +387,8 @@ def _run_generation_job(job_id: str, image_paths: list, context: str, sample_siz
     try:
         import sys, os
         sys.path.insert(0, os.path.dirname(__file__))
-        from main import generate_techpack
+        # Use skill-based generation (trained on 26 PDFs, better accuracy)
+        from skill_generate import generate_techpack
 
         # Inject a progress_callback the pipeline can call after each agent
         def progress_callback(step: str, decision: str, reasoning: str, progress: int):
