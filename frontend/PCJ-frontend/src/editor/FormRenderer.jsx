@@ -143,6 +143,11 @@ export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
           )
         }
 
+        // Hide brand_label_img and care_label_img from editor (generated, not editable)
+        if (pageId === "page_3" && (key === "brand_label_img" || key === "care_label_img")) {
+          return null
+        }
+
         // Measurement diagram: show MeasurementEditor for image-to-image editing
         if ((pageId === "page_6" || pageId === "page_10") && key === "measurement_image_url") {
           return (

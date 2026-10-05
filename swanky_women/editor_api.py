@@ -604,7 +604,7 @@ async def regenerate_sketch(payload: dict = Body(...)):
     Payload: { instruction }
     """
     try:
-        from imageGen import generate_image
+        from skill_image_gen import generate_image
 
         instruction = payload.get("instruction", "").strip()
         if not instruction:
@@ -626,7 +626,7 @@ async def regenerate_sketch(payload: dict = Body(...)):
         )
 
         out_path = "assets/technical_sketch.png"
-        result = generate_image(full_prompt, current_sketch, out_path, use_pro=True)
+        result = generate_image(full_prompt, reference_image_path=current_sketch, output_path=out_path)
         if not result:
             return JSONResponse({"error": "Generation failed"}, status_code=500)
 
