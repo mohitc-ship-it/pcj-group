@@ -640,6 +640,150 @@ async def regenerate_sketch(payload: dict = Body(...)):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Feature 4B — Regenerate measurement diagram via image-to-image
+# ──────────────────────────────────────────────────────────────────────────────
+@app.post("/api/regenerate-measurement")
+async def regenerate_measurement(payload: dict = Body(...)):
+    """
+    Apply a modification instruction to the measurement diagram.
+    Payload: { instruction }
+    """
+    try:
+        from skill_image_gen import generate_image
+
+        instruction = payload.get("instruction", "").strip()
+        if not instruction:
+            return JSONResponse({"error": "instruction is required"}, status_code=400)
+
+        draft = load_draft()
+        current_diagram = draft.get("page_6", draft.get("page_10", {})).get("measurement_image_url", "assets/measurement_diagram.png")
+        if "assets/" in current_diagram:
+            current_diagram = "assets/" + current_diagram.split("assets/")[1]
+
+        full_prompt = (
+            f"MEASUREMENT DIAGRAM MODIFICATION REQUEST:\n"
+            f"Reference the existing measurement diagram image provided.\n"
+            f"Apply the following change: {instruction}\n\n"
+            f"Preserve the garment silhouette and all measurement lines that are NOT mentioned.\n"
+            f"Keep letter labels (A, B, C, etc.) clearly visible.\n"
+            f"Output a clean, black-and-white technical flat sketch with measurement indicator lines on white background."
+        )
+
+        out_path = "assets/measurement_diagram.png"
+        result = generate_image(
+            full_prompt,
+            reference_image_path=current_diagram,
+            output_path=out_path
+        )
+        if not result:
+            return JSONResponse({"error": "Generation failed"}, status_code=500)
+
+        # Update both page_6 and page_10
+        if "page_6" in draft:
+            draft["page_6"]["measurement_image_url"] = result
+        if "page_10" in draft:
+            draft["page_10"]["measurement_image_url"] = result
+        save_draft(draft)
+
+        return JSONResponse({"ok": True, "new_url": f"{BASE_URL}/{result}"})
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Feature 4C — Get AI reasoning for any field
+# ──────────────────────────────────────────────────────────────────────────────
+@app.post("/api/explain-field")
+async def explain_field(payload: dict = Body(...)):
+    """
+    Returns AI reasoning for why a specific field has its current value.
+    Payload: { page_id, field_key }
+    """
+    try:
+        draft = load_draft()
+        page_id = payload.get("page_id", "")
+        field_key = payload.get("field_key", "")
+
+        if page_id not in draft:
+            return JSONResponse({"error": "Invalid page"}, status_code=400)
+
+        # Get the field value
+        page_data = draft[page_id]
+        value = page_data.get(field_key, "")
+        if isinstance(value, dict):
+            value = json.dumps(value, indent=2)
+        elif isinstance(value, list):
+            value = json.dumps(value, indent=2)
+
+        # Get garment context
+        header = draft.get("header", {})
+        description = header.get("description", "garment")
+        fabric_info = ""
+        fabrics = draft.get("page_7", {}).get("fabrics", [])
+        if fabrics and isinstance(fabrics, list) and fabrics[0].get("description"):
+            fabric_info = fabrics[0]["description"]
+
+        # Check for stored reasoning
+        confidence_data = draft.get("_confidence", {})
+        fabric_options = draft.get("page_2", {}).get("_fabric_options", [])
+        fabric_reasoning = draft.get("page_7", {}).get("_fabric_reasoning", "")
+
+        reasoning_parts = []
+
+        if field_key in ("fabrics", "description") and fabric_reasoning:
+            reasoning_parts.append(f"Fabric reasoning: {fabric_reasoning}")
+        if field_key in ("fabrics",) and fabric_options:
+            reasoning_parts.append("Options considered:")
+            for opt in fabric_options:
+                reasoning_parts.append(f"  - {opt.get('fabric', '')} (confidence: {opt.get('confidence', '')}): {opt.get('reasoning', '')}")
+
+        if "pantone" in field_key.lower() or "color" in field_key.lower():
+            reasoning_parts.append("Pantone was matched using pantone.com color finder + local Delta-E verification against 2,300 TCX entries.")
+            notes = confidence_data.get("_notes", [])
+            for n in notes:
+                if "pantone" in n.lower() or "color" in n.lower():
+                    reasoning_parts.append(n)
+
+        if "seam" in field_key.lower() or "construction" in field_key.lower():
+            reasoning_parts.append(f"Construction specs generated for: {description}")
+            reasoning_parts.append(f"Fabric: {fabric_info}")
+            reasoning_parts.append("Seam types, allowances, and machine types selected based on garment category and fabric weight.")
+
+        if "measurement" in field_key.lower() or "size" in field_key.lower():
+            reasoning_parts.append(f"Measurements based on US standard grading for {header.get('category', 'Womenswear')}.")
+            reasoning_parts.append(f"Size range: {header.get('size_range', 'S-XL')}")
+            reasoning_parts.append("Values use standard increments: +2\" bust/waist per size, +0.5\" shoulder per size.")
+
+        if "accessories" in field_key.lower():
+            reasoning_parts.append(f"Accessories identified from visual analysis of {description}.")
+            notes = confidence_data.get("_notes", [])
+            for n in notes:
+                if "closure" in n.lower() or "zipper" in n.lower() or "button" in n.lower():
+                    reasoning_parts.append(n)
+
+        if "wash" in field_key.lower() or "care" in field_key.lower() or "composition" in field_key.lower():
+            reasoning_parts.append("Care instructions follow client standard: identical for all fabrics.")
+            reasoning_parts.append(f"Composite field set to match fabric: {fabric_info}")
+
+        # Overall confidence
+        if confidence_data.get("overall"):
+            reasoning_parts.append(f"\nOverall confidence: {confidence_data['overall']}")
+
+        if not reasoning_parts:
+            reasoning_parts.append(f"This field was generated based on visual analysis of the garment images and garment type: {description}.")
+
+        return JSONResponse({
+            "field": field_key,
+            "value": str(value)[:500],
+            "reasoning": "\n".join(reasoning_parts)
+        })
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Feature 5 — Regenerate a single table row via LLM
 # ──────────────────────────────────────────────────────────────────────────────
 @app.post("/api/regenerate-table-row")
