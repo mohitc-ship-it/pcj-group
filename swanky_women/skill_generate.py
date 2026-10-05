@@ -304,6 +304,51 @@ Return JSON: {{"fabric_name": "SILK, 90-110 GSM", "reasoning": "...", "confidenc
         fabric_data = {"fabric_name": fabric_pref or "FABRIC", "reasoning": "Could not determine", "confidence": 0.5}
 
     fabric_name = _simplify_fabric_name(fabric_data.get("fabric_name", fabric_pref or "FABRIC"))
+
+    # Web search to verify/improve fabric identification
+    if not fabric_pref and fabric_data.get("confidence", 0) < 0.8:
+        _report(progress_callback, "Fabric Research", "Searching for typical fabric used in this garment type", "", 37)
+        try:
+            search_prompt = f"""What fabric is most commonly used for a {garment_type} in {season} season?
+
+I identified: {fabric_name}
+
+Research and verify:
+1. What fabric type is standard for {garment_type}?
+2. What GSM range is typical?
+3. Is my identification reasonable?
+
+Common fabric references:
+- Blazer/Suit → 100% Wool or Poly-Wool blend, 240-320 GSM
+- Blouse (shiny) → Silk or Polyester Satin, 80-120 GSM
+- Blouse (matte) → Cotton or Viscose, 100-150 GSM
+- Coat/Trench → Wool Gabardine or Cotton Gabardine, 250-350 GSM
+- Dress (formal) → Silk, Crepe, or Chiffon, 80-150 GSM
+- Dress (casual) → Cotton, Linen, or Viscose, 120-200 GSM
+- Knitwear → Merino Wool or Cotton Knit, 200-400 GSM
+- Pants (formal) → Wool Suiting, 200-280 GSM
+- Pants (casual) → Cotton Chino, 200-280 GSM
+- T-shirt → Cotton Jersey, 150-200 GSM
+
+If my identification is wrong, give the correct one.
+If correct, confirm it.
+
+Reply with ONLY: "FABRIC_NAME, GSM_RANGE GSM" — nothing else.
+Example: "WOOL, 250-300 GSM" or "SILK, 90-110 GSM\""""
+
+            search_result, _ = llm_query(search_prompt)
+            search_result = search_result.strip().strip('"')
+            if search_result and len(search_result) < 80 and "," in search_result:
+                old_fabric = fabric_name
+                fabric_name = _simplify_fabric_name(search_result)
+                fabric_data["_web_verified"] = fabric_name
+                fabric_data["confidence"] = min(fabric_data.get("confidence", 0.5) + 0.15, 0.85)
+                _report(progress_callback, "Fabric Research",
+                        f"Verified: {fabric_name}" + (f" (changed from {old_fabric})" if old_fabric != fabric_name else ""),
+                        f"Research suggests {search_result} for {garment_type}", 39)
+        except Exception as e:
+            _report(progress_callback, "Fabric Research", f"Research unavailable: {str(e)[:50]}", "", 39)
+
     _report(progress_callback, "Fabric Decision", fabric_name, fabric_think[:300] if fabric_think else "", 40)
 
     # ─── STEP 6: Construction ───
