@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { fetchPageData, renderPreview, resetDraft, saveDraft, downloadPdf } from "../api/editorApi"
 import PreviewPane from "../components/PreviewPane"
 import PageEditor from "../editor/PageEditor"
+import AccuracyPanel from "../components/AccuracyPanel"
 import {
   FileText, Layers, PenTool, Package, Hammer,
-  Ruler, Shirt, Image, Tag, Download, RotateCcw, Save, Check, Loader2, LayoutTemplate
+  Ruler, Shirt, Image, Tag, Download, RotateCcw, Save, Check, Loader2, LayoutTemplate, BarChart3, Plus
 } from "lucide-react"
 
 const PAGES = [
@@ -22,11 +24,13 @@ const PAGES = [
 ]
 
 export default function EditorPage() {
+  const navigate = useNavigate()
   const [page, setPage] = useState("page_1")
   const [data, setData] = useState({})
   const [previewHtml, setPreviewHtml] = useState("")
   const [loadingPage, setLoadingPage] = useState(false)
   const [saveState, setSaveState] = useState("idle")
+  const [showAccuracy, setShowAccuracy] = useState(false)
 
   useEffect(() => {
     setLoadingPage(true)
@@ -113,11 +117,27 @@ export default function EditorPage() {
           </button>
 
           <button
+            onClick={() => setShowAccuracy(!showAccuracy)}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-all"
+          >
+            <BarChart3 className="w-4 h-4" />
+            {showAccuracy ? "Hide Accuracy" : "Accuracy Report"}
+          </button>
+
+          <button
             onClick={downloadPdf}
             className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-all"
           >
             <Download className="w-4 h-4" />
             Export PDF
+          </button>
+
+          <button
+            onClick={() => navigate("/")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            New Tech Pack
           </button>
 
           <button
@@ -144,10 +164,13 @@ export default function EditorPage() {
             {loadingPage && <Loader2 className="w-4 h-4 animate-spin text-violet-400" />}
           </div>
           <div className="flex-1 overflow-y-auto p-5 min-w-0 overflow-x-hidden">
-            {loadingPage
-              ? <div className="flex items-center justify-center h-40 text-white/30 text-sm">Loading...</div>
-              : <PageEditor data={data} onChange={setData} pageId={page} reloadPage={reloadCurrentPage} />
-            }
+            {showAccuracy ? (
+              <AccuracyPanel />
+            ) : loadingPage ? (
+              <div className="flex items-center justify-center h-40 text-white/30 text-sm">Loading...</div>
+            ) : (
+              <PageEditor data={data} onChange={setData} pageId={page} reloadPage={reloadCurrentPage} />
+            )}
           </div>
         </div>
 
