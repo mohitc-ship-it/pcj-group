@@ -475,11 +475,22 @@ cd swanky_women && python3 skill_image_gen.py \
 
 **CRITICAL RULES FOR CALLOUTS (image accuracy depends on this):**
 
-1. Each callout must describe the feature AND its exact state. Examples:
-   - GOOD: "DECORATIVE SHOULDER STRAPS (plain flat fabric, no closures)"
+1. Each callout must describe the feature AND its exact state AND where the label should point. Examples:
+   - GOOD: "SIDE SEAM (label points to outer left edge of garment at hip level)"
+   - BAD: "SIDE SEAM" (AI may point the label to center front)
+   - GOOD: "DECORATIVE SHOULDER STRAPS (plain flat fabric, no closures) — label at shoulder top"
    - BAD: "EPAULETTES" (too vague, AI will add buttons)
-   - GOOD: "LONG SLEEVES WITH PLAIN STRAIGHT HEMMED CUFFS"
+   - GOOD: "LONG SLEEVES WITH PLAIN STRAIGHT HEMMED CUFFS — label at wrist area"
    - BAD: "LONG SLEEVES" (AI may add cuff straps or buttons)
+
+   Standard label positions for common features:
+   - SIDE SEAM → outer edge of garment body (left or right side)
+   - SHOULDER SEAM → top of shoulder where sleeve meets body
+   - ARMHOLE SEAM → armpit area where sleeve joins body
+   - CENTER BACK SEAM → center vertical line on back view
+   - HEM → bottom edge of garment
+   - COLLAR/NECKLINE → top neck area
+   - CUFF → wrist/end of sleeve
 
 2. State the TOTAL button count and placement: "6 LARGE FRONT BUTTONS in 3x2 double-breasted layout (ONLY buttons on entire coat)"
 

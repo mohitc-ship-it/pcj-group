@@ -40,6 +40,72 @@ IMAGE_MODELS = [
     "google/gemini-3.1-flash-image-preview",
 ]
 
+# Vision model for verification (cheap, fast)
+VERIFY_MODEL = os.getenv("VERIFY_MODEL", "google/gemini-2.5-flash")
+
+
+def verify_sketch_labels(sketch_path: str, callout_list: list) -> str:
+    """Use vision LLM to check if sketch labels point to correct garment locations.
+    Returns empty string if OK, or description of issues if wrong."""
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key or not os.path.exists(sketch_path):
+        return ""  # skip verification if no key or no image
+
+    try:
+        data_url = _image_to_base64_url(sketch_path)
+        callouts_str = ", ".join(callout_list)
+
+        prompt = f"""Look at this technical garment sketch. It has callout labels with leader lines pointing to garment features.
+
+Check if each label's leader line points to the CORRECT location on the garment:
+- SIDE SEAM should point to the SIDE EDGE of the garment (not center)
+- SHOULDER SEAM should point to the TOP of the shoulder
+- ARMHOLE SEAM should point to where sleeve meets body
+- CENTER BACK SEAM should point to the center line of the back view
+- HEM should point to the bottom edge
+- COLLAR/NECKLINE should point to the neck area
+- CUFF should point to the wrist/end of sleeve
+
+Expected labels: {callouts_str}
+
+If ALL labels point to the correct locations, respond with exactly: OK
+If any label points to the WRONG location, respond with a brief description of what's wrong.
+Example: "SIDE SEAM label points to center front instead of the side edge"
+
+Respond with ONLY "OK" or the issue description. Nothing else."""
+
+        payload = {
+            "model": VERIFY_MODEL,
+            "messages": [{"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": data_url}},
+                {"type": "text", "text": prompt}
+            ]}],
+            "max_tokens": 200,
+            "temperature": 0,
+        }
+
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=payload, timeout=30,
+        )
+
+        if response.status_code != 200:
+            return ""  # skip on error
+
+        msg = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        if isinstance(msg, list):
+            msg = " ".join(p.get("text", "") for p in msg if isinstance(p, dict))
+
+        msg = msg.strip()
+        if msg.upper() == "OK" or not msg:
+            return ""
+        return msg
+
+    except Exception as e:
+        print(f"  Verification error: {e}")
+        return ""  # skip on error
+
 
 def _image_to_base64_url(path: str) -> str:
     ext = path.lower().rsplit(".", 1)[-1]
@@ -230,10 +296,22 @@ LAYOUT: Two views side by side — FRONT VIEW on the left, BACK VIEW on the righ
 DRAW EXACTLY THESE FEATURES with callout label lines (and NOTHING else):
 {callout_text}
 
+LABEL PLACEMENT RULES (VERY IMPORTANT — labels must point to the CORRECT location):
+- SIDE SEAM: leader line must point to the OUTER EDGE of the garment body (left or right side), NOT the center
+- SHOULDER SEAM: leader line must point to the TOP of the shoulder where sleeve meets body
+- ARMHOLE SEAM: leader line must point to where the sleeve attaches to the body (armpit area)
+- CENTER BACK SEAM: leader line must point to the CENTER LINE of the back view
+- HEM: leader line must point to the BOTTOM EDGE of the garment
+- COLLAR/NECKLINE: leader line must point to the TOP/NECK area
+- CUFF: leader line must point to the END of the sleeve (wrist area)
+- POCKET: leader line must point to the HIP/WAIST area where pocket is located
+- Labels on the LEFT side of the sketch should have leader lines going LEFT → garment
+- Labels on the RIGHT side should have leader lines going RIGHT → garment
+
 DRAWING RULES:
 - Draw ONLY the features listed above. If a feature is not listed, it does not exist on this garment.
 - Match the exact silhouette and proportions from the reference image.
-- Every callout must have a thin leader line from the label text to the exact feature location.
+- Every callout must have a thin leader line from the label text to the EXACT correct location on the garment.
 - All label text must be ALL-CAPS and clearly readable.
 - Label "FRONT VIEW" above the left drawing and "BACK VIEW" above the right drawing.
 {do_not_draw_text}
@@ -243,11 +321,28 @@ STYLE:
 - Clean professional fashion technical flat drawing
 - Consistent line weight throughout"""
 
+    sketch_path = str(ASSETS_DIR / "technical_sketch.png")
     generate_image(
         sketch_prompt,
         reference_image_path=args.front,
-        output_path=str(ASSETS_DIR / "technical_sketch.png")
+        output_path=sketch_path
     )
+
+    # --- 1B. Verify sketch label placement ---
+    print("  Verifying label placement...")
+    verification_issues = verify_sketch_labels(sketch_path, callout_list)
+    if verification_issues:
+        print(f"  ⚠️ Label issues found: {verification_issues}")
+        print("  Regenerating with corrections...")
+        correction_prompt = sketch_prompt + f"\n\nCORRECTION NEEDED: {verification_issues}\nFix the label placement so each leader line points to the correct garment location."
+        generate_image(
+            correction_prompt,
+            reference_image_path=args.front,
+            output_path=sketch_path
+        )
+        print("  ✓ Regenerated with corrections")
+    else:
+        print("  ✓ Labels verified OK")
 
     # --- 2. Brand Label ---
     print("\n[2/4] Generating Brand Label...")
