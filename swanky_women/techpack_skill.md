@@ -56,33 +56,10 @@ Read both garment images using your vision capabilities. Identify:
    - Fitted skirt → invisible side or back zipper
    - Pant/trouser → front fly zipper (always)
    - Add inferred closures to the accessories list even if not visible in images
-5. **Color extraction — HUMAN-EYE METHOD** (CRITICAL for Pantone accuracy):
-
-   Think like a fashion designer picking color from fabric. Follow this process:
-
-   **Step A — Identify sampling zones.** Look at the garment and pick the areas a human eye would naturally choose to judge the "true" fabric color:
-   - A flat, evenly-lit panel of fabric (front chest area, center body, upper sleeve)
-   - NOT shadows in folds or creases
-   - NOT specular highlights on shiny fabrics
-   - NOT areas near skin (skin reflects color onto nearby fabric)
-   - For each distinct color on the garment, identify 2-3 sampling zones
-
-   **Step B — Describe each zone as a bounding box region:**
-   For each sampling zone, describe it precisely so it can be located:
-   - "Center chest panel, between buttons, flat area — approximately top 30-50% of garment, center horizontal"
-   - "Upper left sleeve, flat area without wrinkles"
-   - "Collar/lapel contrast area, center of the contrast fabric"
-
-   **Step C — Extract hex from each zone:**
-   From each sampling zone, extract the hex color that represents WHAT THE FABRIC ACTUALLY IS — not what the camera/lighting makes it look like. Consider:
-   - If the photo has warm lighting (check: does a white shirt look yellowish?), the true color is slightly cooler than what you see
-   - If matte fabric, the color you see IS the color
-   - If shiny/satin fabric, take the mid-tone (between the dark fold and bright highlight)
-
-   Output for each color:
-   - `hex_bright`: From the most well-lit flat area (this goes to pantone.com)
-   - `hex_mid`: From a mid-tone area (backup sample)
-   - `hex_secondary`: For contrast/accent colors (if applicable)
+5. **Color extraction** — Look at the garment like a human would. For each distinct fabric color:
+   - Pick the hex of WHAT THE COLOR ACTUALLY IS. Not the lightest area, not the darkest. Just the true fabric color as your eye sees it.
+   - For satin/shiny fabrics: pick the mid-tone (not the shine, not the shadow)
+   - For each color, give ONE hex value. Keep it simple.
 
 6. **Fabric assessment**: Based on visual drape, texture, sheen, and season — what fabric is this likely? (e.g., wool gabardine, silk charmeuse, cotton poplin, chiffon)
 7. **Complexity level**: Simple (basic top), Medium (structured dress), Complex (coat/suit with lining)
@@ -91,39 +68,24 @@ Write your analysis before proceeding. This analysis drives ALL subsequent conte
 
 ### STEP 2: Match Pantone Colors (TCX only)
 
-**Three-stage Pantone TCX matching:**
-
-**Stage 1 — Get candidates from pantone.com + local Delta-E:**
-
-Run the Pantone matcher script for each distinct color (primary, secondary, accent):
+Run the pantone matcher for each hex color from Step 1. This scrapes pantone.com (same tool the client uses) and creates a visual swatch grid:
 
 ```bash
-cd swanky_women && python3 pantone_matcher.py --hex "BRIGHT_HEX_1" "BRIGHT_HEX_2" --output assets/pantone_grid.png
+cd swanky_women && python3 pantone_matcher.py --hex "HEX_1" "HEX_2" --output assets/pantone_grid.png
 ```
 
-This script:
-- Tries pantone.com/color-finder first (official TCX results)
-- Falls back to local Delta-E matching against 2,300 TCX entries
-- Creates a visual swatch grid image at `assets/pantone_grid.png`
-- Outputs JSON with all candidates
+This gives you TCX candidates from pantone.com. If the scraper fails (Cloudflare block), it falls back to local Delta-E.
 
-**Stage 2 — Visual verification with Claude Vision:**
+**Then pick the best match:**
+1. Read `assets/pantone_grid.png` (the swatch grid)
+2. Read `assets/front.png` (the garment)
+3. Compare each swatch against the garment fabric and pick the one that looks most like the actual fabric color
+4. If pantone.com returned results, prefer those over local Delta-E results
 
-Read BOTH the generated `assets/pantone_grid.png` AND the original garment front image. Compare the color swatches against the actual garment fabric and pick the BEST match for each color.
-
-When comparing:
-- Look at the FABRIC areas, not shadows or highlights
-- The best Pantone should look like "the same color" as the garment in direct light
-- If two candidates look equally close, prefer the one from pantone.com over local Delta-E
-
-**Stage 3 — Record final selection:**
-
-Use ONLY TCX codes. The final Pantone selections go into:
+Put the final picks in:
 - `page_2.pantone_tcx` — primary color
-- `page_2.optional_colors[]` — all colors with their TCX codes
-- `page_7.fabrics[].color` — Pantone reference for fabric page
-
-**Why pantone.com first:** The client uses pantone.com/color-finder to get their TCX codes. Our scraper replicates their exact workflow. Local Delta-E is a fallback when the scraper can't run (headless server, Cloudflare blocking).
+- `page_2.optional_colors[]` — all colors with TCX codes
+- `page_7.fabrics[].color` — same Pantone reference
 
 **Note on fabric identification:** AI cannot determine exact fabric composition from images alone. When writing fabric details:
 - Make your best assessment based on visual texture, drape, sheen, and season
