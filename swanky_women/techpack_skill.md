@@ -672,14 +672,21 @@ Is it KNIT (stretchy, visible knit loops/texture)?
 ]
 ```
 
-**Step 4 — If uncertain, use WebSearch to verify:**
+**Step 4 — Simplify fabric name for the tech pack:**
+The client uses SIMPLE fabric names in their tech packs. Do NOT add sub-types:
+- Write "SILK" not "SILK SATIN" or "SILK CHARMEUSE"
+- Write "COTTON" not "COTTON TWILL" or "COTTON POPLIN" (unless the construction is critical)
+- Write "WOOL" not "WOOL SUITING" or "WOOL GABARDINE" (unless specific treatment like DWR)
+- The _fabric_options field can have detailed names, but the actual fabric description should be simple
+
+**Step 5 — If uncertain, use WebSearch to verify:**
 Search for "[garment description] typical fabric composition" to check common industry conventions.
 
 **GSM Reference by fabric type:**
 | Fabric | Typical GSM Range |
 |--------|------------------|
 | Chiffon/Georgette | 40-70 |
-| Silk Satin/Charmeuse | 80-120 |
+| Silk (includes satin, charmeuse) | 80-150 |
 | Cotton Poplin/Shirting | 100-150 |
 | Cotton Sateen | 130-180 |
 | Viscose/Rayon | 100-160 |
@@ -712,7 +719,9 @@ Only assert 100% certain closures. For uncertain ones, add as "likely" in access
 **Highly likely (add unless evidence against):**
 - Fitted blouse with no visible front buttons → invisible side seam OR back zipper
 - Fitted dress with no visible closure → invisible center back zipper
-- Bodycon/stretch dress with no visible closure → "PULL ON STYLE (NO CLOSURE)" — explicitly state this in accessories
+- Bodycon/stretch KNIT dress with no visible closure → "PULL ON STYLE (NO CLOSURE)" — only for stretchy knit fabrics
+- IMPORTANT: Gathered/ruched neckline on WOVEN/SATIN blouse → INVISIBLE BACK NECK ZIPPER (gathered neckline is too tight to pull over head without a zipper opening)
+- Only use "PULL ON" for stretch knit fabrics. Woven/satin fabrics ALWAYS need a closure somewhere
 - Fitted skirt → invisible side or back zipper
 - Coat with visible front buttons → internal wind flap button (sometimes)
 - Long coat/overcoat → more buttons than visible (typically 3 for single-breasted)
