@@ -56,33 +56,33 @@ Read both garment images using your vision capabilities. Identify:
    - Fitted skirt → invisible side or back zipper
    - Pant/trouser → front fly zipper (always)
    - Add inferred closures to the accessories list even if not visible in images
-5. **Color extraction — FABRIC ISOLATION METHOD** (CRITICAL for Pantone accuracy):
+5. **Color extraction — HUMAN-EYE METHOD** (CRITICAL for Pantone accuracy):
 
-   Do NOT just eyeball the hex. Follow this precise process:
+   Think like a fashion designer picking color from fabric. Follow this process:
 
-   **Step A — Isolate the fabric mentally.** Look at ONLY the garment fabric, ignoring:
-   - Model's skin, hair, background
-   - Shadows in folds and creases
-   - Reflections/highlights on shiny fabrics (for satin, look at the mid-tone, not the bright reflection)
-   - Any other garments visible (e.g., pants under a blazer)
+   **Step A — Identify sampling zones.** Look at the garment and pick the areas a human eye would naturally choose to judge the "true" fabric color:
+   - A flat, evenly-lit panel of fabric (front chest area, center body, upper sleeve)
+   - NOT shadows in folds or creases
+   - NOT specular highlights on shiny fabrics
+   - NOT areas near skin (skin reflects color onto nearby fabric)
+   - For each distinct color on the garment, identify 2-3 sampling zones
 
-   **Step B — Find the "true color" zone.** This is a FLAT, evenly-lit area of fabric with:
-   - No deep shadows
-   - No specular highlights (white shine spots on satin/silk)
-   - Direct or diffused light hitting the fabric evenly
-   - Typically found on the front torso area, upper sleeve, or center back panel
+   **Step B — Describe each zone as a bounding box region:**
+   For each sampling zone, describe it precisely so it can be located:
+   - "Center chest panel, between buttons, flat area — approximately top 30-50% of garment, center horizontal"
+   - "Upper left sleeve, flat area without wrinkles"
+   - "Collar/lapel contrast area, center of the contrast fabric"
 
-   **Step C — Extract 5-6 hex samples** from different locations:
-   - `hex_1`: Brightest flat area (no shadow, no highlight) — THIS IS THE PRIMARY
-   - `hex_2`: Center body mid-tone
-   - `hex_3`: Sleeve area
-   - `hex_4`: Secondary/contrast color (if multi-color garment)
-   - `hex_5`: Any trim/accent color
+   **Step C — Extract hex from each zone:**
+   From each sampling zone, extract the hex color that represents WHAT THE FABRIC ACTUALLY IS — not what the camera/lighting makes it look like. Consider:
+   - If the photo has warm lighting (check: does a white shirt look yellowish?), the true color is slightly cooler than what you see
+   - If matte fabric, the color you see IS the color
+   - If shiny/satin fabric, take the mid-tone (between the dark fold and bright highlight)
 
-   **Step D — Adjust for lighting bias.** If the overall photo has warm (yellowish) or cool (bluish) lighting:
-   - Look for a WHITE element in the photo (white shirt collar, white background area)
-   - If the "white" appears warm/yellow, the entire image has warm cast — mentally subtract warmth from your hex
-   - If the "white" appears blue/cool, subtract cool cast
+   Output for each color:
+   - `hex_bright`: From the most well-lit flat area (this goes to pantone.com)
+   - `hex_mid`: From a mid-tone area (backup sample)
+   - `hex_secondary`: For contrast/accent colors (if applicable)
 
 6. **Fabric assessment**: Based on visual drape, texture, sheen, and season — what fabric is this likely? (e.g., wool gabardine, silk charmeuse, cotton poplin, chiffon)
 7. **Complexity level**: Simple (basic top), Medium (structured dress), Complex (coat/suit with lining)
