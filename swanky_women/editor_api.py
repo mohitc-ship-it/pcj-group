@@ -830,20 +830,36 @@ async def explain_field(payload: dict = Body(...)):
 
         # Check for stored reasoning
         confidence_data = draft.get("_confidence", {})
-        fabric_options = draft.get("page_2", {}).get("_fabric_options", [])
+        fabric_options = draft.get("page_7", {}).get("_fabric_options", []) or draft.get("page_2", {}).get("_fabric_options", [])
         fabric_reasoning = draft.get("page_7", {}).get("_fabric_reasoning", "")
 
         reasoning_parts = []
 
-        if field_key in ("fabrics", "description") and fabric_reasoning:
-            reasoning_parts.append(f"Fabric reasoning: {fabric_reasoning}")
-        if field_key in ("fabrics",) and fabric_options:
-            reasoning_parts.append("Options considered:")
-            for opt in fabric_options:
-                reasoning_parts.append(f"  - {opt.get('fabric', '')} (confidence: {opt.get('confidence', '')}): {opt.get('reasoning', '')}")
+        if field_key in ("fabrics", "description"):
+            if fabric_reasoning and fabric_reasoning != "Could not determine":
+                reasoning_parts.append(f"Fabric reasoning: {fabric_reasoning}")
+            fabrics_list = draft.get("page_7", {}).get("fabrics", [])
+            if fabrics_list:
+                reasoning_parts.append(f"Current fabric: {fabrics_list[0].get('description', 'Not set')}")
+            if fabric_options:
+                reasoning_parts.append(f"\nOptions considered ({len(fabric_options)}):")
+                for i, opt in enumerate(fabric_options):
+                    name = opt.get('name', opt.get('fabric', ''))
+                    why = opt.get('why', opt.get('reasoning', ''))
+                    reasoning_parts.append(f"  {i+1}. {name}" + (f" — {why}" if why else ""))
+            cross_check = draft.get("page_7", {}).get("_cross_checked", {})
+            if isinstance(cross_check, dict) and cross_check.get("note"):
+                reasoning_parts.append(f"\nIndustry cross-check: {cross_check['note']}")
 
         if "pantone" in field_key.lower() or "color" in field_key.lower():
-            reasoning_parts.append("Pantone was matched using pantone.com color finder + local Delta-E verification against 2,300 TCX entries.")
+            pantone_val = draft.get("page_2", {}).get("pantone_tcx", "")
+            opt_colors = draft.get("page_2", {}).get("optional_colors", [])
+            reasoning_parts.append(f"Primary Pantone: {pantone_val}")
+            reasoning_parts.append("Matched via hex extraction → pantone.com color finder + local Delta-E (2,310 TCX entries).")
+            if opt_colors:
+                reasoning_parts.append(f"\n{len(opt_colors)} alternatives available:")
+                for oc in opt_colors[:6]:
+                    reasoning_parts.append(f"  • {oc.get('pantone_tcx', '')} — {oc.get('color_name', '')}")
             notes = confidence_data.get("_notes", [])
             for n in notes:
                 if "pantone" in n.lower() or "color" in n.lower():
@@ -860,11 +876,21 @@ async def explain_field(payload: dict = Body(...)):
             reasoning_parts.append("Values use standard increments: +2\" bust/waist per size, +0.5\" shoulder per size.")
 
         if "accessories" in field_key.lower():
-            reasoning_parts.append(f"Accessories identified from visual analysis of {description}.")
+            acc_list = draft.get("page_4", {}).get("accessories", [])
+            reasoning_parts.append(f"Accessories for {description} ({len(acc_list)} items):")
+            for i, a in enumerate(acc_list):
+                desc_text = a.get("description", a.get("description_name_type_dimensions_material", ""))
+                qty = a.get("quantity_per_style", "")
+                reasoning_parts.append(f"  {i+1}. {desc_text[:80]} (qty: {qty})")
+            has_closure = any(any(kw in str(a).lower() for kw in ["zipper", "button", "hook", "closure"]) for a in acc_list)
+            if has_closure:
+                reasoning_parts.append("\n✓ Closure mechanism identified in accessories.")
+            else:
+                reasoning_parts.append("\n⚠️ No closure found. Run Auto-Fix to check if one is needed.")
             notes = confidence_data.get("_notes", [])
             for n in notes:
                 if "closure" in n.lower() or "zipper" in n.lower() or "button" in n.lower():
-                    reasoning_parts.append(n)
+                    reasoning_parts.append(f"→ {n}")
 
         if "wash" in field_key.lower() or "care" in field_key.lower() or "composition" in field_key.lower():
             reasoning_parts.append("Care instructions follow client standard: identical for all fabrics.")
@@ -996,7 +1022,7 @@ def get_accuracy_report():
         description = header.get("description", "unknown garment")
         category = header.get("category", "")
         confidence_data = draft.get("_confidence", {})
-        fabric_options = draft.get("page_2", {}).get("_fabric_options", [])
+        fabric_options = draft.get("page_7", {}).get("_fabric_options", []) or draft.get("page_2", {}).get("_fabric_options", [])
         fabric_reasoning = draft.get("page_7", {}).get("_fabric_reasoning", "")
 
         components = []
