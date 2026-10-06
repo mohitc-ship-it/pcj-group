@@ -130,11 +130,12 @@ export async function updateMultipleFields(payload) {
  * @param {string} contextText - brand/collection/season/fabric/size context
  * Returns { job_id, status, image_count }
  */
-export async function triggerGeneration(imageFiles, contextText, sampleSize = "", brandLogoFile = null) {
+export async function triggerGeneration(imageFiles, contextText, sampleSize = "", brandLogoFile = null, highAccuracy = false) {
   const formData = new FormData()
   imageFiles.forEach((file) => formData.append("images", file))
   formData.append("context", contextText)
-  
+  formData.append("high_accuracy", highAccuracy ? "true" : "false")
+
   if (sampleSize) {
     formData.append("sample_size", sampleSize)
   }

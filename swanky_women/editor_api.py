@@ -382,22 +382,56 @@ def _push_reasoning(job_id: str, step: str, decision: str, reasoning: str, progr
     })
 
 
-def _run_generation_job(job_id: str, image_paths: list, context: str, sample_size: str, brand_logo_path: str = None):
+def _run_generation_job(job_id: str, image_paths: list, context: str, sample_size: str, brand_logo_path: str = None, high_accuracy: bool = False):
     """Runs generate_techpack in a background thread, updating job state with reasoning traces."""
     try:
-        import sys, os
+        import sys, os, subprocess
         sys.path.insert(0, os.path.dirname(__file__))
-        # Use skill-based generation (trained on 26 PDFs, better accuracy)
-        from skill_generate import generate_techpack
 
         # Inject a progress_callback the pipeline can call after each agent
         def progress_callback(step: str, decision: str, reasoning: str, progress: int):
             _push_reasoning(job_id, step, decision, reasoning, progress)
 
-        _push_reasoning(job_id, "Starting pipeline...", "", "Initializing AI agents and loading models.", 2)
+        if high_accuracy:
+            # ─── HIGH ACCURACY MODE: Run /techpack skill via Claude Code CLI ───
+            _push_reasoning(job_id, "High Accuracy Mode", "Running Claude Opus via /techpack skill", "Using Claude Code CLI for maximum accuracy. This may take 3-5 minutes.", 2)
 
-        # Run the actual pipeline (blocking, in background thread)
-        pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback, brand_logo_path=brand_logo_path)
+            # Build the prompt for claude -p
+            skill_prompt = f"""/techpack
+
+Images: {' '.join(image_paths)}
+{context}
+Sample Size: {sample_size}
+"""
+            try:
+                result = subprocess.run(
+                    ["claude", "-p", skill_prompt, "--allowedTools", "Read,Write,Bash,Edit,Glob,Grep"],
+                    capture_output=True, text=True,
+                    cwd=os.path.dirname(__file__),
+                    timeout=600,  # 10 min max
+                )
+
+                if result.returncode == 0:
+                    _push_reasoning(job_id, "Claude Skill", "Completed", result.stdout[-500:] if result.stdout else "", 90)
+                    # Claude should have written master_filled.json and rendered PDF
+                    from generate import generatePdf
+                    pdf_path = generatePdf()
+                else:
+                    # Fall back to standard pipeline
+                    _push_reasoning(job_id, "Claude Skill", "Failed, falling back to standard", result.stderr[:200] if result.stderr else "", 10)
+                    from skill_generate import generate_techpack
+                    pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback, brand_logo_path=brand_logo_path)
+
+            except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+                _push_reasoning(job_id, "Claude Skill", f"Unavailable: {str(e)[:80]}. Using standard pipeline.", "", 5)
+                from skill_generate import generate_techpack
+                pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback, brand_logo_path=brand_logo_path)
+
+        else:
+            # ─── STANDARD MODE: Use skill_generate.py (Claude Haiku + Gemini) ───
+            _push_reasoning(job_id, "Starting pipeline...", "", "Initializing AI agents and loading models.", 2)
+            from skill_generate import generate_techpack
+            pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback, brand_logo_path=brand_logo_path)
 
         # Clear any stale draft so the frontend editor loads this new generation
         if DRAFT_FILE.exists():
@@ -467,6 +501,7 @@ async def start_generation(
     context: str = Form(...),
     sample_size: Optional[str] = Form("M"),
     brand_logo: Optional[UploadFile] = File(None),
+    high_accuracy: Optional[str] = Form("false"),
 ):
     """
     Accepts 2+ garment images + context, starts generation in background.
@@ -513,14 +548,16 @@ async def start_generation(
     }
 
     # Start background thread
+    use_high_accuracy = high_accuracy.lower() in ("true", "1", "yes")
     thread = threading.Thread(
         target=_run_generation_job,
         args=(job_id, saved_paths, context, sample_size, brand_logo_path),
+        kwargs={"high_accuracy": use_high_accuracy},
         daemon=True,
     )
     thread.start()
 
-    return JSONResponse({"job_id": job_id, "status": "running", "image_count": len(saved_paths)})
+    return JSONResponse({"job_id": job_id, "status": "running", "image_count": len(saved_paths), "high_accuracy": use_high_accuracy})
 
 
 

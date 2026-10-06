@@ -255,14 +255,28 @@ Return JSON only: {{"category": "...", "garment_type": "...", "pieces": ["blazer
     garment_codes = {
         "dress": "DRS", "blouse": "BLO", "shirt": "SHT", "coat": "TRC", "trench": "TRC",
         "blazer": "BLZ", "jacket": "JKT", "pant": "PNT", "trouser": "PNT", "cardigan": "CRD",
-        "skirt": "SKT", "suit": "3PS", "3-piece": "3PS", "turtleneck": "TRT", "hoodie": "HDY",
-        "vest": "VST", "gown": "GWN",
+        "turtleneck": "TRT", "hoodie": "HDY", "vest": "VST", "gown": "GWN",
+        "cocktail": "CDR",
     }
-    gar_code = "GRM"
-    for kw, code in garment_codes.items():
-        if kw in garment_type.lower():
-            gar_code = code
-            break
+    # Suit codes based on pieces
+    pieces = classification.get("pieces", [])
+    pieces_lower = [p.lower() for p in pieces]
+    gt_lower = garment_type.lower()
+
+    if "skirt suit" in gt_lower or ("skirt" in pieces_lower and any(p in pieces_lower for p in ["blazer", "jacket"])):
+        gar_code = "SKSU"
+    elif "3-piece" in gt_lower or "3 piece" in gt_lower or ("vest" in pieces_lower and "trouser" in pieces_lower):
+        gar_code = "3PS"
+    elif "pant suit" in gt_lower or ("trouser" in pieces_lower and any(p in pieces_lower for p in ["blazer", "jacket"])):
+        gar_code = "PNSU"
+    elif "suit" in gt_lower:
+        gar_code = "SUT"
+    else:
+        gar_code = "GRM"
+        for kw, code in garment_codes.items():
+            if kw in gt_lower:
+                gar_code = code
+                break
 
     style_name = f"JPC-{brand_code}-{season_code}-{gar_code}"
     description = f"{garment_type}".title()
@@ -391,7 +405,17 @@ NAMING RULES:
 
 {"User specified fabric: " + fabric_pref + ". USE THIS." if fabric_pref else ""}
 
-Return JSON: {{"fabric_name": "SILK, 90-110 GSM", "reasoning": "...", "confidence": 0.6}}"""
+Return JSON with TOP 3 options:
+{{
+  "fabric_name": "WOVEN SUITING, 250-300 GSM",
+  "options": [
+    {{"name": "WOVEN SUITING, 250-300 GSM", "confidence": 0.6, "why": "structured, matte, holds shape"}},
+    {{"name": "COTTON, 200-260 GSM", "confidence": 0.2, "why": "could be cotton suiting"}},
+    {{"name": "POLYESTER BLEND, 220-280 GSM", "confidence": 0.2, "why": "budget option"}}
+  ],
+  "reasoning": "...",
+  "confidence": 0.6
+}}"""
 
     # Use CLAUDE for fabric decision (better reasoning about visual cues)
     fabric_result, fabric_think = claude_query(fabric_prompt)
@@ -617,6 +641,7 @@ NO markdown, NO bold, NO headers."""
     master["page_7"] = {
         "fabrics": [{"description": fabric_name, "color": f"PANTONE {primary_color.get('pantone_tcx', '')}", "position": ""}],
         "_fabric_reasoning": fabric_data.get("reasoning", ""),
+        "_fabric_options": fabric_data.get("options", []),
         "quality_standards": QUALITY_STANDARDS
     }
 

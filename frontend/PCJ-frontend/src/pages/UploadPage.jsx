@@ -101,6 +101,7 @@ export default function UploadPage() {
   const [closureType, setClosureType] = useState("")
   const [wearCategory, setWearCategory] = useState("Womenswear")
   const [buttonCount, setButtonCount] = useState("")
+  const [highAccuracy, setHighAccuracy] = useState(false)
   const [brandLogo, setBrandLogo] = useState(null)   // { file, preview }
   const [hasPreviousInput, setHasPreviousInput] = useState(false)
 
@@ -235,7 +236,7 @@ export default function UploadPage() {
     try {
       await saveInputToStorage()  // persist fields before navigating away
       const imageFiles = images.map(img => img.file)
-      const { job_id } = await triggerGeneration(imageFiles, buildContext(), sampleSize, brandLogo?.file || null)
+      const { job_id } = await triggerGeneration(imageFiles, buildContext(), sampleSize, brandLogo?.file || null, highAccuracy)
       navigate(`/generating?job_id=${job_id}`)
     } catch (err) {
       setError(err.message || "Failed to start generation. Is the backend running?")
@@ -417,6 +418,20 @@ export default function UploadPage() {
                     rows={4}
                     className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500 transition-all duration-200 resize-none"
                   />
+                </div>
+
+                {/* High Accuracy Mode */}
+                <div className="flex items-center justify-between bg-violet-600/10 border border-violet-500/20 rounded-xl px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-violet-200">High Accuracy Mode</p>
+                    <p className="text-xs text-white/40 mt-0.5">Uses Claude Opus via CLI for maximum accuracy (~3-5 min, uses Claude subscription)</p>
+                  </div>
+                  <button
+                    onClick={() => setHighAccuracy(!highAccuracy)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${highAccuracy ? 'bg-violet-500' : 'bg-white/10'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${highAccuracy ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
                 </div>
 
                 {/* Brand Logo Upload */}
