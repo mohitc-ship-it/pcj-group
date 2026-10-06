@@ -251,7 +251,15 @@ Return JSON only: {{"category": "...", "garment_type": "...", "pieces": ["blazer
 
     # Style code
     brand_code = brand[:3].upper() if len(brand) >= 3 else brand.upper()
-    season_code = "FA/WI25" if "fall" in season.lower() or "winter" in season.lower() else "SP/SU26"
+    # Extract year from season string (e.g., "Fall/Winter 2025" → "25", "FW25" → "25")
+    year_match = re.search(r'(\d{2,4})', season)
+    year_suffix = year_match.group()[-2:] if year_match else "25"
+    if "fall" in season.lower() or "winter" in season.lower() or "fw" in season.lower():
+        season_code = f"FA/WI{year_suffix}"
+    elif "spring" in season.lower() or "summer" in season.lower() or "ss" in season.lower():
+        season_code = f"SP/SU{year_suffix}"
+    else:
+        season_code = f"FA/WI{year_suffix}"
     garment_codes = {
         "dress": "DRS", "blouse": "BLO", "shirt": "SHT", "coat": "TRC", "trench": "TRC",
         "blazer": "BLZ", "jacket": "JKT", "pant": "PNT", "trouser": "PNT", "cardigan": "CRD",
@@ -290,20 +298,22 @@ Return JSON only: {{"category": "...", "garment_type": "...", "pieces": ["blazer
     }
 
     # ─── STEP 4: Color + Pantone ───
-    _report(progress_callback, "Color Extraction", "Extracting hex codes from garment", "", 25)
+    _report(progress_callback, "Color Extraction", "Extracting hex codes from multiple garment areas", "", 25)
 
-    # Simple color extraction — just get hex codes, don't over-process
-    color_prompt = f"""Look at this garment. Extract ALL distinct fabric colors as hex codes.
+    color_prompt = f"""Look at this garment carefully. Extract hex color codes from MANY different areas of the fabric.
 
-Give me MULTIPLE hex samples for the main color from different areas:
-- One from the flattest, most evenly-lit area
-- One from a slightly different area
-- One for each additional distinct color (if multi-color garment)
+Sample from these specific zones:
+1. Center chest / front body (flattest area)
+2. Upper shoulder area
+3. Sleeve (mid-arm)
+4. Lower body / skirt / hem area
+5. Back panel (if visible)
+6. Any DIFFERENT colored trim or contrast area
 
-Do NOT pick from shadows or bright highlights. Pick the TRUE fabric color as a human eye sees it.
+For EACH zone, give the hex of the TRUE fabric color — not shadow, not highlight, not skin reflection.
 
-Return JSON array: [{{"color_name": "descriptive name", "color_hex": "#XXXXXX", "area": "where you sampled from"}}]
-Include 3-5 hex samples total. Only FABRIC colors — ignore skin, background, inner layers."""
+Return JSON array with 6-10 samples: [{{"color_name": "descriptive name", "color_hex": "#XXXXXX", "area": "center chest"}}]
+ONLY fabric colors. Ignore skin, hair, background, inner layers (like a turtleneck under a blazer)."""
 
     color_result, _ = claude_query(color_prompt, images=images)
     colors = []
@@ -314,23 +324,61 @@ Include 3-5 hex samples total. Only FABRIC colors — ignore skin, background, i
     except:
         colors = [{"color_name": "Primary", "color_hex": "#808080"}]
 
-    # Pantone: send ALL hex samples to pantone.com scraper, collect ALL options
+    # Cluster similar hex samples → compute median → send fewer, better hexes to scraper
+    from utils import rgb_to_lab
+    from colormath.color_diff import delta_e_cie2000
+
+    def _cluster_hexes(hex_list, thresh=4.0):
+        """Group similar hexes together using Delta-E distance."""
+        groups = []
+        for h in hex_list:
+            r, g, b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+            lab = rgb_to_lab((r, g, b))
+            placed = False
+            for group in groups:
+                ref_h = group[0]
+                rr, gg, bb = int(ref_h[1:3], 16), int(ref_h[3:5], 16), int(ref_h[5:7], 16)
+                ref_lab = rgb_to_lab((rr, gg, bb))
+                if float(delta_e_cie2000(lab, ref_lab)) < thresh:
+                    group.append(h)
+                    placed = True
+                    break
+            if not placed:
+                groups.append([h])
+        return groups
+
+    def _median_hex(hex_list):
+        """Compute median RGB from a list of hex values."""
+        rs = [int(h[1:3], 16) for h in hex_list]
+        gs = [int(h[3:5], 16) for h in hex_list]
+        bs = [int(h[5:7], 16) for h in hex_list]
+        import statistics
+        mr, mg, mb = int(statistics.median(rs)), int(statistics.median(gs)), int(statistics.median(bs))
+        return f"#{mr:02x}{mg:02x}{mb:02x}"
+
+    # Extract all hex values and cluster them
+    all_hexes = [c.get("color_hex", "") for c in colors if c.get("color_hex", "").startswith("#")]
+    hex_groups = _cluster_hexes(all_hexes, thresh=5.0) if len(all_hexes) > 1 else [[h] for h in all_hexes]
+    median_hexes = [_median_hex(group) for group in hex_groups]
+
+    _report(progress_callback, "Pantone", f"Clustered {len(all_hexes)} samples → {len(median_hexes)} color groups", "", 27)
+
+    # Send median hexes to pantone.com scraper
     all_pantone_options = []
     try:
         from pantone_scraper import get_tcx_options
-        for c in colors[:3]:  # first 3 hex samples
-            hex_clean = c.get("color_hex", "").lstrip("#")
-            if hex_clean:
-                _report(progress_callback, "Pantone", f"Checking pantone.com for #{hex_clean}", "", 28)
-                scraped = get_tcx_options(hex_clean)
-                if scraped:
-                    for opt in scraped:
-                        code = opt.get("code", "")
-                        if "TCX" not in code:
-                            code += " TCX"
-                        opt["code"] = code
-                        opt["source_hex"] = hex_clean
-                    all_pantone_options.extend(scraped)
+        for median_h in median_hexes[:4]:
+            hex_clean = median_h.lstrip("#")
+            _report(progress_callback, "Pantone", f"Checking pantone.com for #{hex_clean} (median of {len(hex_groups[median_hexes.index(median_h)])} samples)", "", 28)
+            scraped = get_tcx_options(hex_clean)
+            if scraped:
+                for opt in scraped:
+                    code = opt.get("code", "")
+                    if "TCX" not in code:
+                        code += " TCX"
+                    opt["code"] = code
+                    opt["source_hex"] = hex_clean
+                all_pantone_options.extend(scraped)
     except Exception as e:
         print(f"[Pantone scraper] Failed: {e}")
 
@@ -342,10 +390,17 @@ Include 3-5 hex samples total. Only FABRIC colors — ignore skin, background, i
             seen_codes.add(opt.get("code"))
             unique_pantone.append(opt)
 
-    # If scraper gave results, use them. Otherwise fall back to Delta-E
+    # ALSO run local Delta-E on all median hexes and merge results
+    for median_h in median_hexes[:4]:
+        local_results = nearest_pantone_tcx(median_h, top_k=3)
+        for r in local_results:
+            if r["code"] not in seen_codes:
+                seen_codes.add(r["code"])
+                unique_pantone.append({"code": r["code"], "name": r["name"], "source": "delta_e", "delta_e": r["delta_e"]})
+
     if unique_pantone:
         primary_pantone = unique_pantone[0]["code"]
-        _report(progress_callback, "Pantone", f"Matched: {primary_pantone} ({len(unique_pantone)} options from pantone.com)", "", 30)
+        _report(progress_callback, "Pantone", f"Matched: {primary_pantone} ({len(unique_pantone)} total options)", "", 30)
     else:
         # Fallback to local Delta-E
         hex_val = colors[0].get("color_hex", "#808080")
