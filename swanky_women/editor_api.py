@@ -719,18 +719,34 @@ async def regenerate_sketch(payload: dict = Body(...)):
         if "assets/" in current_sketch:
             current_sketch = "assets/" + current_sketch.split("assets/")[1]
 
+        # Get original garment image for reference
+        original_image = None
+        for key in ["front_image_url", "garment_front_view_url"]:
+            p = draft.get("page_2", draft.get("page_1", {})).get(key, "")
+            if p and "assets/" in p:
+                original_image = "assets/" + p.split("assets/")[1]
+                break
+
+        description = draft.get("header", {}).get("description", "garment")
+
         full_prompt = (
-            f"TECHNICAL SKETCH MODIFICATION REQUEST:\n"
-            f"Reference the existing technical sketch image provided.\n"
-            f"Apply the following change: {instruction}\n\n"
-            f"Preserve ALL other details of the garment exactly as shown: "
-            f"silhouette, construction lines, seam positions, collar style, sleeve design, "
-            f"pocket placement, and all other design elements that are NOT mentioned in the change request.\n"
-            f"Output a clean, black-and-white technical flat sketch on white background."
+            f"TECHNICAL SKETCH MODIFICATION for a {description}:\n"
+            f"Apply this change: {instruction}\n\n"
+            f"CRITICAL RULES:\n"
+            f"- Look at the ORIGINAL GARMENT PHOTO to understand the real garment\n"
+            f"- Match the original photo's features exactly (button count, collar shape, pocket type)\n"
+            f"- Apply ONLY the requested change. Preserve everything else.\n"
+            f"- If the change mentions buttons, count them from the original garment photo\n"
+            f"- Output clean black-and-white technical flat sketch on white background\n"
+            f"- ALL-CAPS callout labels with thin leader lines"
         )
 
+        # Send ORIGINAL garment image as reference (not the sketch)
+        # This ensures modifications match the real garment
+        ref_image = original_image if original_image and Path(original_image).exists() else current_sketch
+
         out_path = "assets/technical_sketch.png"
-        result = generate_image(full_prompt, reference_image_path=current_sketch, output_path=out_path)
+        result = generate_image(full_prompt, reference_image_path=ref_image, output_path=out_path)
         if not result:
             return JSONResponse({"error": "Generation failed"}, status_code=500)
 
@@ -764,19 +780,31 @@ async def regenerate_measurement(payload: dict = Body(...)):
         if "assets/" in current_diagram:
             current_diagram = "assets/" + current_diagram.split("assets/")[1]
 
+        # Get original garment image
+        original_image = None
+        for key in ["front_image_url", "garment_front_view_url"]:
+            p = draft.get("page_2", draft.get("page_1", {})).get(key, "")
+            if p and "assets/" in p:
+                original_image = "assets/" + p.split("assets/")[1]
+                break
+
+        description = draft.get("header", {}).get("description", "garment")
+
         full_prompt = (
-            f"MEASUREMENT DIAGRAM MODIFICATION REQUEST:\n"
-            f"Reference the existing measurement diagram image provided.\n"
-            f"Apply the following change: {instruction}\n\n"
-            f"Preserve the garment silhouette and all measurement lines that are NOT mentioned.\n"
+            f"MEASUREMENT DIAGRAM MODIFICATION for a {description}:\n"
+            f"Apply this change: {instruction}\n\n"
+            f"Match the garment silhouette from the original garment photo.\n"
             f"Keep letter labels (A, B, C, etc.) clearly visible.\n"
-            f"Output a clean, black-and-white technical flat sketch with measurement indicator lines on white background."
+            f"Do NOT draw any accessories, buttons, thread, or labels.\n"
+            f"Output clean black-and-white technical flat sketch with measurement lines on white background."
         )
+
+        ref_image = original_image if original_image and Path(original_image).exists() else current_diagram
 
         out_path = "assets/measurement_diagram.png"
         result = generate_image(
             full_prompt,
-            reference_image_path=current_diagram,
+            reference_image_path=ref_image,
             output_path=out_path
         )
         if not result:
