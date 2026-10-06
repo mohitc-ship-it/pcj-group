@@ -805,18 +805,37 @@ NO markdown, NO bold, NO headers."""
         else:
             layout = "FRONT VIEW on left, BACK VIEW on right."
 
-        sketch_prompt = f"""Professional technical flat sketch of a {description}.
-LAYOUT: {layout}
-Draw ONLY the garment flat sketches with callout labels pointing to construction features.
-Details: {details_text[:300]}
+        # Build button/feature description from what Claude ACTUALLY saw in the image
+        button_info = ""
+        for a in accessories:
+            desc = str(a.get("description", "")).lower()
+            if "button" in desc:
+                qty = a.get("quantity_per_style", "")
+                button_info += f"BUTTONS: {a.get('description', '')} — quantity: {qty}\n"
 
-STRICT RULES:
-- Draw ONLY garment outline + callout labels with leader lines
-- Do NOT draw any accessories section, accessories grid, button icons, thread icons, label mockups, or any "VISIBLE ACCESSORIES" panel
-- Do NOT draw any boxes or panels showing buttons, thread, labels as separate items
-- The image should contain ONLY the flat garment sketches and text callout labels
+        sketch_prompt = f"""Look at the reference garment photo carefully. Create a professional technical flat sketch that EXACTLY matches what you see.
+
+LAYOUT: {layout}
+
+CRITICAL — MATCH THE REFERENCE IMAGE EXACTLY:
+- Count the EXACT number of buttons visible in the reference photo. Draw that EXACT number. Do NOT add extra buttons.
+- Match the EXACT collar/lapel shape from the reference. Do NOT change it.
+- Match the EXACT pocket type and position from the reference.
+- Match the EXACT silhouette and proportions.
+- If you cannot see a feature in the reference photo, do NOT draw it.
+
+{f"BUTTON COUNT FROM REFERENCE: {button_info}" if button_info else ""}
+
+Garment details from analysis:
+{details_text[:400]}
+
+DRAWING RULES:
+- Draw ONLY the garment flat sketches + callout labels with leader lines
+- Do NOT draw accessories panels, button icons, thread spools, or label mockups
+- Do NOT draw any separate boxes showing accessories
 - LABEL PLACEMENT: SIDE SEAM → outer edge, SHOULDER → top, HEM → bottom, CUFF → wrist
-- Pure black line art on white background. ALL-CAPS callout labels with thin leader lines."""
+- Pure black line art on white background
+- ALL-CAPS callout labels with thin leader lines"""
 
         generate_image(sketch_prompt, reference_image_path=front_img, output_path="assets/technical_sketch.png")
 
