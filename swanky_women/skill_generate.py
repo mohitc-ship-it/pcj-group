@@ -405,20 +405,31 @@ NAMING RULES:
 
 {"User specified fabric: " + fabric_pref + ". USE THIS." if fabric_pref else ""}
 
-Return JSON with TOP 3 options:
+Your job is to analyze WHAT YOU ACTUALLY SEE in the garment and reason about what fabric it could be.
+
+Think through these questions:
+1. What do I SEE? (texture, sheen, drape, weight, how it folds, surface finish)
+2. What garment type is this? (suits are typically wool/poly-wool, blouses are silk/polyester, etc.)
+3. What season? (FW = heavier fabrics, SS = lighter fabrics)
+4. What are the REALISTIC options? Only list fabrics that COULD actually be this garment.
+
+Do NOT make up random options. Each option must be justified by what you see OR by what's standard for this garment type + season.
+
+Return JSON:
 {{
-  "fabric_name": "WOVEN SUITING, 250-300 GSM",
+  "fabric_name": "your best guess with GSM",
   "options": [
-    {{"name": "WOVEN SUITING, 250-300 GSM", "confidence": 0.6, "why": "structured, matte, holds shape"}},
-    {{"name": "COTTON, 200-260 GSM", "confidence": 0.2, "why": "could be cotton suiting"}},
-    {{"name": "POLYESTER BLEND, 220-280 GSM", "confidence": 0.2, "why": "budget option"}}
+    {{"name": "FABRIC, GSM", "why": "specific visual evidence or industry convention that supports this"}},
+    {{"name": "FABRIC, GSM", "why": "specific visual evidence or industry convention that supports this"}}
   ],
-  "reasoning": "...",
-  "confidence": 0.6
-}}"""
+  "reasoning": "detailed explanation of what you see and why you chose this",
+  "confidence": 0.0-1.0
+}}
+
+Only include 2-3 options that you genuinely think are possible. Don't pad with unlikely options."""
 
     # Use CLAUDE for fabric decision (better reasoning about visual cues)
-    fabric_result, fabric_think = claude_query(fabric_prompt)
+    fabric_result, fabric_think = claude_query(fabric_prompt, images=images)
     try:
         json_match = re.search(r'\{[^}]+\}', fabric_result, re.DOTALL)
         fabric_data = json.loads(json_match.group()) if json_match else {}
@@ -427,49 +438,64 @@ Return JSON with TOP 3 options:
 
     fabric_name = _simplify_fabric_name(fabric_data.get("fabric_name", fabric_pref or "FABRIC"))
 
-    # Web search to verify/improve fabric identification
-    if not fabric_pref and fabric_data.get("confidence", 0) < 0.8:
-        _report(progress_callback, "Fabric Research", "Searching for typical fabric used in this garment type", "", 37)
+    # Fabric cross-check: what do manufacturers ACTUALLY use for this garment type + season?
+    if not fabric_pref:
+        _report(progress_callback, "Fabric Cross-Check", "Verifying against industry standards for this garment type + season", "", 37)
         try:
-            search_prompt = f"""What fabric is most commonly used for a {garment_type} in {season} season?
+            ai_options = fabric_data.get("options", [])
+            ai_reasoning = fabric_data.get("reasoning", "")
 
-I identified: {fabric_name}
+            crosscheck_prompt = f"""A designer identified a {garment_type} ({category}, {season} season) fabric as: {fabric_name}
 
-Research and verify:
-1. What fabric type is standard for {garment_type}?
-2. What GSM range is typical?
-3. Is my identification reasonable?
+Their visual reasoning: {ai_reasoning[:300]}
+Their options: {json.dumps(ai_options, default=str)[:300]}
 
-Common fabric references:
-- Blazer/Suit → 100% Wool or Poly-Wool blend, 240-320 GSM
-- Blouse (shiny) → Silk or Polyester Satin, 80-120 GSM
-- Blouse (matte) → Cotton or Viscose, 100-150 GSM
-- Coat/Trench → Wool Gabardine or Cotton Gabardine, 250-350 GSM
-- Dress (formal) → Silk, Crepe, or Chiffon, 80-150 GSM
-- Dress (casual) → Cotton, Linen, or Viscose, 120-200 GSM
-- Knitwear → Merino Wool or Cotton Knit, 200-400 GSM
-- Pants (formal) → Wool Suiting, 200-280 GSM
-- Pants (casual) → Cotton Chino, 200-280 GSM
-- T-shirt → Cotton Jersey, 150-200 GSM
+CROSS-CHECK against what manufacturers ACTUALLY use:
 
-If my identification is wrong, give the correct one.
-If correct, confirm it.
+For {garment_type} in {season}:
+- What fabric composition do garment factories typically use?
+- What GSM range is standard for production?
+- Does the AI's identification make sense given the garment type and season?
+- Are there other fabrics that are equally common for this exact garment type?
 
-Reply with ONLY: "FABRIC_NAME, GSM_RANGE GSM" — nothing else.
-Example: "WOOL, 250-300 GSM" or "SILK, 90-110 GSM\""""
+Consider:
+- Season: {"Heavier fabrics (wool, gabardine, heavy cotton)" if "winter" in season.lower() or "fall" in season.lower() else "Lighter fabrics (cotton, linen, silk, chiffon)"}
+- Garment: {garment_type} — what do brands like Zara, H&M, luxury brands typically use for this?
+- The visual evidence the AI described
 
-            search_result, _ = llm_query(search_prompt)
-            search_result = search_result.strip().strip('"')
-            if search_result and len(search_result) < 80 and "," in search_result:
-                old_fabric = fabric_name
-                fabric_name = _simplify_fabric_name(search_result)
-                fabric_data["_web_verified"] = fabric_name
-                fabric_data["confidence"] = min(fabric_data.get("confidence", 0.5) + 0.15, 0.85)
-                _report(progress_callback, "Fabric Research",
-                        f"Verified: {fabric_name}" + (f" (changed from {old_fabric})" if old_fabric != fabric_name else ""),
-                        f"Research suggests {search_result} for {garment_type}", 39)
+Reply with JSON:
+{{
+  "verified_fabric": "the most likely fabric with GSM",
+  "alternatives": [
+    {{"name": "FABRIC, GSM", "why": "specific reason this is possible for this garment + season"}}
+  ],
+  "matches_ai": true/false,
+  "note": "brief explanation of your cross-check conclusion"
+}}"""
+
+            crosscheck_result, _ = llm_query(crosscheck_prompt)
+            try:
+                json_match = re.search(r'\{.*\}', crosscheck_result, re.DOTALL)
+                if json_match:
+                    crosscheck = json.loads(json_match.group())
+                    verified = crosscheck.get("verified_fabric", "")
+                    if verified:
+                        old_fabric = fabric_name
+                        fabric_name = _simplify_fabric_name(verified)
+                        fabric_data["_cross_checked"] = crosscheck
+                        # Merge alternatives into options
+                        for alt in crosscheck.get("alternatives", []):
+                            if alt not in fabric_data.get("options", []):
+                                fabric_data.setdefault("options", []).append(alt)
+                        if crosscheck.get("matches_ai"):
+                            fabric_data["confidence"] = min(fabric_data.get("confidence", 0.5) + 0.15, 0.9)
+                        _report(progress_callback, "Fabric Cross-Check",
+                            f"Verified: {fabric_name}" + (f" (was {old_fabric})" if old_fabric != fabric_name else ""),
+                            crosscheck.get("note", ""), 39)
+            except Exception:
+                pass
         except Exception as e:
-            _report(progress_callback, "Fabric Research", f"Research unavailable: {str(e)[:50]}", "", 39)
+            _report(progress_callback, "Fabric Cross-Check", f"Unavailable: {str(e)[:50]}", "", 39)
 
     _report(progress_callback, "Fabric Decision", fabric_name, fabric_think[:300] if fabric_think else "", 40)
 
