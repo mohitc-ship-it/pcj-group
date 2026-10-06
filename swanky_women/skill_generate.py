@@ -197,11 +197,19 @@ User context: {context}
 
 Classify:
 - category: Menswear, Womenswear, or Kidswear
-- garment_type: specific type (blazer, 3-piece suit, blouse, coat, pant, dress, etc.)
+- garment_type: specific type (blazer, 3-piece suit, skirt suit, blouse, coat, pant, dress, etc.)
+- pieces: list each SEPARATE garment piece visible (e.g., ["blazer", "skirt"] or ["blazer", "vest", "trouser"])
 - complexity: Simple, Medium, Complex
 - fit_type: Slim, Regular, Oversized, Relaxed
 
-Return JSON only: {{"category": "...", "garment_type": "...", "complexity": "...", "fit_type": "..."}}"""
+CRITICAL RULES for multi-piece detection:
+- A SHIRT or TURTLENECK worn UNDER a blazer is NOT a vest. It's just an inner layer — ignore it.
+- A 3-PIECE SUIT means: blazer + VEST (waistcoat with buttons, no sleeves) + trouser. If there's no separate vest visible, it's NOT 3-piece.
+- SKIRT SUIT = blazer + skirt (2 pieces only, no vest)
+- PANT SUIT = blazer + trouser (2 pieces only, no vest)
+- Only count pieces that are the SAME fabric/color as part of the suit. A different-color inner layer is separate.
+
+Return JSON only: {{"category": "...", "garment_type": "...", "pieces": ["blazer", "skirt"], "complexity": "...", "fit_type": "..."}}"""
 
     # Use CLAUDE for classification (critical — Gemini misclassified suit as dress)
     class_result, class_think = claude_query(classification_prompt)
@@ -633,9 +641,24 @@ NO markdown, NO bold, NO headers."""
             kw in str(a).lower() for kw in ["invisible", "hidden", "internal", "fusible", "interfacing", "lining"]
         )]
 
-        is_multi = any(kw in garment_type.lower() for kw in ["suit", "3-piece", "set"])
-        if is_multi:
+        # Use classification pieces list to determine layout
+        pieces = classification.get("pieces", [])
+        has_vest = "vest" in [p.lower() for p in pieces] or "waistcoat" in [p.lower() for p in pieces]
+        has_skirt = "skirt" in [p.lower() for p in pieces]
+        has_trouser = any(p.lower() in ["trouser", "pant", "trousers", "pants"] for p in pieces)
+        is_multi = len(pieces) >= 2
+
+        if has_vest and has_trouser:
+            # 3-piece suit
             layout = "Draw each piece as a SEPARATE FLAT GARMENT in a grid. TOP ROW: Blazer front/back, Vest front/back. BOTTOM ROW: Trouser front/back."
+        elif has_skirt:
+            # Skirt suit (2 piece)
+            layout = "Draw each piece as a SEPARATE FLAT GARMENT. TOP ROW: Blazer front/back. BOTTOM ROW: Skirt front/back. NO VEST — this is a 2-piece skirt suit."
+        elif has_trouser and not has_vest:
+            # Pant suit (2 piece)
+            layout = "Draw each piece as a SEPARATE FLAT GARMENT. TOP ROW: Blazer front/back. BOTTOM ROW: Trouser front/back. NO VEST — this is a 2-piece pant suit."
+        elif is_multi:
+            layout = f"Draw each piece as a SEPARATE FLAT GARMENT: {', '.join(pieces)}. Each piece front and back."
         else:
             layout = "FRONT VIEW on left, BACK VIEW on right."
 
@@ -680,8 +703,12 @@ STRICT RULES:
         # Measurement diagram
         _report(progress_callback, "Measurement Diagram", "Generating", "", 91)
         desc_lower = garment_type.lower()
-        if is_multi:
-            meas_prompt = f"Measurement diagram for {description}. Show ALL pieces separately. Blazer measurements (G-J) + Trouser measurements (A-F). Legend on right."
+        if has_vest and has_trouser:
+            meas_prompt = f"Measurement diagram for {description}. Show ALL 3 pieces separately. Blazer measurements (G-J) + Trouser measurements (A-F). Legend on right."
+        elif has_skirt:
+            meas_prompt = f"Measurement diagram for {description}. Show 2 pieces: Blazer (G-J: Shoulder, Bust, Waist, Back Length) + Skirt (A-F: Waist, Hip, Thigh, Skirt Length, Hem Width, Rise). Legend on right. NO VEST."
+        elif has_trouser and is_multi:
+            meas_prompt = f"Measurement diagram for {description}. Show 2 pieces: Blazer (G-J) + Trouser (A-F). Legend on right. NO VEST."
         elif is_pant:
             meas_prompt = f"Measurement diagram for {description}. Pant measurements: A=Waist, B=Hip, C=Inseam, D=Outseam, E=Thigh, F=Leg opening."
         else:
