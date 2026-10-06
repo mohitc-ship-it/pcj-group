@@ -2662,22 +2662,10 @@ Do not invent details. Only label what is explicitly provided.
                 kw in garment_type for kw in c.get("garment_type", "").lower().split()
             ) and c.get("reason")]
             if relevant:
-                print(f"[LEARNING] Found {len(relevant)} past corrections for this garment type")
-                for c in relevant[-5:]:  # last 5 relevant corrections
-                    field = c.get("field_key", "")
-                    corrected = c.get("corrected_value", "")
-                    reason = c.get("reason", "")
-                    page = c.get("page_id", "")
-
-                    # Apply learned corrections
-                    if page in master and field in master[page]:
-                        old_val = master[page][field]
-                        if isinstance(old_val, str) and isinstance(corrected, str):
-                            # If the original value matches what was corrected before, apply
-                            original_val = c.get("original_value", "")
-                            if original_val and original_val in str(old_val):
-                                master[page][field] = corrected
-                                print(f"[LEARNING] Applied correction: {field} = '{corrected}' (reason: {reason})")
+                # Corrections are used as CONTEXT in prompts, not auto-applied
+                # Because: "WOOL → WOVEN SUITING" for skirt suit doesn't mean
+                # wool is always wrong — the next garment might actually be wool
+                print(f"[LEARNING] Found {len(relevant)} past corrections — used as prompt context, NOT auto-applied")
     except Exception as e:
         print(f"[LEARNING] Could not load corrections: {e}")
 

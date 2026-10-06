@@ -881,17 +881,19 @@ DRAWING RULES:
                        reference_image_path=front_img, output_path="assets/measurement_diagram.png")
         _report(progress_callback, "Measurement Diagram", "Generated", "", 93)
 
-    # ─── STEP 13: Apply continuous learning corrections ───
+    # ─── STEP 13: Continuous learning — corrections as CONTEXT, not overrides ───
+    # Corrections feed into prompts (Step 5 fabric, Step 6 construction already use corrections_context)
+    # We do NOT blindly replace values — AI considers corrections as preferences
+    # The correction may not apply to every garment (wool IS correct sometimes)
     if corrections:
-        for c in corrections:
-            page_id = c.get("page_id", "")
-            field_key = c.get("field_key", "")
-            corrected = c.get("corrected_value", "")
-            original = c.get("original_value", "")
-            if page_id in master and field_key in master[page_id]:
-                if isinstance(master[page_id][field_key], str) and original and original in str(master[page_id][field_key]):
-                    master[page_id][field_key] = corrected
-                    print(f"[LEARNING] Applied: {field_key} = '{corrected[:50]}'")
+        correction_notes = []
+        for c in corrections[-5:]:
+            correction_notes.append(f"Past correction: {c.get('field_key','')}: '{c.get('original_value','')[:30]}' → '{c.get('corrected_value','')[:30]}' (reason: {c.get('reason','')})")
+        if correction_notes:
+            master.setdefault("_confidence", {}).setdefault("_notes", []).append(
+                f"Learning: {len(corrections)} past corrections found for this garment type. Fed into AI prompts as preferences, not auto-applied."
+            )
+            print(f"[LEARNING] {len(corrections)} corrections found — used as context in prompts, NOT auto-applied")
 
     # ─── STEP 14: Save + Render ───
     _report(progress_callback, "Rendering PDF", "Generating 10-page PDF", "", 95)
