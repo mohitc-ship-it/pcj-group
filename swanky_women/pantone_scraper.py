@@ -24,8 +24,9 @@ def get_tcx_options(hex_code: str) -> list:
 
     try:
         with sync_playwright() as p:
-            # Must run headful to bypass Cloudflare anti-bot protection.
-            browser = p.chromium.launch(headless=False)
+            # Try headless first for server/CI, fall back to headful if Cloudflare blocks
+            headless_mode = os.environ.get("PANTONE_HEADLESS", "true").lower() in ("true", "1", "yes")
+            browser = p.chromium.launch(headless=headless_mode)
             context = browser.new_context()
             page = context.new_page()
 
@@ -68,7 +69,28 @@ def get_tcx_options(hex_code: str) -> list:
                 print(f"[pantone_scraper] Navigation or scraping failed: {e}")
             finally:
                 browser.close()
-                
+
+            # If headless mode got no results, retry headful (Cloudflare bypass)
+            if not tcx_colors and headless_mode:
+                print("[pantone_scraper] Headless got no results, retrying headful...")
+                try:
+                    browser = p.chromium.launch(headless=False)
+                    context = browser.new_context()
+                    page = context.new_page()
+                    page.on("response", handle_response)
+                    page.goto("https://www.pantone.com/color-finder", wait_until="networkidle")
+                    search_input = page.locator('input[type="text"]').first
+                    search_input.wait_for(state="visible", timeout=10000)
+                    search_input.fill(hex_code)
+                    try:
+                        page.locator('button:has-text("SEARCH")').click(timeout=3000)
+                    except:
+                        page.keyboard.press('Enter')
+                    page.wait_for_timeout(8000)
+                    browser.close()
+                except Exception as e2:
+                    print(f"[pantone_scraper] Headful retry also failed: {e2}")
+
     finally:
         # Restore environment variables
         if old_dyld is not None:
