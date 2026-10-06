@@ -49,10 +49,47 @@ def _get_claude():
             _claude_client = anthropic.Anthropic(api_key=api_key)
     return _claude_client
 
+# Cached system prompt — same across ALL tech packs (saves 90% on input tokens)
+CACHED_SYSTEM_PROMPT = """You are a senior fashion technical designer creating factory-ready tech packs.
+
+FABRIC DECISION TREE:
+- Knit (stretchy) → WOOL BLEND KNIT (FW) / COTTON KNIT (SS)
+- Woven + Sheen + Fluid → SILK
+- Woven + Matte + Heavy + Suit → WOVEN SUITING
+- Woven + Matte + Heavy + Coat → GABARDINE or WOOL
+- Woven + Matte + Light → COTTON
+- Sheer → CHIFFON or GEORGETTE
+
+CLASSIFICATION RULES:
+- Shirt/turtleneck under blazer is NOT a vest
+- 3-piece suit = blazer + vest (sleeveless with buttons) + trouser
+- Skirt suit = blazer + skirt (2 pieces, NO vest)
+- Only count pieces in SAME fabric as the suit
+
+NAMING: Use simple names — SILK not SILK SATIN, WOVEN SUITING not WOOL SUITING.
+Always include GSM range.
+
+CONSTRUCTION MINIMUMS: blazer=10, pant=10, blouse=8, dress=8, suit=10, skirt=6 rows.
+For suits group by piece: BLAZER — ..., SKIRT — ...
+
+POM COLUMNS:
+- Dress: bust, waist, hip (3)
+- Pants: waist, hip, inseam, outseam, leg_opening (5)
+- Knitwear: bust, shoulder, sleeve, body_length (4, NO waist/hip)
+- Tops: bust, waist, hip, shoulder, sleeve, length (6)
+- Skirt suit: bust, waist, hip, skirt_length (4)
+- 3-piece: bust, waist, hip, blazer_length, sleeve, pant_waist, pant_hip, pant_inseam (8)
+
+ACCESSORIES: Only list VISIBLE items. Do NOT guess invisible zippers.
+SKETCH: Only draw VISIBLE features. Match reference photo exactly."""
+
+
 def claude_query(prompt, images=None):
-    """Use Claude Haiku for critical reasoning. Falls back to Gemini if unavailable."""
+    """Use Claude Haiku with prompt caching. Falls back to Gemini if unavailable."""
     client = _get_claude()
     if not client:
+        if images:
+            return analyze_images(images, prompt)
         return llm_query(prompt)
 
     try:
@@ -72,8 +109,21 @@ def claude_query(prompt, images=None):
             model=CLAUDE_MODEL,
             max_tokens=4096,
             temperature=0,
+            system=[{
+                "type": "text",
+                "text": CACHED_SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"}
+            }],
             messages=[{"role": "user", "content": content}]
         )
+
+        # Log cache stats
+        usage = response.usage
+        if hasattr(usage, 'cache_read_input_tokens'):
+            cached = getattr(usage, 'cache_read_input_tokens', 0)
+            if cached > 0:
+                print(f"[Claude] Cache hit: {cached} tokens read from cache (90% savings)")
+
         text = response.content[0].text if response.content else ""
         return text, ""
     except Exception as e:
