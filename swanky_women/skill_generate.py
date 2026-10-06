@@ -276,17 +276,21 @@ Return JSON only: {{"category": "...", "garment_type": "...", "pieces": ["blazer
     }
 
     # ─── STEP 4: Color + Pantone ───
-    _report(progress_callback, "Color Extraction", "Extracting colors and matching Pantone", "", 25)
+    _report(progress_callback, "Color Extraction", "Extracting hex codes from garment", "", 25)
 
-    color_prompt = f"""Look at this garment and extract the dominant fabric color(s).
-For each distinct color, give:
-- color_name: descriptive name
-- color_hex: hex code (pick from the true fabric color, mid-tone, not shadow or highlight)
+    # Simple color extraction — just get hex codes, don't over-process
+    color_prompt = f"""Look at this garment. Extract ALL distinct fabric colors as hex codes.
 
-Return JSON array: [{{"color_name": "...", "color_hex": "#..."}}]
-Only include FABRIC colors, ignore skin, background, other garments."""
+Give me MULTIPLE hex samples for the main color from different areas:
+- One from the flattest, most evenly-lit area
+- One from a slightly different area
+- One for each additional distinct color (if multi-color garment)
 
-    # Use CLAUDE for color extraction (better hex accuracy)
+Do NOT pick from shadows or bright highlights. Pick the TRUE fabric color as a human eye sees it.
+
+Return JSON array: [{{"color_name": "descriptive name", "color_hex": "#XXXXXX", "area": "where you sampled from"}}]
+Include 3-5 hex samples total. Only FABRIC colors — ignore skin, background, inner layers."""
+
     color_result, _ = claude_query(color_prompt, images=images)
     colors = []
     try:
@@ -296,32 +300,58 @@ Only include FABRIC colors, ignore skin, background, other garments."""
     except:
         colors = [{"color_name": "Primary", "color_hex": "#808080"}]
 
-    # Pantone matching
-    for c in colors:
-        hex_val = c.get("color_hex", "#808080")
-        pantone_results = nearest_pantone_tcx(hex_val, top_k=3)
-        if pantone_results:
-            c["pantone_tcx"] = pantone_results[0]["code"]
-            c["pantone_options"] = pantone_results
-        else:
-            c["pantone_tcx"] = "Unknown"
-
-    # Try pantone.com scraper for primary color
+    # Pantone: send ALL hex samples to pantone.com scraper, collect ALL options
+    all_pantone_options = []
     try:
         from pantone_scraper import get_tcx_options
-        primary_hex = colors[0].get("color_hex", "").lstrip("#")
-        if primary_hex:
-            scraped = get_tcx_options(primary_hex)
-            if scraped:
-                code = scraped[0].get("code", "")
-                if "TCX" not in code:
-                    code += " TCX"
-                colors[0]["pantone_tcx"] = code
-                _report(progress_callback, "Pantone", f"Matched: {code} (from pantone.com)", "", 30)
+        for c in colors[:3]:  # first 3 hex samples
+            hex_clean = c.get("color_hex", "").lstrip("#")
+            if hex_clean:
+                _report(progress_callback, "Pantone", f"Checking pantone.com for #{hex_clean}", "", 28)
+                scraped = get_tcx_options(hex_clean)
+                if scraped:
+                    for opt in scraped:
+                        code = opt.get("code", "")
+                        if "TCX" not in code:
+                            code += " TCX"
+                        opt["code"] = code
+                        opt["source_hex"] = hex_clean
+                    all_pantone_options.extend(scraped)
     except Exception as e:
-        _report(progress_callback, "Pantone", f"Scraper unavailable, using Delta-E: {colors[0].get('pantone_tcx', '')}", str(e)[:100], 30)
+        print(f"[Pantone scraper] Failed: {e}")
 
-    primary_color = colors[0] if colors else {"color_name": "Primary", "color_hex": "#808080", "pantone_tcx": "Unknown"}
+    # Deduplicate pantone options by code
+    seen_codes = set()
+    unique_pantone = []
+    for opt in all_pantone_options:
+        if opt.get("code") not in seen_codes:
+            seen_codes.add(opt.get("code"))
+            unique_pantone.append(opt)
+
+    # If scraper gave results, use them. Otherwise fall back to Delta-E
+    if unique_pantone:
+        primary_pantone = unique_pantone[0]["code"]
+        _report(progress_callback, "Pantone", f"Matched: {primary_pantone} ({len(unique_pantone)} options from pantone.com)", "", 30)
+    else:
+        # Fallback to local Delta-E
+        hex_val = colors[0].get("color_hex", "#808080")
+        pantone_results = nearest_pantone_tcx(hex_val, top_k=5)
+        unique_pantone = [{"code": r["code"], "name": r["name"]} for r in pantone_results]
+        primary_pantone = pantone_results[0]["code"] if pantone_results else "Unknown"
+        _report(progress_callback, "Pantone", f"Delta-E match: {primary_pantone}", "", 30)
+
+    # Build final color list for the tech pack
+    primary_color = {
+        "color_name": colors[0].get("color_name", "Primary") if colors else "Primary",
+        "color_hex": colors[0].get("color_hex", "#808080") if colors else "#808080",
+        "pantone_tcx": primary_pantone,
+    }
+    # Add all pantone options as optional_colors for designer to pick
+    optional_colors = [{"color_name": opt.get("name", ""), "color_hex": colors[0].get("color_hex", ""), "pantone_tcx": opt.get("code", "")} for opt in unique_pantone[:5]]
+    if not optional_colors:
+        optional_colors = [primary_color]
+
+    _report(progress_callback, "Color", f"{len(optional_colors)} Pantone options for designer to pick", "", 31)
 
     # ─── STEP 5: Fabric ───
     _report(progress_callback, "Fabric Decision", "Determining fabric type", "", 35)
@@ -343,14 +373,21 @@ Season: {season}
 Garment type: {garment_type}
 {corrections_context}
 
-FABRIC DECISION TREE:
-- Knit (stretchy, visible loops) → WOOL BLEND KNIT (FW) / COTTON KNIT (SS)
-- Woven + Sheen → SILK (fluid) / SATEEN (structured)
-- Woven + Matte + Heavy → WOOL (FW) / COTTON TWILL (SS)
-- Woven + Matte + Light → COTTON POPLIN / COTTON SHIRTING
-- Sheer → CHIFFON / GEORGETTE
+FABRIC DECISION TREE — use the EXACT output name shown:
+- Knit (stretchy, visible loops) → "WOOL BLEND KNIT" (FW) / "COTTON KNIT" (SS)
+- Woven + Sheen + Fluid → "SILK"
+- Woven + Sheen + Structured → "SATEEN"
+- Woven + Matte + Heavy + Suit/Blazer/Formal → "WOVEN SUITING" (NOT "WOOL" — use "WOVEN SUITING")
+- Woven + Matte + Heavy + Coat → "GABARDINE" or "WOOL"
+- Woven + Matte + Light → "COTTON" or "COTTON POPLIN"
+- Sheer → "CHIFFON" or "GEORGETTE"
+- Jersey/Stretch → "JERSEY KNIT"
 
-USE SIMPLE NAMES: "SILK" not "SILK SATIN", "WOOL" not "WOOL SUITING"
+NAMING RULES:
+- For suits/blazers: always say "WOVEN SUITING" (not "WOOL SUITING" or "WOOL")
+- For silk garments: say "SILK" (not "SILK SATIN" or "SILK CHARMEUSE")
+- For cotton: say "COTTON" (not "COTTON TWILL" or "COTTON POPLIN" unless construction matters)
+- Always include GSM range
 
 {"User specified fabric: " + fabric_pref + ". USE THIS." if fabric_pref else ""}
 
@@ -559,7 +596,7 @@ NO markdown, NO bold, NO headers."""
         "color_name": primary_color.get("color_name", ""), "color_hex": primary_color.get("color_hex", ""),
         "pantone_tcx": primary_color.get("pantone_tcx", ""),
         "details": details_text,
-        "optional_colors": colors,
+        "optional_colors": optional_colors,
     }
 
     master["page_3"] = {
