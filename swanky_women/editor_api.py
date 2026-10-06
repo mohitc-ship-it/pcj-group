@@ -394,9 +394,8 @@ def _run_generation_job(job_id: str, image_paths: list, context: str, sample_siz
 
         if high_accuracy:
             # ─── HIGH ACCURACY MODE: Run /techpack skill via Claude Code CLI ───
-            _push_reasoning(job_id, "High Accuracy Mode", "Running Claude Opus via /techpack skill", "Using Claude Code CLI for maximum accuracy. This may take 3-5 minutes.", 2)
+            _push_reasoning(job_id, "High Accuracy Mode", "Starting Claude Opus via /techpack skill", "Using Claude Code CLI for maximum accuracy. This takes 3-5 minutes.", 2)
 
-            # Build the prompt for claude -p
             skill_prompt = f"""/techpack
 
 Images: {' '.join(image_paths)}
@@ -404,21 +403,58 @@ Images: {' '.join(image_paths)}
 Sample Size: {sample_size}
 """
             try:
-                result = subprocess.run(
+                import time as _time
+
+                # Use Popen for streaming output instead of run()
+                proc = subprocess.Popen(
                     ["claude", "-p", skill_prompt, "--allowedTools", "Read,Write,Bash,Edit,Glob,Grep"],
-                    capture_output=True, text=True,
-                    cwd=os.path.dirname(__file__),
-                    timeout=600,  # 10 min max
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    text=True, cwd=os.path.dirname(__file__),
                 )
 
-                if result.returncode == 0:
-                    _push_reasoning(job_id, "Claude Skill", "Completed", result.stdout[-500:] if result.stdout else "", 90)
-                    # Claude should have written master_filled.json and rendered PDF
+                # Stream stdout and push progress updates
+                output_lines = []
+                step_keywords = {
+                    "Step 1": ("Vision Analysis", 10),
+                    "Step 2": ("Pantone Matching", 20),
+                    "Step 3": ("Style Code", 25),
+                    "Step 4": ("Content Generation", 40),
+                    "Step 5": ("Writing JSON", 60),
+                    "Step 6": ("Detail Crops", 70),
+                    "Step 7": ("Image Generation", 80),
+                    "Step 8": ("PDF Rendering", 90),
+                    "Step 9": ("Verification", 95),
+                    "Pantone": ("Pantone", 22),
+                    "fabric": ("Fabric Decision", 35),
+                    "construction": ("Construction", 45),
+                    "accessories": ("Accessories", 50),
+                    "measurement": ("Measurements", 55),
+                    "sketch": ("Technical Sketch", 82),
+                    "label": ("Labels", 85),
+                    "PDF": ("PDF Rendering", 92),
+                }
+
+                start_time = _time.time()
+                for line in proc.stdout:
+                    line = line.strip()
+                    if line:
+                        output_lines.append(line)
+                        # Match keywords to push progress
+                        for kw, (step_name, prog) in step_keywords.items():
+                            if kw.lower() in line.lower():
+                                elapsed = int(_time.time() - start_time)
+                                _push_reasoning(job_id, step_name, line[:150], f"[{elapsed}s elapsed]", prog)
+                                break
+
+                proc.wait(timeout=600)
+
+                if proc.returncode == 0:
+                    _push_reasoning(job_id, "Claude Skill Complete", "All steps finished", "\n".join(output_lines[-10:]), 95)
                     from generate import generatePdf
                     pdf_path = generatePdf()
                 else:
-                    # Fall back to standard pipeline
-                    _push_reasoning(job_id, "Claude Skill", "Failed, falling back to standard", result.stderr[:200] if result.stderr else "", 10)
+                    stderr = proc.stderr.read() if proc.stderr else ""
+                    _push_reasoning(job_id, "Claude Skill", "Failed, falling back to standard", stderr[:200], 10)
                     from skill_generate import generate_techpack
                     pdf_path = generate_techpack(image_paths, context, True, sample_size, progress_callback=progress_callback, brand_logo_path=brand_logo_path)
 
@@ -968,16 +1004,19 @@ def get_accuracy_report():
         # --- 1. Pantone / Color ---
         pantone = draft.get("page_2", {}).get("pantone_tcx", "")
         optional_colors = draft.get("page_2", {}).get("optional_colors", [])
-        pantone_score = confidence_data.get("pantone_match", 0.75)
-        pantone_reasoning = f"Pantone {pantone} matched via pantone.com color finder + local Delta-E."
+        color_hex = draft.get("page_2", {}).get("color_hex", "")
+        pantone_score = confidence_data.get("pantone_match", 0.80 if pantone else 0.5)
+        pantone_reasoning = f"Primary: {pantone}" if pantone else "No Pantone code found."
+        if color_hex:
+            pantone_reasoning += f"\nHex: {color_hex}"
         if len(optional_colors) > 1:
-            pantone_reasoning += f" {len(optional_colors)} color options provided for designer review."
-        if pantone_score >= 0.9:
-            pantone_reasoning += " High confidence — multiple hex samples agreed on same code."
-        elif pantone_score >= 0.7:
-            pantone_reasoning += " Moderate confidence — color visually close but may need designer verification."
-        else:
-            pantone_reasoning += " Low confidence — significant shadow/lighting variation in source image."
+            pantone_reasoning += f"\n{len(optional_colors)} Pantone options available for designer:"
+            for oc in optional_colors[:5]:
+                pantone_reasoning += f"\n  • {oc.get('pantone_tcx', '')} — {oc.get('color_name', '')}"
+        elif len(optional_colors) == 1:
+            pantone_reasoning += "\nOnly 1 option — consider running Auto-Fix to add alternatives."
+        if not pantone:
+            pantone_reasoning += "\n⚠️ No Pantone code set. Use Auto-Fix or set manually."
         components.append({
             "name": "Pantone / Color",
             "score": round(pantone_score * 100),
@@ -989,16 +1028,33 @@ def get_accuracy_report():
         # --- 2. Fabric ---
         fabrics = draft.get("page_7", {}).get("fabrics", [])
         fabric_desc = fabrics[0].get("description", "") if fabrics else ""
-        fabric_score = confidence_data.get("fabric_identification", 0.5)
-        fabric_reason = fabric_reasoning or "Fabric identified from visual analysis of texture, drape, and sheen."
+        fabric_score = confidence_data.get("fabric_identification", 0.6 if fabric_desc else 0.3)
+        fabric_reason = ""
+        if fabric_reasoning:
+            fabric_reason = f"AI Reasoning: {fabric_reasoning}\n"
+        else:
+            fabric_reason = f"Current: {fabric_desc}\n" if fabric_desc else "No fabric identified.\n"
+
+        # Show fabric options if available
         if fabric_options:
-            top_opt = fabric_options[0]
-            fabric_reason += f"\nTop pick: {top_opt.get('fabric', '')} (confidence: {top_opt.get('confidence', '')})"
-            fabric_reason += f"\nReasoning: {top_opt.get('reasoning', '')}"
-            if len(fabric_options) > 1:
-                fabric_reason += f"\nAlternatives: {', '.join(o.get('fabric','') for o in fabric_options[1:])}"
+            fabric_reason += "\nOptions considered:"
+            for i, opt in enumerate(fabric_options[:5]):
+                name = opt.get('name', opt.get('fabric', ''))
+                why = opt.get('why', opt.get('reasoning', ''))
+                conf = opt.get('confidence', '')
+                fabric_reason += f"\n  {i+1}. {name}"
+                if why:
+                    fabric_reason += f" — {why}"
+                if conf:
+                    fabric_reason += f" ({int(float(conf)*100) if isinstance(conf, (int,float)) else conf}%)"
+
+        # Show cross-check if available
+        cross_check = draft.get("page_7", {}).get("_cross_checked") or draft.get("page_2", {}).get("_fabric_options", [])
+        if isinstance(cross_check, dict) and cross_check.get("note"):
+            fabric_reason += f"\n\nIndustry cross-check: {cross_check['note']}"
+
         if fabric_score < 0.7:
-            fabric_reason += "\n⚠️ Fabric cannot be precisely determined from images. Designer should verify composition."
+            fabric_reason += "\n\n⚠️ Fabric cannot be precisely determined from images alone. Designer should verify."
         components.append({
             "name": "Fabric Identification",
             "score": round(fabric_score * 100),
