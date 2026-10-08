@@ -639,6 +639,7 @@ async def start_generation(
     sample_size: Optional[str] = Form("M"),
     brand_logo: Optional[UploadFile] = File(None),
     high_accuracy: Optional[str] = Form("false"),
+    claude_model: Optional[str] = Form("claude-sonnet-4-6"),
 ):
     """
     Accepts 2+ garment images + context, starts generation in background.
@@ -686,6 +687,10 @@ async def start_generation(
 
     # Start background thread
     use_high_accuracy = high_accuracy.lower() in ("true", "1", "yes")
+
+    # Set the Claude model for this generation
+    os.environ["CLAUDE_MODEL"] = claude_model or "claude-sonnet-4-6"
+
     thread = threading.Thread(
         target=_run_generation_job,
         args=(job_id, saved_paths, context, sample_size, brand_logo_path),
@@ -712,6 +717,15 @@ def get_generation_status(job_id: str):
         "error": job.get("error"),
         "cost": job.get("cost"),            # cost breakdown when done
     })
+
+
+@app.get("/api/last-cost")
+def get_last_cost():
+    """Get cost from the most recent generation job."""
+    if not _jobs:
+        return JSONResponse({"cost": None})
+    latest = max(_jobs.values(), key=lambda j: j.get("progress", 0))
+    return JSONResponse({"cost": latest.get("cost"), "model": os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")})
 
 
 @app.get("/api/download-pdf")

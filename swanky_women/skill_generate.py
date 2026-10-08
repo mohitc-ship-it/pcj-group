@@ -693,19 +693,33 @@ Return JSON array: [{{"description": "...", "quantity_per_style": "...", "color"
     is_skirt = "skirt" in garment_type.lower()
     is_knit = any(kw in garment_type.lower() for kw in ["cardigan", "sweater", "pullover"])
 
+    # Determine POM columns based on garment type
+    is_skirt_suit = has_skirt and is_multi
+    if is_suit and not is_skirt_suit:
+        pom_instruction = "COLUMNS REQUIRED: size, bust, waist, hip, blazer_length, sleeve_length, pant_waist, pant_hip, pant_inseam"
+    elif is_skirt_suit:
+        pom_instruction = "COLUMNS REQUIRED: size, bust, waist, hip, skirt_length"
+    elif is_pant:
+        pom_instruction = "COLUMNS REQUIRED: size, waist, hip, inseam, outseam, leg_opening"
+    elif is_dress:
+        pom_instruction = "COLUMNS REQUIRED: size, bust, waist, hip"
+    elif is_skirt:
+        pom_instruction = "COLUMNS REQUIRED: size, waist, hip, skirt_length"
+    elif is_knit:
+        pom_instruction = "COLUMNS REQUIRED: size, bust, shoulder, sleeve_length, body_length (NO waist, NO hip)"
+    else:
+        pom_instruction = "COLUMNS REQUIRED: size, bust, waist, hip, shoulder, sleeve_length, body_length"
+
     measurement_prompt = f"""Generate a size chart for a {garment_type} ({category}).
 Size range: {size_range}. Sample size: {sample_size}.
 
-{"POM columns: bust, waist, hip, blazer_length, sleeve_length, pant_waist, pant_hip, pant_inseam (8 columns for suit)" if is_suit else ""}
-{"POM columns: waist, hip, inseam, outseam, leg_opening (5 columns for pants)" if is_pant and not is_suit else ""}
-{"POM columns: bust, waist, hip (3 columns for dress)" if is_dress else ""}
-{"POM columns: waist, hip, skirt_length (3 columns for skirt)" if is_skirt else ""}
-{"POM columns: bust, shoulder, sleeve_length, body_length (4 columns for knitwear, NO waist/hip)" if is_knit else ""}
-{"POM columns: bust, waist, hip, shoulder, sleeve_length, body_length (6 columns for tops)" if not any([is_suit, is_pant, is_dress, is_skirt, is_knit]) else ""}
+{pom_instruction}
 
+You MUST include ALL columns listed above. Do not skip any.
 Values in INCHES as ranges (e.g. "35-36"). Use US standard grading (+2" per size for bust/waist).
 
-Return JSON array, one object per size: [{{"size": "S", "bust": "34-35", ...}}]"""
+Return JSON array, one object per size. Example:
+[{{"size": "S", "bust": "34-35", "waist": "26-27", "hip": "36-37", "skirt_length": "22-24"}}]"""
 
     measurement_result, _ = llm_query(measurement_prompt, enable_thinking=True)
     measurements = []
@@ -918,7 +932,7 @@ DRAWING RULES:
         if has_vest and has_trouser:
             meas_prompt = f"Measurement diagram for {description}. Show ALL 3 pieces separately. Blazer measurements (G-J) + Trouser measurements (A-F). Legend on right."
         elif has_skirt:
-            meas_prompt = f"Measurement diagram for {description}. Show 2 pieces: Blazer (G-J: Shoulder, Bust, Waist, Back Length) + Skirt (A-F: Waist, Hip, Thigh, Skirt Length, Hem Width, Rise). Legend on right. NO VEST."
+            meas_prompt = f"Measurement diagram for {description}. Show 2 separate flat garment sketches: Blazer and Skirt. Add measurement lines with letter labels. Blazer: G=Shoulder, H=Bust, I=Waist, J=Back Length. Skirt: A=Waist, B=Hip, C=Thigh, D=Skirt Length, E=Hem Width, F=Rise. Small text legend on right. Do NOT draw text boxes or panels on top of the garments. Keep it clean — just the garment outlines with measurement arrows and letter labels."
         elif has_trouser and is_multi:
             meas_prompt = f"Measurement diagram for {description}. Show 2 pieces: Blazer (G-J) + Trouser (A-F). Legend on right. NO VEST."
         elif is_pant:

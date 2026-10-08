@@ -102,6 +102,7 @@ export default function UploadPage() {
   const [wearCategory, setWearCategory] = useState("Womenswear")
   const [buttonCount, setButtonCount] = useState("")
   const [highAccuracy, setHighAccuracy] = useState(false)
+  const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-6")
   const [brandLogo, setBrandLogo] = useState(null)   // { file, preview }
   const [hasPreviousInput, setHasPreviousInput] = useState(false)
 
@@ -236,7 +237,7 @@ export default function UploadPage() {
     try {
       await saveInputToStorage()  // persist fields before navigating away
       const imageFiles = images.map(img => img.file)
-      const { job_id } = await triggerGeneration(imageFiles, buildContext(), sampleSize, brandLogo?.file || null, highAccuracy)
+      const { job_id } = await triggerGeneration(imageFiles, buildContext(), sampleSize, brandLogo?.file || null, highAccuracy, claudeModel)
       navigate(`/generating?job_id=${job_id}`)
     } catch (err) {
       setError(err.message || "Failed to start generation. Is the backend running?")
@@ -420,18 +421,17 @@ export default function UploadPage() {
                   />
                 </div>
 
-                {/* High Accuracy Mode */}
-                <div className="flex items-center justify-between bg-violet-600/10 border border-violet-500/20 rounded-xl px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold text-violet-200">High Accuracy Mode</p>
-                    <p className="text-xs text-white/40 mt-0.5">Uses Claude Opus via CLI for maximum accuracy (~3-5 min, uses Claude subscription)</p>
-                  </div>
-                  <button
-                    onClick={() => setHighAccuracy(!highAccuracy)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${highAccuracy ? 'bg-violet-500' : 'bg-white/10'}`}
+                {/* AI Model Selector */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-white/60 uppercase tracking-widest">AI Model</label>
+                  <select
+                    value={claudeModel}
+                    onChange={(e) => setClaudeModel(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 transition-all duration-200"
                   >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${highAccuracy ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
+                    <option value="claude-sonnet-4-6">Sonnet 4.6 — Best quality (~$0.39/pack)</option>
+                    <option value="claude-haiku-4-5">Haiku 4.5 — Fastest, cheapest (~$0.19/pack)</option>
+                  </select>
                 </div>
 
                 {/* Brand Logo Upload */}
