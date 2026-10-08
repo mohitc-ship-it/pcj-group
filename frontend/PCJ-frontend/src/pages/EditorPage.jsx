@@ -6,7 +6,7 @@ import PageEditor from "../editor/PageEditor"
 import AccuracyPanel from "../components/AccuracyPanel"
 import {
   FileText, Layers, PenTool, Package, Hammer,
-  Ruler, Shirt, Image, Tag, Download, RotateCcw, Save, Check, Loader2, LayoutTemplate, BarChart3, Plus
+  Ruler, Shirt, Image, Tag, Download, RotateCcw, Save, Check, Loader2, LayoutTemplate, BarChart3, Plus, DollarSign
 } from "lucide-react"
 
 const PAGES = [
@@ -31,6 +31,11 @@ export default function EditorPage() {
   const [loadingPage, setLoadingPage] = useState(false)
   const [saveState, setSaveState] = useState("idle")
   const [showAccuracy, setShowAccuracy] = useState(false)
+  const [lastCost, setLastCost] = useState(null)
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/last-cost").then(r => r.json()).then(d => setLastCost(d)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     setLoadingPage(true)
@@ -123,6 +128,30 @@ export default function EditorPage() {
             <BarChart3 className="w-4 h-4" />
             {showAccuracy ? "Hide Accuracy" : "Accuracy Report"}
           </button>
+
+          {/* Generation Cost */}
+          {lastCost?.cost && (
+            <div className="bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2 text-xs">
+              <div className="flex items-center gap-1.5 text-white/50 mb-1">
+                <DollarSign className="w-3 h-3" />
+                <span className="font-semibold">Generation Cost</span>
+              </div>
+              <div className="flex justify-between text-white/40">
+                <span>Images</span>
+                <span>${lastCost.cost.image_generation?.toFixed(4)}</span>
+              </div>
+              <div className="flex justify-between text-white/40">
+                <span>AI/Vision</span>
+                <span>${lastCost.cost.text_vision_llm?.toFixed(4)}</span>
+              </div>
+              <div className="flex justify-between text-white font-bold mt-1 pt-1 border-t border-white/10">
+                <span>Total</span>
+                <span>${lastCost.cost.total?.toFixed(4)}</span>
+              </div>
+              {lastCost.model && <p className="text-white/20 mt-1">Model: {lastCost.model}</p>}
+              {lastCost.cost.breakdown && <p className="text-white/20">{lastCost.cost.breakdown}</p>}
+            </div>
+          )}
 
           <button
             onClick={downloadPdf}

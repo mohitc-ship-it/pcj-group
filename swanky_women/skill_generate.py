@@ -49,39 +49,25 @@ def _get_claude():
             _claude_client = anthropic.Anthropic(api_key=api_key)
     return _claude_client
 
-# Cached system prompt — same across ALL tech packs (saves 90% on input tokens)
-CACHED_SYSTEM_PROMPT = """You are a senior fashion technical designer creating factory-ready tech packs.
+# Load the FULL skill prompt as cached system prompt — gives API calls the same
+# knowledge as Claude Code mode (800 lines of trained rules from 26 PDFs)
+_SKILL_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude", "commands", "techpack.md")
+_CACHED_SYSTEM_PROMPT = None
 
-FABRIC DECISION TREE:
-- Knit (stretchy) → WOOL BLEND KNIT (FW) / COTTON KNIT (SS)
-- Woven + Sheen + Fluid → SILK
-- Woven + Matte + Heavy + Suit → WOVEN SUITING
-- Woven + Matte + Heavy + Coat → GABARDINE or WOOL
-- Woven + Matte + Light → COTTON
-- Sheer → CHIFFON or GEORGETTE
+def _get_cached_system_prompt():
+    global _CACHED_SYSTEM_PROMPT
+    if _CACHED_SYSTEM_PROMPT is None:
+        try:
+            with open(_SKILL_PROMPT_PATH) as f:
+                _CACHED_SYSTEM_PROMPT = f.read()
+            print(f"[Skill] Loaded full skill prompt: {len(_CACHED_SYSTEM_PROMPT)} chars")
+        except Exception:
+            # Fallback to short version if skill file not found
+            _CACHED_SYSTEM_PROMPT = "You are a senior fashion technical designer creating factory-ready tech packs. Use simple fabric names (SILK not SILK SATIN). Only draw VISIBLE features on sketches."
+            print("[Skill] Using fallback short prompt")
+    return _CACHED_SYSTEM_PROMPT
 
-CLASSIFICATION RULES:
-- Shirt/turtleneck under blazer is NOT a vest
-- 3-piece suit = blazer + vest (sleeveless with buttons) + trouser
-- Skirt suit = blazer + skirt (2 pieces, NO vest)
-- Only count pieces in SAME fabric as the suit
-
-NAMING: Use simple names — SILK not SILK SATIN, WOVEN SUITING not WOOL SUITING.
-Always include GSM range.
-
-CONSTRUCTION MINIMUMS: blazer=10, pant=10, blouse=8, dress=8, suit=10, skirt=6 rows.
-For suits group by piece: BLAZER — ..., SKIRT — ...
-
-POM COLUMNS:
-- Dress: bust, waist, hip (3)
-- Pants: waist, hip, inseam, outseam, leg_opening (5)
-- Knitwear: bust, shoulder, sleeve, body_length (4, NO waist/hip)
-- Tops: bust, waist, hip, shoulder, sleeve, length (6)
-- Skirt suit: bust, waist, hip, skirt_length (4)
-- 3-piece: bust, waist, hip, blazer_length, sleeve, pant_waist, pant_hip, pant_inseam (8)
-
-ACCESSORIES: Only list VISIBLE items. Do NOT guess invisible zippers.
-SKETCH: Only draw VISIBLE features. Match reference photo exactly."""
+CACHED_SYSTEM_PROMPT = property(lambda self: _get_cached_system_prompt())  # lazy load
 
 
 def claude_query(prompt, images=None):
@@ -105,13 +91,14 @@ def claude_query(prompt, images=None):
                     content.append({"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}})
         content.append({"type": "text", "text": prompt})
 
+        sys_prompt = _get_cached_system_prompt()
         response = client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=4096,
             temperature=0,
             system=[{
                 "type": "text",
-                "text": CACHED_SYSTEM_PROMPT,
+                "text": sys_prompt,
                 "cache_control": {"type": "ephemeral"}
             }],
             messages=[{"role": "user", "content": content}]
