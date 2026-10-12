@@ -337,18 +337,12 @@
                     <h3>DETAILS</h3>
                     <table class="thumbnail-table">
                         <tr>
-                            {% if page_2.detail_images %}
-                                {% for img_url in page_2.detail_images %}
-                                    <td><img src="{{ img_url }}" alt="Detail {{ loop.index }}"></td>
-                                {% endfor %}
-                            {% else %}
-                                {% if page_2.detail_image_1_url %}<td><img src="{{ page_2.detail_image_1_url }}" alt="Detail 1"></td>{% endif %}
-                                {% if page_2.detail_image_2_url %}<td><img src="{{ page_2.detail_image_2_url }}" alt="Detail 2"></td>{% endif %}
-                                {% if page_2.detail_image_3_url %}<td><img src="{{ page_2.detail_image_3_url }}" alt="Detail 3"></td>{% endif %}
-                                {% if page_2.detail_image_4_url %}<td><img src="{{ page_2.detail_image_4_url }}" alt="Detail 4"></td>{% endif %}
-                                {% if page_2.detail_image_5_url %}<td><img src="{{ page_2.detail_image_5_url }}" alt="Detail 5"></td>{% endif %}
-                                {% if page_2.detail_image_6_url %}<td><img src="{{ page_2.detail_image_6_url }}" alt="Detail 6"></td>{% endif %}
-                            {% endif %}
+                            {% if page_2.detail_image_1_url %}<td><img src="{{ page_2.detail_image_1_url }}" alt="Detail 1"></td>{% endif %}
+                            {% if page_2.detail_image_2_url %}<td><img src="{{ page_2.detail_image_2_url }}" alt="Detail 2"></td>{% endif %}
+                            {% if page_2.detail_image_3_url %}<td><img src="{{ page_2.detail_image_3_url }}" alt="Detail 3"></td>{% endif %}
+                            {% if page_2.detail_image_4_url %}<td><img src="{{ page_2.detail_image_4_url }}" alt="Detail 4"></td>{% endif %}
+                            {% if page_2.detail_image_5_url %}<td><img src="{{ page_2.detail_image_5_url }}" alt="Detail 5"></td>{% endif %}
+                            {% if page_2.detail_image_6_url %}<td><img src="{{ page_2.detail_image_6_url }}" alt="Detail 6"></td>{% endif %}
                         </tr>
                     </table>
                 </td>

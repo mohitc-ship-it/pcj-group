@@ -44,67 +44,100 @@ IMAGE_MODELS = [
 VERIFY_MODEL = os.getenv("VERIFY_MODEL", "google/gemini-2.5-flash")
 
 
-def verify_sketch_labels(sketch_path: str, callout_list: list) -> str:
-    """Use vision LLM to check if sketch labels point to correct garment locations.
-    Returns empty string if OK, or description of issues if wrong."""
+def verify_sketch_labels(
+    sketch_path: str,
+    callout_list: list = None,
+    garment_type: str = "",
+    reference_image_path: str = None,
+    expected_pieces: list = None
+) -> str:
+    """Use vision LLM to audit the technical CAD flat sketch for:
+    1. Piece accuracy: checks if only the expected garment is drawn (no extra blazers/skirts/pants).
+    2. Text & spelling: checks if all labels are spelled correctly in standard English (no typos like EXTACT or SIBNE).
+    3. Label placement: checks if leader lines point to the correct garment edges.
+    Returns empty string if OK, or concise correction instructions if defects found."""
     api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key or not os.path.exists(sketch_path):
-        return ""  # skip verification if no key or no image
+    if not os.path.exists(sketch_path):
+        return ""
 
-    try:
-        data_url = _image_to_base64_url(sketch_path)
-        callouts_str = ", ".join(callout_list)
+    callout_list = callout_list or []
+    callouts_str = ", ".join(callout_list)
 
-        prompt = f"""Look at this technical garment sketch. It has callout labels with leader lines pointing to garment features.
+    prompt = f"""You are a senior fashion technical designer quality auditor.
+Inspect this 2D CAD apparel technical flat sketch (Image 1){' and reference photo (Image 2)' if reference_image_path and os.path.exists(reference_image_path) else ''}.
 
-Check if each label's leader line points to the CORRECT location on the garment:
-- SIDE SEAM should point to the SIDE EDGE of the garment (not center)
-- SHOULDER SEAM should point to the TOP of the shoulder
-- ARMHOLE SEAM should point to where sleeve meets body
-- CENTER BACK SEAM should point to the center line of the back view
-- HEM should point to the bottom edge
-- COLLAR/NECKLINE should point to the neck area
-- CUFF should point to the wrist/end of sleeve
+Target Garment: {garment_type or 'Apparel garment'}
+Expected Pieces: {expected_pieces or [garment_type] if garment_type else 'Single standalone garment'}
 
-Expected labels: {callouts_str}
+CRITICAL DEFECT CHECKLIST:
+1. UNREQUESTED EXTRA PIECES (MAJOR DEFECT):
+   - Does Image 1 draw ONLY the requested piece(s)?
+   - REJECT if an unrequested outer blazer, jacket, coat, pants, or skirt is drawn (e.g. user uploaded a turtleneck or knit top, but the sketch drew a blazer over it, or drew an unwanted skirt or trousers).
+2. SPELLING & GIBBERISH TEXT (MAJOR DEFECT):
+   - Inspect ALL uppercase callout text labels and notes in the sketch.
+   - REJECT if any label is misspelled or garbled (e.g. "EXTACT", "SIBNE SEAM", "SLEVE", or pseudo-letters). All words must be standard English.
+3. DRAWING STYLE:
+   - Must be clean 2D vector CAD apparel specification black line art on pure white background showing FRONT and BACK views.
+4. LEADER LINE PLACEMENT:
+   - Leader lines must point accurately: SIDE SEAM → outer side edge, SHOULDER → top shoulder, HEM → bottom edge, CUFF → wrist.
+   {f"Expected callout features: {callouts_str}" if callouts_str else ""}
 
-If ALL labels point to the correct locations, respond with exactly: OK
-If any label points to the WRONG location, respond with a brief description of what's wrong.
-Example: "SIDE SEAM label points to center front instead of the side edge"
+If the sketch has ZERO defects and accurately depicts ONLY the target garment, respond with exactly: OK
+If ANY defect exists, respond with a concise, direct instruction for the redraw.
+Example: "REJECT: Drew an unrequested outer blazer and skirt. Draw ONLY the single turtleneck top front and back. Remove misspelled label 'EXTACT'."
 
-Respond with ONLY "OK" or the issue description. Nothing else."""
+Respond with ONLY "OK" or the specific defect instruction. Nothing else."""
 
-        payload = {
-            "model": VERIFY_MODEL,
-            "messages": [{"role": "user", "content": [
+    # Try OpenRouter first
+    if api_key:
+        try:
+            data_url = _image_to_base64_url(sketch_path)
+            content_blocks = [
                 {"type": "image_url", "image_url": {"url": data_url}},
-                {"type": "text", "text": prompt}
-            ]}],
-            "max_tokens": 200,
-            "temperature": 0,
-        }
+            ]
+            if reference_image_path and os.path.exists(reference_image_path):
+                ref_data_url = _image_to_base64_url(reference_image_path)
+                content_blocks.append({"type": "image_url", "image_url": {"url": ref_data_url}})
+            content_blocks.append({"type": "text", "text": prompt})
 
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=payload, timeout=30,
-        )
+            payload = {
+                "model": VERIFY_MODEL,
+                "messages": [{"role": "user", "content": content_blocks}],
+                "max_tokens": 250,
+                "temperature": 0,
+            }
 
-        if response.status_code != 200:
-            return ""  # skip on error
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=payload, timeout=30,
+            )
 
-        msg = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        if isinstance(msg, list):
-            msg = " ".join(p.get("text", "") for p in msg if isinstance(p, dict))
+            if response.status_code == 200:
+                msg = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                if isinstance(msg, list):
+                    msg = " ".join(p.get("text", "") for p in msg if isinstance(p, dict))
+                msg = msg.strip()
+                if msg.upper() == "OK" or not msg:
+                    return ""
+                return msg
+        except Exception as e:
+            print(f"  OpenRouter verification error: {e}")
 
-        msg = msg.strip()
-        if msg.upper() == "OK" or not msg:
+    # Fallback to local llm.analyze_images if OpenRouter unavailable
+    try:
+        from llm import analyze_images
+        imgs = [sketch_path]
+        if reference_image_path and os.path.exists(reference_image_path):
+            imgs.append(reference_image_path)
+        txt, _ = analyze_images(imgs, prompt)
+        txt = txt.strip()
+        if txt.upper() == "OK" or not txt:
             return ""
-        return msg
-
+        return txt
     except Exception as e:
-        print(f"  Verification error: {e}")
-        return ""  # skip on error
+        print(f"  LLM verification fallback error: {e}")
+        return ""
 
 
 def _image_to_base64_url(path: str) -> str:
@@ -443,22 +476,24 @@ IMPORTANT: This is a SKIRT. Use ONLY skirt measurements."""
 
 IMPORTANT: This is a DRESS. Use dress-specific measurements."""
     else:
-        # Default: upper body (coat, jacket, cardigan, shirt, blouse)
-        measurement_points = """- A = Chest/Bust width (horizontal double-arrow across chest)
+        # Default: upper body (coat, jacket, cardigan, shirt, blouse, top)
+        measurement_points = """- A = Chest/Bust width (horizontal double-arrow across chest 1" below armholes)
 - B = Waist width (horizontal double-arrow at waist)
-- C = Shoulder width (horizontal double-arrow across shoulders)
-- D = Sleeve length (vertical line from shoulder to cuff)
-- E = Total garment length (vertical line from shoulder to hem)
-- F = Front length (shoulder to front hem)"""
+- C = Shoulder width (horizontal double-arrow across shoulder points)
+- D = Sleeve length (double-arrow along sleeve from shoulder to cuff)
+- E = Body length / HPS to Hem (single vertical line from High Point Shoulder straight down to hem)
+- F = Sweep / Bottom Hem width (horizontal double-arrow across bottom hem)"""
 
     measurement_prompt = f"""Based on this garment image, create a clean technical flat sketch measurement diagram for a {args.description}.
 
-Draw FRONT VIEW and BACK VIEW flat sketches (black line art, no color, no shading) with measurement indicator lines:
+Draw FRONT VIEW and BACK VIEW flat sketches (crisp vector black line art, pure white background, no color, no gray shading, no smudges or shadows on back view) with measurement indicator lines:
 {measurement_points}
 
 Each measurement line must have its letter label (A, B, C, etc.) clearly visible.
+Clean bottom legend: A Bust | B Waist | C Shoulder | D Sleeve | E Body length | F Sweep.
+Do NOT draw two competing vertical length arrows.
 The sketch must match the EXACT silhouette and proportions of the reference garment.
-Pure black line art on white background. No color. No shading."""
+Pure black line art on white background. No color. No shading. No center-back smudges."""
 
     generate_image(
         measurement_prompt,

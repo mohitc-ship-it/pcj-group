@@ -11,7 +11,8 @@ export default function SketchEditor({ value, onUpdated }) {
   function toDisplayUrl(path) {
     if (!path) return null
     if (path.startsWith("http")) return path
-    if (path.includes("assets/")) return "http://localhost:8000/" + path.split("assets/")[0] + "assets/" + path.split("assets/")[1]
+    const base = import.meta.env.VITE_API_BASE_URL || ""
+    if (path.includes("assets/")) return base + "/" + path.split("assets/")[0] + "assets/" + path.split("assets/")[1]
     return path
   }
 

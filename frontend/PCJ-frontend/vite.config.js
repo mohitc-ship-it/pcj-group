@@ -24,4 +24,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Use _a/ instead of assets/ to avoid conflict with backend /assets/ route
+    assetsDir: "_a",
+  },
 })

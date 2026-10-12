@@ -7,56 +7,223 @@
         "page_5": "product_construction",
         "page_6": "measurements",
         "page_7": "fabrics_quality_standards",
-        "page_8": "reference_image_page",
+        "page_8": "size_chart_page",
         "page_9": "wash_and_care_label"
     },
     "header": {
-        "date": "05/10/2026",
-        "season": "Fall / Winter",
+        "date": "09/10/2026",
+        "season": "Fall / Winter 2025",
         "collection": "JC PRIVATE",
-        "style_name": "JPC-H-FA/WI25-PNT",
-        "description": "Men's Slim-Fit Dress Pant",
-        "category": "Menswear",
-        "brand": "HIDDEN",
+        "style_name": "JPC-PRI-FA/WI25-TRT",
+        "description": "Turtleneck",
+        "category": "Womenswear",
+        "brand": "PRIVY",
         "size_range": "S - XL",
         "total_order_quantity": "",
-        "sample_size_1st": "S",
+        "sample_size_1st": "M",
         "sample_pre_production": "",
         "sample_production": ""
     },
     "page_1": {
-        "garment_front_view_url": "assets/front.png",
-        "garment_back_view_url": "assets/back.png",
-        "style_number": "JPC-H-FA/WI25-PNT",
-        "date": "05-10-2026",
-        "brand_name": "HIDDEN",
+        "garment_front_view_url": "assets/image_0_front.png",
+        "garment_back_view_url": "assets/image_1_back.png",
+        "style_number": "JPC-PRI-FA/WI25-TRT",
+        "date": "09-10-2026",
+        "brand_name": "PRIVY",
         "collection_name": "JC PRIVATE",
         "brand_logo": "assets/brand_logo.png",
-        "season": "FALL / WINTER"
+        "season": "FALL / WINTER 2025"
     },
     "page_2": {
-        "front_image_url": "assets/front.png",
-        "back_image_url": "assets/back.png",
-        "detail_image_1_url": "assets/grid_0.png",
-        "detail_image_2_url": "assets/grid_1.png",
-        "detail_image_3_url": "assets/grid_2.png",
-        "detail_image_4_url": "",
-        "detail_image_5_url": "",
-        "detail_image_6_url": "",
-        "color_name": "Provincial Blue",
-        "color_hex": "#6B7B8A",
-        "pantone_tcx": "18-4220 TCX",
-        "details": {
-            "silhouette": "Slim-fit flat front dress trouser with straight leg and mid-rise waist",
-            "sleeves": "",
-            "other_features": "Flat front with no pleats, slant side pockets, front fly with hook and bar closure, belt loops, front crease, two back welt pockets with button closure, back darts, center back seam"
-        },
+        "front_image_url": "assets/image_0_front.png",
+        "back_image_url": "assets/image_1_back.png",
+        "detail_image_1_url": "assets/detail_crop_1_front_collar_neckline.png",
+        "detail_image_2_url": "assets/detail_crop_2_front_mid_closure.png",
+        "detail_image_3_url": "assets/detail_crop_3_front_lower_hem.png",
+        "detail_image_4_url": "assets/detail_crop_4_back_upper_neckline.png",
+        "detail_image_5_url": "assets/detail_crop_5_back_mid_contour.png",
+        "detail_image_6_url": "assets/detail_crop_6_back_lower_hem.png",
+        "color_name": "Delicioso",
+        "color_hex": "#2C1810",
+        "pantone_tcx": "19-0840 TCX",
+        "details": "Silhouette: Fitted, body-hugging silhouette with a slim tapered waist and hip-length hem.\nSleeves: Long fitted sleeves with plain hemmed cuffs, set-in sleeve construction.\nOther Features:\nClassic fold-over turtleneck collar, double-layer tube construction\nNo closures — pull-on style with stretch knit fabric\nClean hemline at hip length with coverstitch finish\nPrincess seam shaping through body for fitted silhouette",
         "optional_colors": [
             {
-                "color_name": "Provincial Blue",
-                "color_hex": "#6B7B8A",
-                "pantone_tcx": "18-4220 TCX"
+                "color_name": "Delicioso",
+                "color_hex": "#2C1810",
+                "pantone_tcx": "19-0840 TCX",
+                "pantone_options": [
+                    {
+                        "code": "19-0840 TCX",
+                        "name": "Delicioso",
+                        "hex": "#2A1A0E"
+                    },
+                    {
+                        "code": "19-1111 TCX",
+                        "name": "Black Coffee",
+                        "hex": "#2A1A0E"
+                    },
+                    {
+                        "code": "19-0914 TCX",
+                        "name": "Solemnity",
+                        "hex": "#2A1A0E"
+                    },
+                    {
+                        "code": "19-1106 TCX",
+                        "name": "Mole",
+                        "hex": "#392D2B"
+                    },
+                    {
+                        "code": "19-1018 TCX",
+                        "name": "Ganache",
+                        "hex": "#34292A"
+                    },
+                    {
+                        "code": "19-0712 TCX",
+                        "name": "Demitasse",
+                        "hex": "#40342B"
+                    },
+                    {
+                        "code": "19-1110 TCX",
+                        "name": "Chocolate Plum",
+                        "hex": "#3C2D2E"
+                    },
+                    {
+                        "code": "19-0915 TCX",
+                        "name": "Coffee Bean",
+                        "hex": "#40312F"
+                    }
+                ]
             }
+        ],
+        "pantone_options": [
+            {
+                "code": "19-0840 TCX",
+                "name": "Delicioso",
+                "hex": "#2A1A0E"
+            },
+            {
+                "code": "19-1111 TCX",
+                "name": "Black Coffee",
+                "hex": "#2A1A0E"
+            },
+            {
+                "code": "19-0914 TCX",
+                "name": "Solemnity",
+                "hex": "#2A1A0E"
+            },
+            {
+                "code": "19-1106 TCX",
+                "name": "Mole",
+                "hex": "#392D2B"
+            },
+            {
+                "code": "19-1018 TCX",
+                "name": "Ganache",
+                "hex": "#34292A"
+            },
+            {
+                "code": "19-0712 TCX",
+                "name": "Demitasse",
+                "hex": "#40342B"
+            },
+            {
+                "code": "19-1110 TCX",
+                "name": "Chocolate Plum",
+                "hex": "#3C2D2E"
+            },
+            {
+                "code": "19-0915 TCX",
+                "name": "Coffee Bean",
+                "hex": "#40312F"
+            }
+        ],
+        "optional_image_urls": [
+            "assets/ai_detail_0_collar_and_lapel_construction.png",
+            "assets/ai_detail_0_deep_v-neck_ribbed_band_&_collar_line.png",
+            "assets/ai_detail_0_front_turtleneck_collar_&_neck_seam.png",
+            "assets/ai_detail_0_front_turtleneck_collar_&_neckline_seam.png",
+            "assets/ai_detail_0_front_waistband_and_fly_closure.png",
+            "assets/ai_detail_0_front_waistband_and_fly_construction.png",
+            "assets/ai_detail_0_gathered_high_neckband_and_bodice_shirring.png",
+            "assets/ai_detail_0_high_turtleneck_collar_front.png",
+            "assets/ai_detail_0_notch_lapel_&_collar_gorge_construction.png",
+            "assets/ai_detail_0_notch_lapel_and_collar_construction.png",
+            "assets/ai_detail_0_notch_lapel_and_collar_gorge_seam_construction.png",
+            "assets/ai_detail_0_notch_lapel_and_gorge_seam_construction.png",
+            "assets/ai_detail_0_notched_lapel_&_collar_gorge_construction.png",
+            "assets/ai_detail_0_peak_lapel_&_gorge_line_construction.png",
+            "assets/ai_detail_0_peak_lapel_&_gorge_seam_construction.png",
+            "assets/ai_detail_0_peak_lapel_and_collar_gorge_construction.png",
+            "assets/ai_detail_0_turtleneck_collar_and_neckband_fold.png",
+            "assets/ai_detail_1_back_collar_stand_&_upper_back_join.png",
+            "assets/ai_detail_1_back_trouser_double_welt_pocket.png",
+            "assets/ai_detail_1_chest_welt_pocket_with_pocket_square.png",
+            "assets/ai_detail_1_contrast_rib-welt_front_pocket.png",
+            "assets/ai_detail_1_double-breasted_button_array_and_flap_pocket_trim.png",
+            "assets/ai_detail_1_flap_pocket_&_button_closure_placement.png",
+            "assets/ai_detail_1_flap_pocket_&_tonal_button_detail.png",
+            "assets/ai_detail_1_front_set-in_sleeve_&_shoulder_armscye.png",
+            "assets/ai_detail_1_front_side-entry_pocket_opening.png",
+            "assets/ai_detail_1_front_slant_pocket_construction.png",
+            "assets/ai_detail_1_hip_flap_welt_pocket_&_button_attachment.png",
+            "assets/ai_detail_1_rear_high_collar_and_neckline_attachment.png",
+            "assets/ai_detail_1_tailored_flap_welt_pocket_construction.png",
+            "assets/ai_detail_1_tailored_waist_flap_pocket_and_button_placement.png",
+            "assets/ai_detail_1_turtleneck_collar_and_neck_join_back.png",
+            "assets/ai_detail_1_waist_flap_pocket_&_button_detailing.png",
+            "assets/ai_detail_1_waist_tie_and_belt_loop.png",
+            "assets/ai_detail_2_back_left_welt_pocket_with_button.png",
+            "assets/ai_detail_2_back_left_welt_pocket_with_button_closure.png",
+            "assets/ai_detail_2_back_yoke_and_pleat_detail.png",
+            "assets/ai_detail_2_contrast_ribbed_sleeve_cuff_finish.png",
+            "assets/ai_detail_2_curved_peplum_hem_and_waist_seam_transition.png",
+            "assets/ai_detail_2_fitted_sleeve_&_clean-finished_cuff.png",
+            "assets/ai_detail_2_front_sleeve_cuff_hem_finishing.png",
+            "assets/ai_detail_2_posterior_sleeve_cap_and_armscye_insertion.png",
+            "assets/ai_detail_2_set-in_armscye_and_shoulder_seam.png",
+            "assets/ai_detail_2_set-in_sleeve_cuff_hem_finishing.png",
+            "assets/ai_detail_2_sleeve_cuff_hem_&_vent_finishing.png",
+            "assets/ai_detail_2_sleeve_cuff_hem_and_vent_finishing.png",
+            "assets/ai_detail_2_sleeve_cuff_hem_finishing.png",
+            "assets/ai_detail_2_sleeve_hem_&_cuff_finish.png",
+            "assets/ai_detail_2_sleeve_hem_and_vent_finishing.png",
+            "assets/ai_detail_2_waistcoat_button_placket_and_fastening.png",
+            "assets/ai_detail_3_back_contoured_princess_seams_and_peplum_hem.png",
+            "assets/ai_detail_3_back_contoured_princess_seams_and_peplum_hem_flare.png",
+            "assets/ai_detail_3_back_hemline_&_contour_finishing.png",
+            "assets/ai_detail_3_back_princess_seams_&_peplum_flare_hem.png",
+            "assets/ai_detail_3_back_right_welt_pocket_with_button.png",
+            "assets/ai_detail_3_back_right_welt_pocket_with_button_closure.png",
+            "assets/ai_detail_3_back_set-in_armscye_construction.png",
+            "assets/ai_detail_3_contoured_back_princess_seams_&_peplum_flare.png",
+            "assets/ai_detail_3_contrasting_ribbed_hem_&_placket_corner.png",
+            "assets/ai_detail_3_curved_cutaway_peplum_hem_sweep.png",
+            "assets/ai_detail_3_fitted_back_princess_seams_&_peplum_sweep.png",
+            "assets/ai_detail_3_fitted_princess_seams_and_back_peplum_flare.png",
+            "assets/ai_detail_3_front_blouson_hem_drape_and_waistband_transition.png",
+            "assets/ai_detail_3_front_bottom_hem_construction.png",
+            "assets/ai_detail_3_lower_flap_pocket_assembly.png",
+            "assets/ai_detail_3_sleeve_and_cuff_construction.png",
+            "assets/ai_detail_3_sleeve_cuff_hem_finishing.png",
+            "assets/ai_detail_4_back_turtleneck_collar_&_upper_back_seam.png",
+            "assets/ai_detail_4_front_bottom_hem_and_side_seam.png",
+            "assets/ai_detail_4_front_bottom_hem_finishing.png",
+            "assets/ai_detail_4_front_leg_center_pressed_crease.png",
+            "assets/ai_detail_4_rear_rise_seam_and_center_waistband_contour.png",
+            "assets/ai_detail_4_sleeve_cuff_and_vent_finishing.png",
+            "assets/ai_detail_5_back_bottom_hem_&_side_seam_intersection.png",
+            "assets/ai_detail_5_back_waist_contour_and_bottom_hem.png",
+            "assets/ai_detail_5_blazer_back_side_vents_and_skirt_hem.png",
+            "assets/ai_detail_5_lower_leg_hem_and_permanent_center_crease.png",
+            "assets/ai_detail_5_rear_hem_sweep_and_waist_contouring.png",
+            "assets/ai_detail_5_trouser_bottom_hem_finishing.png",
+            "assets/detail_crop_1_front_collar_neckline.png",
+            "assets/detail_crop_2_front_mid_closure.png",
+            "assets/detail_crop_3_front_lower_hem.png",
+            "assets/detail_crop_4_back_upper_neckline.png",
+            "assets/detail_crop_5_back_mid_contour.png",
+            "assets/detail_crop_6_back_lower_hem.png"
         ]
     },
     "page_3": {
@@ -76,119 +243,111 @@
         "care_label": {
             "image_url": "assets/care_label_final.png",
             "size": "Approx 5 cm × 8 cm",
-            "placement": "Inner left side seam, above 10-15 cm from the hem"
+            "placement": "Inner left side seam"
         },
         "label_notes": "The color of the labels is white. Type of: 100% Recycled polyester woven label."
     },
     "page_4": {
         "accessories": [
             {
-                "description": "ZIPPER, YKK NYLON COIL ZIPPER, 6\"",
+                "description": "100% Spun Polyester Core-Spun Thread (Tex 27 / Ticket 120)",
+                "quantity_per_style": "AS REQD",
+                "color": "DTM (19-0840 TCX Delicioso)",
+                "position": "All Seams & Hems"
+            },
+            {
+                "description": "Main Brand Woven Label (100% Recycled Polyester)",
                 "quantity_per_style": "1",
-                "color": "MATCHING BLUE",
-                "position": "FRONT FLY"
+                "color": "White / Brand Colors",
+                "position": "Center Back Inner Neck"
             },
             {
-                "description": "HOOK AND BAR, FRONT CLOSURE ON WAISTBAND",
-                "quantity_per_style": "1 SET",
-                "color": "",
-                "position": "WAISTBAND TOP"
+                "description": "Care & Composition Printed Satin Label",
+                "quantity_per_style": "1",
+                "color": "White / Black Print",
+                "position": "Inner Left Side Seam (10 cm from hem)"
             },
             {
-                "description": "THREAD, POLY CORE SPUN",
-                "quantity_per_style": "AS REQUESTED",
-                "color": "PANTONE 18-4220 TCX",
-                "position": ""
-            },
-            {
-                "description": "Care label, Size label and brand label",
-                "quantity_per_style": "3",
-                "color": "",
-                "position": "WAISTBAND INTERIOR / SIDE SEAM"
+                "description": "Size Pip Woven Label",
+                "quantity_per_style": "1",
+                "color": "White",
+                "position": "Below Main Brand Label"
             }
         ]
     },
     "page_5": {
         "seams": [
             {
-                "part": "Side Seam",
-                "seam_type": "Plain Seam + Overlock",
-                "seam_allowance": "1 cm",
-                "stitch_type": "",
+                "part": "Shoulder Seam",
+                "seam_type": "Fully Fashioned Join",
+                "seam_allowance": "N/A (knit-to-knit)",
+                "stitch_type": "Linking Stitch",
                 "stitch_size_spi": "10-12",
-                "machine_type": "Single Needle + Overlock"
+                "machine_type": "Flatbed Linking Machine"
             },
             {
-                "part": "Inseam",
-                "seam_type": "Flat-Felled Seam",
-                "seam_allowance": "1.5 cm",
-                "stitch_type": "",
-                "stitch_size_spi": "8-10",
-                "machine_type": "Flat-bed Double Needle Machine"
-            },
-            {
-                "part": "Waistband",
-                "seam_type": "Plain Seam",
-                "seam_allowance": "1 cm",
-                "stitch_type": "",
+                "part": "Side Seams",
+                "seam_type": "Superimposed Seam",
+                "seam_allowance": "10 mm",
+                "stitch_type": "4-Thread Overlock (514)",
                 "stitch_size_spi": "10-12",
-                "machine_type": "Single Needle Machine"
+                "machine_type": "Overlock Machine (4-thread)"
             },
             {
-                "part": "Rise (Crotch Seam)",
-                "seam_type": "Lapped Seam",
-                "seam_allowance": "1.5 cm",
-                "stitch_type": "",
-                "stitch_size_spi": "8-10",
-                "machine_type": "Overlock + Safety Stitch Machine"
-            },
-            {
-                "part": "Hem",
-                "seam_type": "Turned Hem",
-                "seam_allowance": "3 cm",
-                "stitch_type": "",
+                "part": "Sleeve Attachment",
+                "seam_type": "Fully Fashioned Join",
+                "seam_allowance": "N/A (knit-to-knit)",
+                "stitch_type": "Linking Stitch",
                 "stitch_size_spi": "10-12",
-                "machine_type": "Blind Hem or Single Needle"
+                "machine_type": "Flatbed Linking Machine"
             },
             {
-                "part": "Pocket Bag Attach.",
-                "seam_type": "Plain Seam",
-                "seam_allowance": "0.7 cm",
-                "stitch_type": "",
+                "part": "Sleeve Underarm Seam",
+                "seam_type": "Superimposed Seam",
+                "seam_allowance": "10 mm",
+                "stitch_type": "4-Thread Overlock (514)",
                 "stitch_size_spi": "10-12",
-                "machine_type": "Single Needle Machine"
+                "machine_type": "Overlock Machine (4-thread)"
             },
             {
-                "part": "Fly (Zipper)",
-                "seam_type": "Lapped Zipper Seam",
-                "seam_allowance": "1 cm",
-                "stitch_type": "",
+                "part": "Turtleneck Collar Join",
+                "seam_type": "Superimposed Seam",
+                "seam_allowance": "8 mm",
+                "stitch_type": "3-Thread Overlock (504)",
                 "stitch_size_spi": "10-12",
-                "machine_type": "Single Needle + Bartack Machine"
+                "machine_type": "Overlock Machine (3-thread)"
             },
             {
-                "part": "Belt Loops",
-                "seam_type": "Turned + Topstitched",
-                "seam_allowance": "--",
-                "stitch_type": "",
-                "stitch_size_spi": "--",
-                "machine_type": "Bartack Machine"
+                "part": "Turtleneck Collar Fold & Topstitch",
+                "seam_type": "Flat Seam / Coverstitch",
+                "seam_allowance": "6 mm",
+                "stitch_type": "Coverstitch (406)",
+                "stitch_size_spi": "10-12",
+                "machine_type": "Coverstitch Machine"
             },
             {
-                "part": "Topstitching",
-                "seam_type": "--",
-                "seam_allowance": "--",
-                "stitch_type": "",
-                "stitch_size_spi": "8-10",
-                "machine_type": "Single Needle (Heavy Thread)"
+                "part": "Cuff Rib Join",
+                "seam_type": "Superimposed Seam",
+                "seam_allowance": "8 mm",
+                "stitch_type": "3-Thread Overlock (504)",
+                "stitch_size_spi": "10-12",
+                "machine_type": "Overlock Machine (3-thread)"
             },
             {
-                "part": "Overlocking Edges",
-                "seam_type": "--",
-                "seam_allowance": "--",
-                "stitch_type": "",
-                "stitch_size_spi": "--",
-                "machine_type": "Overlock Machine"
+                "part": "Hem Rib Join",
+                "seam_type": "Superimposed Seam",
+                "seam_allowance": "8 mm",
+                "stitch_type": "3-Thread Overlock (504)",
+                "stitch_size_spi": "10-12",
+                "machine_type": "Overlock Machine (3-thread)"
+            },
+            {
+                "part": "Label Attachment (Brand & Care)",
+                "seam_type": "Flat Attachment",
+                "seam_allowance": "N/A",
+                "stitch_type": "Lockstitch (301)",
+                "stitch_size_spi": "10-12",
+                "machine_type": "Single Needle Lockstitch Machine"
             }
         ]
     },
@@ -197,49 +356,69 @@
         "measurements": [
             {
                 "size": "S",
-                "waist": "28-29",
+                "bust": "33.5-34.5",
+                "waist": "26-27",
                 "hip": "36-37",
-                "inseam": "30-32"
+                "shoulder": "14",
+                "sleeve_length": "23",
+                "body_length": "24"
             },
             {
                 "size": "M",
-                "waist": "30-31.5",
+                "bust": "35.5-36.5",
+                "waist": "28-29",
                 "hip": "38-39",
-                "inseam": "31-33"
+                "shoulder": "14.5",
+                "sleeve_length": "23.5",
+                "body_length": "24.5"
             },
             {
                 "size": "L",
-                "waist": "33-35.5",
+                "bust": "38",
+                "waist": "30.5",
                 "hip": "40.5-42",
-                "inseam": "32-34"
+                "shoulder": "15",
+                "sleeve_length": "24",
+                "body_length": "25"
             },
             {
                 "size": "XL",
-                "waist": "38-40.5",
-                "hip": "43.5",
-                "inseam": "33-35"
+                "bust": "39.5",
+                "waist": "32",
+                "hip": "43.5-45",
+                "shoulder": "15.5",
+                "sleeve_length": "24.5",
+                "body_length": "25.5"
             }
         ]
     },
     "page_7": {
         "fabrics": [
             {
-                "description": "WOOL SUITING, 250-300 GSM",
-                "color": "PANTONE 18-4220 TCX",
-                "position": ""
-            },
-            {
-                "description": "",
-                "color": "",
-                "position": ""
-            },
-            {
-                "description": "",
-                "color": "",
+                "description": "WOOL, 200-280 GSM",
+                "color": "PANTONE 19-0840 TCX",
                 "position": ""
             }
         ],
-        "_fabric_reasoning": "Identified as wool suiting based on: smooth structured surface, matte finish, visible crease holding, fall/winter dress pant",
+        "_fabric_reasoning": "Could not determine",
+        "_fabric_options": [
+            {
+                "name": "WOOL BLEND KNIT (Wool/Acrylic or Wool/Nylon), 220-300 GSM",
+                "why": "Extremely common for Fall/Winter turtlenecks across all price points — Zara, H&M, COS all use wool-blend knits for warmth with cost efficiency. Acrylic or nylon adds durability and reduces pilling."
+            },
+            {
+                "name": "COTTON RIB KNIT, 180-240 GSM",
+                "why": "Used for lightweight or transitional-season turtlenecks. Brands like Uniqlo and Everlane use heavyweight cotton rib for FW turtlenecks. Less warm than wool but more affordable and easier care."
+            },
+            {
+                "name": "VISCOSE/MODAL KNIT, 160-220 GSM",
+                "why": "Used for fitted, drapey turtlenecks — common in contemporary womenswear (ASOS, & Other Stories). Softer hand than cotton, good for layering pieces."
+            },
+            {
+                "name": "CASHMERE KNIT, 150-200 GSM",
+                "why": "Luxury turtleneck standard — finer gauge, lighter GSM but extremely warm. Used by luxury brands (Loro Piana, Brunello Cucinelli). Lower GSM than wool because cashmere fibres trap more air."
+            }
+        ],
         "quality_standards": [
             {
                 "test": "Tensile Strength",
@@ -280,8 +459,8 @@
         ]
     },
     "page_8": {
-        "reference_image_front": "assets/front.png",
-        "reference_image_back": "assets/back.png"
+        "reference_image_front": "assets/image_0_front.png",
+        "reference_image_back": "assets/image_1_back.png"
     },
     "page_9": {
         "wash_label": {
@@ -322,28 +501,53 @@
         "measurements": [
             {
                 "size": "S",
-                "waist": "28-29",
+                "bust": "33.5-34.5",
+                "waist": "26-27",
                 "hip": "36-37",
-                "inseam": "30-32"
+                "shoulder": "14",
+                "sleeve_length": "23",
+                "body_length": "24"
             },
             {
                 "size": "M",
-                "waist": "30-31.5",
+                "bust": "35.5-36.5",
+                "waist": "28-29",
                 "hip": "38-39",
-                "inseam": "31-33"
+                "shoulder": "14.5",
+                "sleeve_length": "23.5",
+                "body_length": "24.5"
             },
             {
                 "size": "L",
-                "waist": "33-35.5",
+                "bust": "38",
+                "waist": "30.5",
                 "hip": "40.5-42",
-                "inseam": "32-34"
+                "shoulder": "15",
+                "sleeve_length": "24",
+                "body_length": "25"
             },
             {
                 "size": "XL",
-                "waist": "38-40.5",
-                "hip": "43.5",
-                "inseam": "33-35"
+                "bust": "39.5",
+                "waist": "32",
+                "hip": "43.5-45",
+                "shoulder": "15.5",
+                "sleeve_length": "24.5",
+                "body_length": "25.5"
             }
+        ]
+    },
+    "_confidence": {
+        "pantone_match": 0.85,
+        "fabric_identification": 0.5,
+        "construction_completeness": 0.9,
+        "measurement_accuracy": 0.85,
+        "accessories_completeness": 0.85,
+        "overall": 0.82,
+        "_notes": [
+            "Classification: turtleneck (Womenswear)",
+            "Fabric: WOOL, 200-280 GSM (confidence: 0.5)",
+            "Construction: 9 rows (min 6)"
         ]
     }
 }

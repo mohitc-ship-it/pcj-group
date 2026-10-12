@@ -693,12 +693,121 @@ def split_into_grids(
             Image.fromarray(grid).save(
                 os.path.join(output_dir, f"grid_{count}.png")
             )
-            count += 1
+    if not final_grid_images and height > 100:
+        # Guaranteed fallback crops when grid slicing filter yields 0 crops (e.g. narrow images)
+        slices = [
+            ("collar_neckline", 0.0, 0.32),
+            ("closure_buttons", 0.22, 0.54),
+            ("waist_pockets", 0.44, 0.76),
+            ("hem_cuffs", 0.68, 1.0)
+        ]
+        for name, y_start_frac, y_end_frac in slices:
+            y1 = int(height * y_start_frac)
+            y2 = min(height, int(height * y_end_frac))
+            if y2 > y1:
+                crop = img_np[y1:y2, :]
+                crop_path = os.path.join(output_dir, f"grid_{count}.png")
+                Image.fromarray(crop).save(crop_path)
+                final_grid_images.append(crop_path)
+                count += 1
 
     print(f"Saved {count} grids after all filters.")
     return final_grid_images
 
 
+
+
+# =========================================================
+# INDIVIDUAL DETAIL CROPPING (Single-view, 1:1 Square)
+# =========================================================
+
+def create_individual_detail_crops(
+    front_image_path: str,
+    back_image_path: Optional[str] = None,
+    output_dir: str = "assets",
+    export_size: int = 600,
+) -> List[str]:
+    """
+    Creates individual close-up detail crops from separate front and back source images.
+    NEVER combines or slices across both views simultaneously into a single crop.
+    Each crop is centered, 1:1 square, padded if necessary, and upscaled/resized to export_size x export_size.
+    """
+    import os as _os
+    from PIL import Image as PILImage
+
+    _os.makedirs(output_dir, exist_ok=True)
+    saved_crops = []
+
+    def _prepare_rgb(img_path):
+        raw = PILImage.open(img_path)
+        if raw.mode in ("RGBA", "LA") or (raw.mode == "P" and "transparency" in raw.info):
+            canvas = PILImage.new("RGB", raw.size, (255, 255, 255))
+            rgba = raw.convert("RGBA")
+            canvas.paste(rgba, mask=rgba.split()[3])
+            return canvas
+        return raw.convert("RGB")
+
+    def _crop_square(img, y_start_frac, y_end_frac, x_center_frac, label_suffix, idx):
+        W, H = img.size
+        y_start = int(H * y_start_frac)
+        y_end = int(H * y_end_frac)
+        crop_h = max(y_end - y_start, int(H * 0.25))
+        crop_w = crop_h  # 1:1 square
+
+        cx = int(W * x_center_frac)
+        cy = (y_start + y_end) // 2
+
+        left = cx - crop_w // 2
+        top = cy - crop_h // 2
+        right = left + crop_w
+        bottom = top + crop_h
+
+        canvas = PILImage.new("RGB", (crop_w, crop_h), (255, 255, 255))
+        src_left = max(0, left)
+        src_top = max(0, top)
+        src_right = min(W, right)
+        src_bottom = min(H, bottom)
+
+        sub = img.crop((src_left, src_top, src_right, src_bottom))
+        paste_x = src_left - left
+        paste_y = src_top - top
+        canvas.paste(sub, (paste_x, paste_y))
+
+        final = canvas.resize((export_size, export_size), resample=PILImage.Resampling.LANCZOS)
+        out_name = f"detail_crop_{idx}_{label_suffix}.png"
+        out_path = _os.path.join(output_dir, out_name)
+        final.save(out_path, format="PNG", compress_level=1)
+        saved_crops.append(out_path)
+        print(f"[create_individual_detail_crops] Saved: {out_path} ({export_size}x{export_size})")
+
+    if not front_image_path or not _os.path.exists(front_image_path):
+        print(f"[create_individual_detail_crops] Front image not found: {front_image_path}")
+        return []
+
+    try:
+        front_img = _prepare_rgb(front_image_path)
+        # 1. Front Collar / Neckline / Upper Detail
+        _crop_square(front_img, 0.04, 0.34, 0.50, "front_collar_neckline", 1)
+        # 2. Front Mid / Buttons / Closure / Pocket
+        _crop_square(front_img, 0.30, 0.60, 0.50, "front_mid_closure", 2)
+        # 3. Front Lower / Hem / Sweep
+        _crop_square(front_img, 0.65, 0.95, 0.50, "front_lower_hem", 3)
+
+        if back_image_path and _os.path.exists(back_image_path):
+            back_img = _prepare_rgb(back_image_path)
+            # 4. Back Neckline / Upper Back
+            _crop_square(back_img, 0.04, 0.34, 0.50, "back_upper_neckline", 4)
+            # 5. Back Mid / Waist / Princess Seams
+            _crop_square(back_img, 0.35, 0.65, 0.50, "back_mid_contour", 5)
+            # 6. Back Hem / Slit / Sweep
+            _crop_square(back_img, 0.65, 0.95, 0.50, "back_lower_hem", 6)
+        else:
+            # Additional front details: sleeve cuff / waist
+            _crop_square(front_img, 0.45, 0.75, 0.25, "front_sleeve_detail", 4)
+    except Exception as e:
+        print(f"[create_individual_detail_crops] Error generating crops: {e}")
+
+    return saved_crops
 
 
 # =========================================================
@@ -709,7 +818,8 @@ def ai_crop_detail_regions(
     images: list,
     garment_details: str,
     output_dir: str = "assets",
-    n_crops: int = 4,
+    min_crops: int = 3,
+    max_crops: int = 6,
     min_crop_size: int = 150,
     white_threshold: float = 0.85,
 ) -> list:
@@ -717,31 +827,19 @@ def ai_crop_detail_regions(
     Uses Claude Vision to identify the most important detail regions on a garment,
     then crops those exact regions from the source images using PIL.
 
-    Strategy:
-    1. Ask Claude Vision to identify top N detail zones with normalized bounding boxes
-    2. Crop each zone from the source image
-    3. Filter out near-blank crops
-    4. Return list of saved crop paths (up to n_crops)
+    Only crops what is ACTUALLY REQUIRED for the specific garment (typically 3 to 6 details):
+    - Simple tops / knits / tees: typically 3-4 details (neckline, cuff, hem, back neck)
+    - Structured jackets / suits: 5-6 details (lapel, buttons, pockets, cuffs, hem, back vent)
+    - Pants / skirts: 3-4 details (waistband, pockets, hem/cuff)
 
-    Falls back to empty list on any error — caller should handle fallback.
-
-    Args:
-        images:          list of source image paths (front first)
-        garment_details: garment description text to guide what to look for
-        output_dir:      where to save cropped images
-        n_crops:         how many detail crops to produce
-        min_crop_size:   minimum pixel dimension for a valid crop
-        white_threshold: fraction of white pixels above which a crop is discarded
-
-    Returns:
-        list of saved crop paths
+    Does NOT force redundant crops of blank body fabric.
     """
     import json as _json
     import os as _os
     from PIL import Image as PILImage
 
     # ── Environment Configurations ──
-    crop_model = _os.getenv("DETAIL_CROP_MODEL", "google/gemini-3.8-flash")
+    crop_model = _os.getenv("DETAIL_CROP_MODEL", _os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6"))
     frac_min = float(_os.getenv("DETAIL_CROP_SIZE_FRACTION_MIN", "0.55"))
     frac_max = float(_os.getenv("DETAIL_CROP_SIZE_FRACTION_MAX", "0.85"))
     frac_default = float(_os.getenv("DETAIL_CROP_SIZE_FRACTION_DEFAULT", "0.65"))
@@ -753,44 +851,43 @@ def ai_crop_detail_regions(
 Garment description context:
 {garment_details}
 
-Your task: Identify exactly {n_crops} distinct construction detail regions following this STRICT DETAIL PRIORITY HIERARCHY:
+Your task: Identify ONLY the genuine, meaningful construction detail regions that ACTUALLY EXIST on this garment (between {min_crops} and {max_crops} details, depending on garment complexity).
+- Simple garments (e.g. t-shirt, pullover top, plain knitwear) typically have 3-4 required construction details (collar/neckline, sleeve hem/cuff, bottom hem, and back neckline).
+- Complex garments (e.g. tailored blazers, suits, structured outerwear) have 5-6 construction details (collar/lapel, front button stance/closure, flap/welt pockets, sleeve cuff/vent, hemline/walking slit, back seam contour).
+- Do NOT invent or force dummy crops of plain, featureless body fabric. Only capture genuine construction features present on the garment.
 
-1. PRIORITY 1 — TOP STYLE / CUT & NECKLINE:
-   Any distinctive architectural cut or styling at the top of the garment: collar construction, lapel notch / peak and gorge seam, curved round neckline, plunge, or neckband styling.
+STRICT DETAIL PRIORITY HIERARCHY:
 
-2. PRIORITY 2 — ACCESSORIES, HARDWARE & POCKET TRIMS:
-   The primary decorative or functional accessories / hardware: flap pockets, welt pockets, buttons, zipper pulls, belt buckles, or beadwork.
-   CRITICAL: If both upper (chest) and lower (waist/hip) pockets exist, treat them as distinct details and crop each one separately!
-   NEVER slice through a pocket or button — capture the ENTIRE pocket with breathing room around it.
+1. PRIORITY 1 — TOP STYLE / CUT & NECKLINE (Essential):
+   Collar construction, lapel notch / peak and gorge seam, curved round neckline, plunge, or neckband styling.
 
-3. PRIORITY 3 — SLEEVE / CUFF CONSTRUCTION & TRIMS:
+2. PRIORITY 2 — ACCESSORIES, HARDWARE & POCKET TRIMS (Only if present):
+   Flap pockets, welt pockets, buttons, zipper pulls, belt buckles. If the garment has NO buttons or NO pockets, DO NOT include this category!
+
+3. PRIORITY 3 — SLEEVE / CUFF CONSTRUCTION & TRIMS (If sleeves exist):
    Sleeve cuff with its decorative trim border, cuff vent, buttons, or edge stitching.
 
-4. PRIORITY 4 — CURVED CUTS, SILHOUETTE CONTOURS & HEM:
-   Distinctive curved silhouette lines: lower front curved hem corner or peplum curve, contoured waist seams, princess seams, walking slit/vent, or bottom hem finishing.
+4. PRIORITY 4 — HEMLINE, SILHOUETTE CONTOURS & VENTS (Essential):
+   Bottom hem finishing, curved hem corner, walking slit/vent, peplum curve, or waistband.
+
+5. PRIORITY 5 — BACK DETAILS (If distinct):
+   Back neckline, back yoke, back zipper/keyhole, or center back vent.
 
 CRITICAL FRAMING & SIZING RULES:
-- GENEROUS, LARGER CROP WINDOW (NO TIGHT CROPS):
-  Provide a generous crop window (crop_size_fraction between {frac_min:.2f} and {frac_max:.2f} of image width, recommend ~{frac_default:.2f}) so that the COMPLETE detail is captured with its surrounding construction context.
-  NEVER leave parts in half:
-  - For pockets: capture the ENTIRE pocket, including the full pocket flap/welt, button, and surrounding panel fabric. Do NOT slice the pocket in half.
-  - For lapel & collar: capture the FULL lapel notch, peak, collar roll, and gorge seam down into the chest. Center directly on the fabric of the lapel/notch, NOT on the wearer's neck or throat skin.
-  - For button closures: capture the complete button row with surrounding front placket panels.
-  - For sleeve cuffs: capture the full width of the cuff, vent, and buttons.
-  - For peplum / hems: capture the full sweep of the curved hem and seam.
-- AVOID HUMAN BODY PARTS: Center strictly on the garment construction itself (fabric, stitches, collar notch, lapel roll). NEVER center on the model's head, face, lips, chin, or neck skin. For collar/lapel callouts, center on the notch or fold of the fabric on the chest/shoulder area, NOT on the wearer's neck or chin.
+- GENEROUS CROP WINDOW: Provide a generous crop window (crop_size_fraction between {frac_min:.2f} and {frac_max:.2f} of image width, recommend ~{frac_default:.2f}) so that the COMPLETE detail is captured with its surrounding construction context.
+- AVOID HUMAN BODY PARTS: Center strictly on the garment construction itself (fabric, stitches, collar notch, lapel roll). NEVER center on the model's head, face, lips, chin, or neck skin.
 - Center the target feature dead in the middle of the frame.
 
 For each detail region, return valid JSON with:
 - "label": Short descriptive name of the detail
-- "priority_category": One of "top_cut_neckline", "accessories_hardware_pocket", "sleeve_cuff", "curved_hem_contour"
-- "reasoning": In-depth technical explanation of WHY this region was chosen, what manufacturing/quality challenges exist here (e.g. trim tension, button placement, puckering, curve radius), and why the factory must inspect it up close.
+- "priority_category": One of "top_cut_neckline", "accessories_hardware_pocket", "sleeve_cuff", "curved_hem_contour", "back_detail"
+- "reasoning": In-depth technical explanation of WHY this region was chosen and why the factory must inspect it up close.
 - "image_index": 0 for front image, 1 for back image
 - "center_x": X coordinate of the dead center of the detail as fraction of image width (0.0 to 1.0)
 - "center_y": Y coordinate of the dead center of the detail as fraction of image height (0.0 to 1.0)
-- "crop_size_fraction": Size of square crop relative to image width ({frac_min:.2f} to {frac_max:.2f}) so the complete detail fits with generous breathing room.
+- "crop_size_fraction": Size of square crop relative to image width ({frac_min:.2f} to {frac_max:.2f}).
 
-Return ONLY a valid JSON array of exactly {n_crops} objects. No markdown. No code fences. No explanation."""
+Return ONLY a valid JSON array of between {min_crops} and {max_crops} objects (whatever details are actually required for this garment). No markdown. No code fences. No explanation."""
 
     try:
         try:
@@ -807,14 +904,18 @@ Return ONLY a valid JSON array of exactly {n_crops} objects. No markdown. No cod
 
         regions = _json.loads(raw)
         if not isinstance(regions, list) or len(regions) == 0:
-            print("[ai_crop] No valid regions returned from Vision model")
-            return []
+            print("[ai_crop] No valid regions returned from Vision model, using individual detail crops fallback")
+            f_img = images[0] if len(images) > 0 else None
+            b_img = images[1] if len(images) > 1 else None
+            return create_individual_detail_crops(f_img, b_img, output_dir=output_dir, export_size=min_export_px)[:max_crops]
 
-        print(f"[ai_crop] Vision model ({crop_model}) identified {len(regions)} detail regions")
+        print(f"[ai_crop] Vision model ({crop_model}) identified {len(regions)} required detail regions")
 
     except Exception as e:
-        print(f"[ai_crop] Vision region detection failed: {e}")
-        return []
+        print(f"[ai_crop] Vision region detection failed: {e}, using individual detail crops fallback")
+        f_img = images[0] if len(images) > 0 else None
+        b_img = images[1] if len(images) > 1 else None
+        return create_individual_detail_crops(f_img, b_img, output_dir=output_dir, export_size=min_export_px)[:max_crops]
 
     # ── Step 2: Crop each region from the source image ──
     saved_crops = []
@@ -908,7 +1009,18 @@ Return ONLY a valid JSON array of exactly {n_crops} objects. No markdown. No cod
             continue
 
     print(f"[ai_crop] Produced {len(saved_crops)}/{len(regions)} valid detail crops")
-    return saved_crops[:n_crops]
+    if len(saved_crops) < min_crops:
+        print(f"[ai_crop] Supplementing with essential individual crops (got {len(saved_crops)}, minimum needed {min_crops})")
+        f_img = images[0] if len(images) > 0 else None
+        b_img = images[1] if len(images) > 1 else None
+        supp = create_individual_detail_crops(f_img, b_img, output_dir=output_dir, export_size=min_export_px)
+        for sc in supp:
+            if sc not in saved_crops:
+                saved_crops.append(sc)
+            if len(saved_crops) >= min_crops:
+                break
+
+    return saved_crops[:max_crops]
 
 
 def format_technical_sketch(

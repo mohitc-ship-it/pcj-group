@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Wand2, Loader2, Ruler } from "lucide-react"
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ""
 
 export default function MeasurementEditor({ value, onUpdated }) {
   const [instruction, setInstruction] = useState("")

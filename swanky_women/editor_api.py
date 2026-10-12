@@ -22,7 +22,13 @@ app = FastAPI()
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 ASSETS_DIR = "assets"
-BASE_URL = "http://localhost:8000"
+# PUBLIC_URL env var → set on Render/Railway/etc.
+# Render also injects RENDER_EXTERNAL_URL automatically.
+BASE_URL = (
+    os.getenv("PUBLIC_URL")
+    or os.getenv("RENDER_EXTERNAL_URL")
+    or "http://localhost:8000"
+).rstrip("/")
 
 os.makedirs(ASSETS_DIR, exist_ok=True)
 # --------------------------------------------------
@@ -188,7 +194,18 @@ def get_page_draft(page_id: str):
             status_code=400
         )
 
-    page_data = data[page_id]
+    page_data = dict(data[page_id])
+
+    # If page_2, dynamically ensure optional_image_urls includes all available crops in assets/
+    if page_id == "page_2":
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+        existing_crops = []
+        if os.path.exists(assets_dir):
+            for f in sorted(os.listdir(assets_dir)):
+                if (f.startswith("detail_crop_") or f.startswith("ai_detail_")) and f.endswith(".png"):
+                    existing_crops.append(f"assets/{f}")
+        current_opts = page_data.get("optional_image_urls", [])
+        page_data["optional_image_urls"] = list(dict.fromkeys(current_opts + existing_crops))
 
     # Normalize asset URLs ONLY for response
     normalized_data = normalize_asset_urls(page_data)
@@ -399,24 +416,119 @@ def _enrich_master_for_editor():
 
     changed = False
 
-    # 1. Add Pantone alternatives if only 1 color
+    # 1. Structure Pantone alternatives properly as suggestions under pantone_options
     optional_colors = data.get("page_2", {}).get("optional_colors", [])
     primary_hex = data.get("page_2", {}).get("color_hex", "")
-    if len(optional_colors) <= 1 and primary_hex:
+    primary_tcx = data.get("page_2", {}).get("pantone_tcx", "")
+    primary_name = data.get("page_2", {}).get("color_name", "Primary")
+
+    if primary_hex:
         try:
             from utils import nearest_pantone_tcx
-            extra = nearest_pantone_tcx(primary_hex, top_k=5)
-            existing_codes = {c.get("pantone_tcx", "") for c in optional_colors}
-            for r in extra:
-                if r["code"] not in existing_codes:
-                    optional_colors.append({
-                        "color_name": r["name"], "color_hex": r["hex"], "pantone_tcx": r["code"]
-                    })
+            extra = nearest_pantone_tcx(primary_hex, top_k=6)
+            suggestions = [
+                {"code": r["code"], "name": r["name"], "hex": r["hex"]}
+                for r in extra
+            ]
+
+            # If optional_colors has multiple colors sharing the same hex (candidates incorrectly listed as separate colors)
+            # consolidate them back to 1 garment color with suggestions
+            if len(optional_colors) > 1 and all(c.get("color_hex", "").lower() == primary_hex.lower() for c in optional_colors):
+                # Collect all unique candidate codes
+                existing_opts = []
+                seen_c = set()
+                for c in optional_colors:
+                    code = c.get("pantone_tcx", "")
+                    if code and code not in seen_c:
+                        seen_c.add(code)
+                        existing_opts.append({"code": code, "name": c.get("color_name", ""), "hex": primary_hex})
+                for s in suggestions:
+                    if s["code"] not in seen_c:
+                        seen_c.add(s["code"])
+                        existing_opts.append(s)
+
+                optional_colors = [{
+                    "color_name": primary_name,
+                    "color_hex": primary_hex,
+                    "pantone_tcx": primary_tcx or optional_colors[0].get("pantone_tcx", ""),
+                    "pantone_options": existing_opts[:8]
+                }]
+            elif not optional_colors:
+                optional_colors = [{
+                    "color_name": primary_name,
+                    "color_hex": primary_hex,
+                    "pantone_tcx": primary_tcx,
+                    "pantone_options": suggestions[:8]
+                }]
+            else:
+                for c in optional_colors:
+                    if not c.get("pantone_options"):
+                        c_hex = c.get("color_hex", primary_hex)
+                        c_extra = nearest_pantone_tcx(c_hex, top_k=6) if c_hex != primary_hex else extra
+                        c["pantone_options"] = [
+                            {"code": r["code"], "name": r["name"], "hex": r["hex"]}
+                            for r in c_extra
+                        ]
+
             data["page_2"]["optional_colors"] = optional_colors
+            data["page_2"]["pantone_options"] = optional_colors[0].get("pantone_options", suggestions)
             changed = True
-            print(f"[Enrich] Added {len(optional_colors)-1} Pantone alternatives")
-        except Exception:
-            pass
+            print(f"[Enrich] Formatted Pantone suggestions under garment color")
+        except Exception as e:
+            print(f"[Enrich] Pantone suggestions error: {e}")
+
+    # 1b. Ensure detail images are populated in page_2 (Single-view, 1:1 Square)
+    p2 = data.get("page_2", {})
+    has_legacy_grid = any(str(p2.get(f"detail_image_{i}_url", "")).startswith("assets/grid_") for i in range(1, 7))
+    has_duplicate_crops = any("detail_0_" in str(p2.get(f"detail_image_{i}_url", "")) for i in range(2, 7))
+    has_any_crop = any(bool(p2.get(f"detail_image_{i}_url")) for i in range(1, 7))
+
+    if not has_any_crop or has_legacy_grid or has_duplicate_crops:
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+        if os.path.exists(assets_dir):
+            crop_files = [
+                f"assets/{f}" for f in os.listdir(assets_dir)
+                if f.startswith("detail_crop_") and f.endswith(".png")
+            ]
+            crop_files.sort()
+            if not crop_files:
+                crop_files = [
+                    f"assets/{f}" for f in os.listdir(assets_dir)
+                    if f.startswith("ai_detail_") and f.endswith(".png")
+                ]
+                crop_files.sort(key=lambda p: -os.path.getmtime(os.path.join(assets_dir, os.path.basename(p))))
+            if not crop_files:
+                try:
+                    from utils import create_individual_detail_crops
+                    front_p = os.path.join(assets_dir, "image_0_front.png")
+                    back_p = os.path.join(assets_dir, "image_1_back.png")
+                    if not os.path.exists(front_p):
+                        front_p = os.path.join(assets_dir, "front.png")
+                    if not os.path.exists(back_p):
+                        back_p = os.path.join(assets_dir, "back.png")
+                    if os.path.exists(front_p):
+                        crop_files = create_individual_detail_crops(front_p, back_p if os.path.exists(back_p) else None, assets_dir)
+                except Exception as ce:
+                    print(f"[Enrich] Individual detail crop fallback error: {ce}")
+            for i in range(1, 7):
+                p2[f"detail_image_{i}_url"] = crop_files[i-1] if i-1 < len(crop_files) else ""
+            if crop_files:
+                changed = True
+                print(f"[Enrich] Populated {len(crop_files)} single-view detail crop URLs")
+
+    # Ensure optional_image_urls is populated with all available crops in assets/
+    assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+    if os.path.exists(assets_dir):
+        all_crops = [
+            f"assets/{f}" for f in sorted(os.listdir(assets_dir))
+            if (f.startswith("detail_crop_") or f.startswith("ai_detail_")) and f.endswith(".png")
+        ]
+        if all_crops:
+            existing_opts = p2.get("optional_image_urls", [])
+            merged = list(dict.fromkeys(existing_opts + all_crops))
+            if merged != existing_opts:
+                p2["optional_image_urls"] = merged
+                changed = True
 
     # 2. Add fabric reasoning if missing
     fabrics = data.get("page_7", {}).get("fabrics", [])
@@ -596,15 +708,20 @@ Sample Size: {sample_size}
         verification_calls = generated_images  # each generated image gets verified
 
         # Count AI detail crops
-        ai_crop_count = len([f for f in _os.listdir("assets") if f.startswith("ai_detail_")])
+        ai_crop_count = len([f for f in _os.listdir("assets") if f.startswith("ai_detail_") or f.startswith("detail_crop_")])
 
         # Cost calculation based on actual models used
         # Image gen: GPT Image 2.5 Flare via OpenRouter ~$0.03-0.05 per image
         # OR Gemini Pro/Flash ~$0.02-0.04 per image
         image_gen_cost = generated_images * 0.035
-        # Text/Vision LLM: ~13 agent calls × Gemini Flash ($0.25/M in, $1.50/M out)
-        # ~37K input tokens, ~12K output tokens per pack
-        text_llm_cost = (37000 * 0.25 / 1_000_000) + (12000 * 1.50 / 1_000_000)  # ~$0.027
+        # Text/Vision LLM cost based on active model
+        current_model = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
+        if "opus" in current_model.lower():
+            text_llm_cost = (37000 * 3.0 / 1_000_000) + (12000 * 75.0 / 1_000_000)
+        elif "haiku" in current_model.lower():
+            text_llm_cost = (37000 * 0.40 / 1_000_000) + (12000 * 4.0 / 1_000_000)
+        else:
+            text_llm_cost = (37000 * 1.50 / 1_000_000) + (12000 * 15.0 / 1_000_000)
         # Vision verification: ~$0.003 per call
         verification_cost = verification_calls * 0.003
         # AI crop detection: 1 vision call ~$0.005
@@ -1711,6 +1828,13 @@ def get_corrections_for_garment(garment_type: str):
         "lessons": lessons,
         "corrections": relevant[-20:],
     })
+
+
+# ── Serve React frontend (must be last, after all API routes) ──────────────
+# In production the Dockerfile copies the built React dist/ here.
+_DIST_DIR = BASE_DIR / "dist"
+if _DIST_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(_DIST_DIR), html=True), name="frontend")
 
 
 if __name__ == "__main__":

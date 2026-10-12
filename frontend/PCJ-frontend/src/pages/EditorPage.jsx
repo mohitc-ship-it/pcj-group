@@ -34,7 +34,8 @@ export default function EditorPage() {
   const [lastCost, setLastCost] = useState(null)
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/last-cost").then(r => r.json()).then(d => setLastCost(d)).catch(() => {})
+    const base = import.meta.env.VITE_API_BASE_URL || ""
+    fetch(`${base}/api/last-cost`).then(r => r.json()).then(d => setLastCost(d)).catch(() => {})
   }, [])
 
   useEffect(() => {

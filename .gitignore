@@ -1,7 +1,10 @@
-# Environment & Secrets
+# Environment & Secrets — never commit real keys
 .env
+.env.local
 *.key
 credentials*
+# .env.example IS committed (safe template with no real values)
+# .env.production IS committed (only contains empty VITE_API_BASE_URL, no secrets)
 
 # Python
 __pycache__/

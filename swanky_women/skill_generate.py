@@ -28,6 +28,7 @@ from llm import analyze_images, llm_structured, llm_query
 from generate import generatePdf
 from utils import (
     nearest_pantone_tcx, ai_crop_detail_regions,
+    create_individual_detail_crops,
     combine_images_horizontally, split_into_grids,
     recommend_colors_from_images
 )
@@ -70,8 +71,8 @@ def _get_cached_system_prompt():
 CACHED_SYSTEM_PROMPT = property(lambda self: _get_cached_system_prompt())  # lazy load
 
 
-def claude_query(prompt, images=None):
-    """Use Claude Haiku with prompt caching. Falls back to Gemini if unavailable."""
+def claude_query(prompt, images=None, enable_thinking=False):
+    """Use Claude (Opus/Sonnet/Haiku) with prompt caching on system prompt AND images. Falls back to Gemini if unavailable."""
     client = _get_claude()
     if not client:
         if images:
@@ -82,27 +83,36 @@ def claude_query(prompt, images=None):
         content = []
         if images:
             import base64
-            for img_path in images:
-                if os.path.exists(img_path):
-                    with open(img_path, "rb") as f:
-                        b64 = base64.standard_b64encode(f.read()).decode()
-                    ext = img_path.lower().rsplit(".", 1)[-1]
-                    media = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}.get(ext, "image/png")
-                    content.append({"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}})
+            valid_images = [p for p in images if os.path.exists(p)]
+            for idx, img_path in enumerate(valid_images):
+                with open(img_path, "rb") as f:
+                    b64 = base64.standard_b64encode(f.read()).decode()
+                ext = img_path.lower().rsplit(".", 1)[-1]
+                media = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}.get(ext, "image/png")
+                img_block = {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
+                # Cache the last image so all images are cached across sequential calls in the pipeline
+                if idx == len(valid_images) - 1:
+                    img_block["cache_control"] = {"type": "ephemeral"}
+                content.append(img_block)
         content.append({"type": "text", "text": prompt})
 
-        sys_prompt = _get_cached_system_prompt()
-        response = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=4096,
-            temperature=0,
-            system=[{
+        model_to_use = os.getenv("CLAUDE_MODEL", CLAUDE_MODEL)
+        kwargs = {
+            "model": model_to_use,
+            "max_tokens": 8192 if enable_thinking else 4096,
+            "system": [{
                 "type": "text",
                 "text": sys_prompt,
                 "cache_control": {"type": "ephemeral"}
             }],
-            messages=[{"role": "user", "content": content}]
-        )
+            "messages": [{"role": "user", "content": content}]
+        }
+        if enable_thinking:
+            kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2048}
+        else:
+            kwargs["temperature"] = 0
+
+        response = client.messages.create(**kwargs)
 
         # Log cache stats
         usage = response.usage
@@ -303,23 +313,29 @@ Return JSON only: {{"category": "...", "garment_type": "...", "pieces": ["blazer
         "turtleneck": "TRT", "hoodie": "HDY", "vest": "VST", "gown": "GWN",
         "cocktail": "CDR",
     }
-    # Suit codes based on pieces
+    # Garment pieces and structure detection
     pieces = classification.get("pieces", [])
     pieces_lower = [p.lower() for p in pieces]
     gt_lower = garment_type.lower()
 
-    if "skirt suit" in gt_lower or ("skirt" in pieces_lower and any(p in pieces_lower for p in ["blazer", "jacket"])):
+    has_vest = "vest" in pieces_lower or "waistcoat" in pieces_lower
+    has_skirt = "skirt" in pieces_lower or "skirt" in gt_lower
+    has_trouser = any(p in pieces_lower for p in ["trouser", "pant", "trousers", "pants"]) or any(kw in gt_lower for kw in ["pant", "trouser"])
+    is_multi = len(pieces) >= 2 or any(kw in gt_lower for kw in ["suit", "set", "2-piece", "3-piece", "2 piece", "3 piece"])
+    is_skirt_suit = ("skirt suit" in gt_lower) or (has_skirt and (is_multi or any(p in pieces_lower for p in ["blazer", "jacket"])))
+
+    if is_skirt_suit:
         gar_code = "SKSU"
-    elif "3-piece" in gt_lower or "3 piece" in gt_lower or ("vest" in pieces_lower and "trouser" in pieces_lower):
+    elif "3-piece" in gt_lower or "3 piece" in gt_lower or (has_vest and has_trouser):
         gar_code = "3PS"
-    elif "pant suit" in gt_lower or ("trouser" in pieces_lower and any(p in pieces_lower for p in ["blazer", "jacket"])):
+    elif "pant suit" in gt_lower or (has_trouser and any(p in pieces_lower for p in ["blazer", "jacket"])):
         gar_code = "PNSU"
     elif "suit" in gt_lower:
         gar_code = "SUT"
     else:
         gar_code = "GRM"
-        for kw, code in garment_codes.items():
-            if kw in gt_lower:
+        for g_kw, code in garment_codes.items():
+            if g_kw in gt_lower:
                 gar_code = code
                 break
 
@@ -361,103 +377,110 @@ ONLY fabric colors. Ignore skin, hair, background, inner layers (like a turtlene
     except:
         colors = [{"color_name": "Primary", "color_hex": "#808080"}]
 
-    # Cluster similar hex samples → compute median → send fewer, better hexes to scraper
-    from utils import rgb_to_lab
+    # ── Check exact hex codes (NO median, NO clustering) ──
+    from utils import nearest_pantone_tcx, rgb_to_lab
     from colormath.color_diff import delta_e_cie2000
 
-    def _cluster_hexes(hex_list, thresh=4.0):
-        """Group similar hexes together using Delta-E distance."""
-        groups = []
-        for h in hex_list:
-            r, g, b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
-            lab = rgb_to_lab((r, g, b))
-            placed = False
-            for group in groups:
-                ref_h = group[0]
-                rr, gg, bb = int(ref_h[1:3], 16), int(ref_h[3:5], 16), int(ref_h[5:7], 16)
-                ref_lab = rgb_to_lab((rr, gg, bb))
-                if float(delta_e_cie2000(lab, ref_lab)) < thresh:
-                    group.append(h)
-                    placed = True
-                    break
-            if not placed:
-                groups.append([h])
-        return groups
+    all_hexes = [c.get("color_hex", "").strip() for c in colors if c.get("color_hex", "").strip().startswith("#")]
+    if not all_hexes:
+        all_hexes = ["#808080"]
 
-    def _median_hex(hex_list):
-        """Compute median RGB from a list of hex values."""
-        rs = [int(h[1:3], 16) for h in hex_list]
-        gs = [int(h[3:5], 16) for h in hex_list]
-        bs = [int(h[5:7], 16) for h in hex_list]
-        import statistics
-        mr, mg, mb = int(statistics.median(rs)), int(statistics.median(gs)), int(statistics.median(bs))
-        return f"#{mr:02x}{mg:02x}{mb:02x}"
+    _report(progress_callback, "Pantone", f"Checking exact hex codes across {len(all_hexes)} samples", "", 27)
 
-    # Extract all hex values and cluster them
-    all_hexes = [c.get("color_hex", "") for c in colors if c.get("color_hex", "").startswith("#")]
-    hex_groups = _cluster_hexes(all_hexes, thresh=5.0) if len(all_hexes) > 1 else [[h] for h in all_hexes]
-    median_hexes = [_median_hex(group) for group in hex_groups]
+    # For EACH exact hex code, run local Delta-E search against verified Pantone TCX
+    all_pantone_candidates = []
+    seen_codes = set()
 
-    _report(progress_callback, "Pantone", f"Clustered {len(all_hexes)} samples → {len(median_hexes)} color groups", "", 27)
+    for h in all_hexes:
+        matches = nearest_pantone_tcx(h, top_k=5)
+        for m in matches:
+            code = m["code"]
+            if code not in seen_codes:
+                seen_codes.add(code)
+                all_pantone_candidates.append({
+                    "code": code,
+                    "name": m["name"],
+                    "hex": m["hex"],
+                    "delta_e": m.get("delta_e", 999.0),
+                    "source_hex": h
+                })
 
-    # Send median hexes to pantone.com scraper
-    all_pantone_options = []
+    # Also query official pantone.com scraper for top exact hexes
     try:
         from pantone_scraper import get_tcx_options
-        for median_h in median_hexes[:4]:
-            hex_clean = median_h.lstrip("#")
-            _report(progress_callback, "Pantone", f"Checking pantone.com for #{hex_clean} (median of {len(hex_groups[median_hexes.index(median_h)])} samples)", "", 28)
+        for h in all_hexes[:3]:
+            hex_clean = h.lstrip("#")
+            _report(progress_callback, "Pantone", f"Checking pantone.com for exact #{hex_clean}", "", 28)
             scraped = get_tcx_options(hex_clean)
             if scraped:
                 for opt in scraped:
                     code = opt.get("code", "")
                     if "TCX" not in code:
                         code += " TCX"
-                    opt["code"] = code
-                    opt["source_hex"] = hex_clean
-                all_pantone_options.extend(scraped)
+                    if code not in seen_codes:
+                        seen_codes.add(code)
+                        all_pantone_candidates.append({
+                            "code": code,
+                            "name": opt.get("name", ""),
+                            "hex": h,
+                            "delta_e": 0.5,
+                            "source_hex": h
+                        })
     except Exception as e:
         print(f"[Pantone scraper] Failed: {e}")
 
-    # Deduplicate pantone options by code
-    seen_codes = set()
-    unique_pantone = []
-    for opt in all_pantone_options:
-        if opt.get("code") not in seen_codes:
-            seen_codes.add(opt.get("code"))
-            unique_pantone.append(opt)
+    # Sort all candidates by closest match (lowest Delta-E)
+    all_pantone_candidates.sort(key=lambda x: x.get("delta_e", 999.0))
 
-    # ALSO run local Delta-E on all median hexes and merge results
-    for median_h in median_hexes[:4]:
-        local_results = nearest_pantone_tcx(median_h, top_k=3)
-        for r in local_results:
-            if r["code"] not in seen_codes:
-                seen_codes.add(r["code"])
-                unique_pantone.append({"code": r["code"], "name": r["name"], "source": "delta_e", "delta_e": r["delta_e"]})
-
-    if unique_pantone:
-        primary_pantone = unique_pantone[0]["code"]
-        _report(progress_callback, "Pantone", f"Matched: {primary_pantone} ({len(unique_pantone)} total options)", "", 30)
+    if all_pantone_candidates:
+        primary_pantone = all_pantone_candidates[0]["code"]
+        primary_color_name = all_pantone_candidates[0]["name"] or (colors[0].get("color_name") if colors else "Primary")
     else:
-        # Fallback to local Delta-E
-        hex_val = colors[0].get("color_hex", "#808080")
-        pantone_results = nearest_pantone_tcx(hex_val, top_k=5)
-        unique_pantone = [{"code": r["code"], "name": r["name"]} for r in pantone_results]
-        primary_pantone = pantone_results[0]["code"] if pantone_results else "Unknown"
-        _report(progress_callback, "Pantone", f"Delta-E match: {primary_pantone}", "", 30)
+        primary_pantone = "Unknown"
+        primary_color_name = colors[0].get("color_name", "Primary") if colors else "Primary"
 
-    # Build final color list for the tech pack
+    # Candidate Pantone suggestions/alternatives for the designer to pick from
+    pantone_suggestions = [
+        {"code": c["code"], "name": c["name"], "hex": c.get("hex", all_hexes[0])}
+        for c in all_pantone_candidates[:8]
+    ]
+
     primary_color = {
-        "color_name": colors[0].get("color_name", "Primary") if colors else "Primary",
-        "color_hex": colors[0].get("color_hex", "#808080") if colors else "#808080",
+        "color_name": primary_color_name,
+        "color_hex": all_hexes[0],
         "pantone_tcx": primary_pantone,
+        "pantone_options": pantone_suggestions,
     }
-    # Add all pantone options as optional_colors for designer to pick
-    optional_colors = [{"color_name": opt.get("name", ""), "color_hex": colors[0].get("color_hex", ""), "pantone_tcx": opt.get("code", "")} for opt in unique_pantone[:5]]
-    if not optional_colors:
-        optional_colors = [primary_color]
 
-    _report(progress_callback, "Color", f"{len(optional_colors)} Pantone options for designer to pick", "", 31)
+    # Monochromatic garments have 1 color with suggestions; distinct contrast colors get their own row
+    optional_colors = [primary_color]
+
+    # Check if any sample belongs to a genuinely different contrast color (Delta-E >= 15.0 from primary)
+    pr = int(all_hexes[0][1:3], 16)
+    pg = int(all_hexes[0][3:5], 16)
+    pb = int(all_hexes[0][5:7], 16)
+    p_lab = rgb_to_lab((pr, pg, pb))
+
+    for c in colors[1:]:
+        c_hex = c.get("color_hex", "").strip()
+        if c_hex.startswith("#") and len(c_hex) == 7:
+            cr = int(c_hex[1:3], 16)
+            cg = int(c_hex[3:5], 16)
+            cb = int(c_hex[5:7], 16)
+            c_lab = rgb_to_lab((cr, cg, cb))
+            diff = float(delta_e_cie2000(p_lab, c_lab))
+            if diff >= 15.0:
+                c_matches = nearest_pantone_tcx(c_hex, top_k=5)
+                c_opts = [{"code": m["code"], "name": m["name"], "hex": m["hex"]} for m in c_matches]
+                optional_colors.append({
+                    "color_name": c.get("color_name", "Contrast Trim"),
+                    "color_hex": c_hex,
+                    "pantone_tcx": c_matches[0]["code"] if c_matches else primary_pantone,
+                    "pantone_options": c_opts,
+                })
+                break
+
+    _report(progress_callback, "Pantone", f"Matched: {primary_pantone} ({len(pantone_suggestions)} suggestions available)", "", 31)
 
     # ─── STEP 5: Fabric ───
     _report(progress_callback, "Fabric Decision", "Determining fabric type", "", 35)
@@ -565,7 +588,7 @@ Reply with JSON:
   "note": "brief explanation of your cross-check conclusion"
 }}"""
 
-            crosscheck_result, _ = llm_query(crosscheck_prompt)
+            crosscheck_result, _ = claude_query(crosscheck_prompt)
             try:
                 json_match = re.search(r'\{.*\}', crosscheck_result, re.DOTALL)
                 if json_match:
@@ -598,8 +621,8 @@ Reply with JSON:
     min_rows = {"blazer": 10, "jacket": 10, "coat": 10, "pant": 10, "trouser": 10,
                 "blouse": 8, "shirt": 8, "dress": 8, "suit": 10, "cardigan": 10, "skirt": 6}
     expected_min = 6
-    for kw, count in min_rows.items():
-        if kw in garment_type.lower():
+    for row_kw, count in min_rows.items():
+        if row_kw in garment_type.lower():
             expected_min = max(expected_min, count)
 
     construction_prompt = f"""Generate a product construction table for a {garment_type}.
@@ -616,7 +639,7 @@ Each row: {{"part": "...", "seam_type": "...", "seam_allowance": "...", "stitch_
 
 Return ONLY a JSON array of rows."""
 
-    construction_result, _ = llm_query(construction_prompt, enable_thinking=True)
+    construction_result, _ = claude_query(construction_prompt)
     seams = []
     try:
         raw = construction_result.strip()
@@ -632,18 +655,21 @@ Return ONLY a JSON array of rows."""
     # ─── STEP 7: Accessories ───
     _report(progress_callback, "Accessories", "Identifying accessories from garment", "", 55)
 
-    accessories_prompt = f"""List accessories for a {garment_type} based on this analysis:
+    accessories_prompt = f"""List production accessories / trims / findings (BOM) for a {garment_type} based on this analysis:
 
 {vision_text[:500]}
 
-ONLY list items you can actually SEE in the garment or that are 100% certain:
-- Visible buttons → list with count, type, size
-- Visible zipper → list type and position
-- Thread → always include
-- Labels → always include (care + size + brand)
-
-Do NOT list invisible zippers unless you can SEE them.
-Do NOT guess closures — only list what's visible.
+Follow apparel industry manufacturing standards:
+- Thread: MUST be specified as:
+  - description: "100% Spun Polyester Core-Spun Thread (Tex 27 / Ticket 120)"
+  - quantity_per_style: "AS REQD" (NEVER use "1")
+  - color: "DTM (Dyed to Match - {primary_pantone})"
+  - position: "All Seams & Hems"
+- Labels: list EACH label separately (do NOT group them into one row):
+  - Main Brand Woven Label: quantity: "1", color: "White / Brand Colors", position: "Center Back Inner Neck"
+  - Care & Composition Printed Satin Label: quantity: "1", color: "White / Black Print", position: "Inner Left Side Seam"
+  - Size Woven Loop / Pip: quantity: "1", color: "White", position: "Below Main Brand Label"
+- Hardware / closures (buttons, zippers, snaps, buckles): ONLY if visible on the garment. If no buttons or zippers exist, do NOT add any!
 
 Return JSON array: [{{"description": "...", "quantity_per_style": "...", "color": "...", "position": "..."}}]"""
 
@@ -658,9 +684,21 @@ Return JSON array: [{{"description": "...", "quantity_per_style": "...", "color"
         accessories = json.loads(raw)
     except:
         accessories = [
-            {"description": "THREAD, POLYESTER", "quantity_per_style": "1", "color": "MATCHING", "position": ""},
-            {"description": "Care label, Size label and brand label", "quantity_per_style": "3", "color": "", "position": "SIDE SEAM / CENTER BACK"}
+            {"description": "100% Spun Polyester Core-Spun Thread (Tex 27 / Ticket 120)", "quantity_per_style": "AS REQD", "color": f"DTM ({primary_pantone})", "position": "All Seams & Hems"},
+            {"description": "Main Brand Woven Label", "quantity_per_style": "1", "color": "White / Brand Colors", "position": "Center Back Inner Neck"},
+            {"description": "Care & Composition Printed Satin Label", "quantity_per_style": "1", "color": "White / Black Print", "position": "Inner Left Side Seam"},
+            {"description": "Size Pip Woven Label", "quantity_per_style": "1", "color": "White", "position": "Below Main Brand Label"}
         ]
+
+    # Sanitize thread entries to industry standard
+    for a in accessories:
+        if "thread" in a.get("description", "").lower():
+            if str(a.get("quantity_per_style", "")).strip() in ("1", "1.0", "1 spool", "1 cone", ""):
+                a["quantity_per_style"] = "AS REQD"
+            if not a.get("position"):
+                a["position"] = "All Seams & Hems"
+            if str(a.get("color", "")).upper() in ("MATCHING", ""):
+                a["color"] = f"DTM ({primary_pantone})"
 
     # Only add fly zipper for pants (100% certain)
     if any(kw in garment_type.lower() for kw in ["pant", "trouser"]):
@@ -681,7 +719,7 @@ Return JSON array: [{{"description": "...", "quantity_per_style": "...", "color"
     is_knit = any(kw in garment_type.lower() for kw in ["cardigan", "sweater", "pullover"])
 
     # Determine POM columns based on garment type
-    is_skirt_suit = has_skirt and is_multi
+    is_skirt_suit = is_skirt_suit or (has_skirt and is_multi)
     if is_suit and not is_skirt_suit:
         pom_instruction = "COLUMNS REQUIRED: size, bust, waist, hip, blazer_length, sleeve_length, pant_waist, pant_hip, pant_inseam"
     elif is_skirt_suit:
@@ -708,7 +746,7 @@ Values in INCHES as ranges (e.g. "35-36"). Use US standard grading (+2" per size
 Return JSON array, one object per size. Example:
 [{{"size": "S", "bust": "34-35", "waist": "26-27", "hip": "36-37", "skirt_length": "22-24"}}]"""
 
-    measurement_result, _ = llm_query(measurement_prompt, enable_thinking=True)
+    measurement_result, _ = claude_query(measurement_prompt)
     measurements = []
     try:
         raw = measurement_result.strip()
@@ -733,7 +771,7 @@ Other Features:
 Based on: {vision_text[:500]}
 NO markdown, NO bold, NO headers."""
 
-    details_text, _ = analyze_images(images, details_prompt)
+    details_text, _ = claude_query(details_prompt, images=images)
 
     # ─── STEP 10: Populate master JSON ───
     _report(progress_callback, "Building Tech Pack", "Assembling all data", "", 75)
@@ -811,20 +849,29 @@ NO markdown, NO bold, NO headers."""
     }
 
     # ─── STEP 11: Detail crops ───
-    _report(progress_callback, "Detail Cropping", "Identifying detail regions", "", 78)
+    _report(progress_callback, "Detail Cropping", "Identifying required detail regions", "", 78)
 
     combined_image = combine_images_horizontally(images, "assets/combined.png")
-    ai_crops = ai_crop_detail_regions(images, details_text, "assets", 4)
+    ai_crops = ai_crop_detail_regions(images, details_text, "assets", min_crops=3, max_crops=6)
+
+    # Initialize all 6 detail slots to empty string so unused slots are excluded/deselected by default
+    for i in range(1, 7):
+        master["page_2"][f"detail_image_{i}_url"] = ""
 
     if not ai_crops:
-        # Fallback to grid crops
-        grid_crops = split_into_grids(combined_image, "assets", grid_height=700)
-        ai_crops = grid_crops[:4]
+        # Fallback to individual single-view crops
+        ai_crops = create_individual_detail_crops(front_img, back_img, "assets")
 
+    # Populate only the required crops that were identified for this garment
     for i, crop_path in enumerate(ai_crops[:6]):
         master["page_2"][f"detail_image_{i+1}_url"] = crop_path
 
-    _report(progress_callback, "Detail Cropping", f"{len(ai_crops)} regions cropped", "", 80)
+    # Keep all available crops in optional_image_urls for suggestions & custom user selection
+    fallback_crops = create_individual_detail_crops(front_img, back_img, "assets")
+    all_available = list(dict.fromkeys(ai_crops + fallback_crops))
+    master["page_2"]["optional_image_urls"] = all_available
+
+    _report(progress_callback, "Detail Cropping", f"{len(ai_crops[:6])} required detail regions cropped", "", 80)
 
     # ─── STEP 12: Image generation ───
     if generate:
@@ -835,66 +882,240 @@ NO markdown, NO bold, NO headers."""
             kw in str(a).lower() for kw in ["invisible", "hidden", "internal", "fusible", "interfacing", "lining"]
         )]
 
-        # Use classification pieces list to determine layout
-        pieces = classification.get("pieces", [])
-        has_vest = "vest" in [p.lower() for p in pieces] or "waistcoat" in [p.lower() for p in pieces]
-        has_skirt = "skirt" in [p.lower() for p in pieces]
-        has_trouser = any(p.lower() in ["trouser", "pant", "trousers", "pants"] for p in pieces)
-        is_multi = len(pieces) >= 2
+        # Build technical sketch specification strictly referring to what was observed in the original reference
+        gt = garment_type.lower()
+        pieces_lower = [str(p).lower() for p in pieces]
+        dt_lower = details_text.lower()
 
-        if has_vest and has_trouser:
-            # 3-piece suit
-            layout = "Draw each piece as a SEPARATE FLAT GARMENT in a grid. TOP ROW: Blazer front/back, Vest front/back. BOTTOM ROW: Trouser front/back."
-        elif has_skirt:
-            # Skirt suit (2 piece)
-            layout = "Draw each piece as a SEPARATE FLAT GARMENT. TOP ROW: Blazer front/back. BOTTOM ROW: Skirt front/back. NO VEST — this is a 2-piece skirt suit."
-        elif has_trouser and not has_vest:
-            # Pant suit (2 piece)
-            layout = "Draw each piece as a SEPARATE FLAT GARMENT. TOP ROW: Blazer front/back. BOTTOM ROW: Trouser front/back. NO VEST — this is a 2-piece pant suit."
-        elif is_multi:
-            layout = f"Draw each piece as a SEPARATE FLAT GARMENT: {', '.join(pieces)}. Each piece front and back."
-        else:
+        has_blazer = any(k in gt or k in pieces_lower for k in ["blazer", "suit jacket", "jacket"]) and not any(k in gt for k in ["bomber", "denim jacket", "leather jacket"])
+        has_skirt = any(k in gt or k in pieces_lower for k in ["skirt"])
+        has_trouser = any(k in gt or k in pieces_lower for k in ["trouser", "pant", "trousers", "pants"])
+        has_vest = any(k in gt or k in pieces_lower for k in ["vest", "waistcoat"])
+        is_dress = "dress" in gt or "gown" in gt
+
+        is_3piece = (has_vest and has_trouser and has_blazer) or "3-piece" in gt or "3 piece" in gt
+        is_skirt_suit = (has_blazer and has_skirt) or "skirt suit" in gt
+        is_pant_suit = (has_blazer and has_trouser) or "pant suit" in gt or "trouser suit" in gt
+
+        if is_3piece:
+            target_summary = f"3-Piece Suit (Blazer, Vest, Trouser)"
+            layout = "Draw each piece as a SEPARATE FLAT GARMENT in a 2-row grid. TOP ROW: Blazer front/back, Vest front/back. BOTTOM ROW: Trouser front/back."
+            prohibited_items = ["skirt", "dress"]
+        elif is_skirt_suit:
+            target_summary = f"2-Piece Skirt Suit (Blazer and Skirt)"
+            layout = "2-PIECE SKIRT SUIT CAD FLATS: TOP ROW: Blazer Front View (left) + Blazer Back View (right). BOTTOM ROW: Skirt Front View (left) + Skirt Back View (right)."
+            prohibited_items = ["vest", "trousers", "pants"]
+        elif is_pant_suit:
+            target_summary = f"2-Piece Pant Suit (Blazer and Trouser)"
+            layout = "2-PIECE PANT SUIT CAD FLATS: TOP ROW: Blazer Front View (left) + Blazer Back View (right). BOTTOM ROW: Trouser Front View (left) + Trouser Back View (right)."
+            prohibited_items = ["vest", "skirt"]
+        elif (has_blazer or "blazer" in gt) and not (has_skirt or has_trouser):
+            # Standalone blazer
+            target_summary = f"Single Blazer ({garment_type})"
             layout = "FRONT VIEW on left, BACK VIEW on right."
+            prohibited_items = ["skirt", "trousers", "pants", "vest", "inner shirt"]
+        elif is_dress:
+            target_summary = f"Single Dress ({garment_type})"
+            layout = "FRONT VIEW on left, BACK VIEW on right."
+            prohibited_items = ["blazer", "jacket", "coat", "pants", "skirt"]
+        elif has_trouser and not has_blazer:
+            target_summary = f"Single Trouser / Pants ({garment_type})"
+            layout = "FRONT VIEW on left, BACK VIEW on right."
+            prohibited_items = ["blazer", "jacket", "top", "shirt"]
+        elif has_skirt and not has_blazer:
+            target_summary = f"Single Skirt ({garment_type})"
+            layout = "FRONT VIEW on left, BACK VIEW on right."
+            prohibited_items = ["blazer", "jacket", "top", "shirt"]
+        else:
+            # Standalone top (turtleneck, shirt, blouse, sweater, knitwear)
+            target_summary = f"Single Top ({garment_type})"
+            layout = "FRONT VIEW on left, BACK VIEW on right."
+            prohibited_items = ["blazer", "jacket", "coat", "vest", "skirt", "pants"]
 
-        # Build button/feature description from what Claude ACTUALLY saw in the image
-        button_info = ""
-        for a in accessories:
-            desc = str(a.get("description", "")).lower()
-            if "button" in desc:
-                qty = a.get("quantity_per_style", "")
-                button_info += f"BUTTONS: {a.get('description', '')} — quantity: {qty}\n"
+        # Extract specific architectural CAD types via vision from reference photos
+        cad_specs = {}
+        try:
+            cad_vision_prompt = f"""You are a master apparel technical CAD designer.
+Look closely at the reference garment photos.
+Garment: {garment_type} ({description})
+Pieces: {pieces}
 
-        sketch_prompt = f"""Look at the reference garment photo carefully. Create a professional technical flat sketch that EXACTLY matches what you see.
+Analyze the EXACT architectural types of each construction element directly from what you see in the reference photo. If a feature does not exist on the garment, say 'None'.
 
-LAYOUT: {layout}
+Identify:
+1. 'pocket_type': Exact pocket construction (e.g., 'Two lower flap welt pockets at waist', 'One chest welt pocket', 'Side seam slash pockets', 'Front patch pockets with button flaps', or 'None — clean seamless front').
+2. 'collar_or_neckline_type': Exact collar/neckline construction (e.g., 'Notch lapel with tailored gorge seam', 'Peak lapel with sharp upward points', 'Folded double-layer ribbed turtleneck collar (~8-10cm height)', 'Ribbed crew neckline', 'Pointed shirt collar with stand', 'Deep V-neckline').
+3. 'closure_type': Exact closure mechanism & hardware (e.g., 'Double-breasted 4-button closure (2x2 button stance)', 'Single-breasted 2-button front closure', 'Center front concealed button placket', 'Exposed metal zipper', 'Pull-on stretch entry with no front closures').
+4. 'sleeve_and_cuff_type': Exact sleeve & cuff (e.g., 'Long set-in sleeves with 4-button vent cuffs', 'Long slim-fit sleeves with narrow clean-finished plain hem cuffs', 'Raglan sleeves with ribbed knit cuffs', 'Sleeveless with clean finished armholes').
+5. 'hem_and_silhouette_type': Exact silhouette & hem (e.g., 'Tailored hourglass silhouette with structured shoulders and hip-length hem', 'Fitted silhouette with curved flared peplum hem', 'Straight knee-length pencil skirt with center back walking slit', 'Straight clean hem at hip level').
+6. 'callout_labels': 5 to 7 specific, standard uppercase apparel callout labels for the exact visible features.
 
-CRITICAL — MATCH THE REFERENCE IMAGE EXACTLY:
-- Count the EXACT number of buttons visible in the reference photo. Draw that EXACT number. Do NOT add extra buttons.
-- Match the EXACT collar/lapel shape from the reference. Do NOT change it.
-- Match the EXACT pocket type and position from the reference.
-- Match the EXACT silhouette and proportions.
-- If you cannot see a feature in the reference photo, do NOT draw it.
+Return JSON only:
+{{
+  "pocket_type": "...",
+  "collar_or_neckline_type": "...",
+  "closure_type": "...",
+  "sleeve_and_cuff_type": "...",
+  "hem_and_silhouette_type": "...",
+  "callout_labels": ["..."]
+}}"""
+            raw_specs, _ = claude_query(cad_vision_prompt, images=images)
+            json_m = re.search(r'\{.*\}', raw_specs, re.DOTALL)
+            if json_m:
+                cad_specs = json.loads(json_m.group())
+        except Exception as e:
+            print(f"[CAD Vision] Spec extraction fallback: {e}")
 
-{f"BUTTON COUNT FROM REFERENCE: {button_info}" if button_info else ""}
+        # Fallback to rule-based extraction from details_text / vision_text if needed
+        button_matches = [a for a in accessories if "button" in str(a.get("description", "")).lower()]
+        btn_desc = ", ".join([f"{a.get('description', 'Buttons')} (qty: {a.get('quantity_per_style', '')})" for a in button_matches]) if button_matches else "front closure buttons visible in reference photo"
+
+        pocket_type = cad_specs.get("pocket_type")
+        if not pocket_type or pocket_type.lower() == "none":
+            if "flap pocket" in dt_lower:
+                pocket_type = "Lower flap welt pockets"
+            elif "welt pocket" in dt_lower:
+                pocket_type = "Tailored welt pockets"
+            elif "patch pocket" in dt_lower:
+                pocket_type = "Front patch pockets"
+            elif "slash pocket" in dt_lower or "slant pocket" in dt_lower:
+                pocket_type = "Side-entry slash / slant pockets"
+            elif "pocket" in dt_lower:
+                pocket_type = "Visible tailored pockets"
+            else:
+                pocket_type = "No pockets — clean seamless front"
+
+        collar_type = cad_specs.get("collar_or_neckline_type")
+        if not collar_type:
+            if "turtleneck" in dt_lower or "roll neck" in dt_lower:
+                collar_type = "Folded double-layer turtleneck collar (~8-10cm height)"
+            elif "notch lapel" in dt_lower:
+                collar_type = "Classic notch lapel with tailored gorge seam"
+            elif "peak lapel" in dt_lower:
+                collar_type = "Peak lapel with sharp upward points"
+            elif "collar" in dt_lower:
+                collar_type = "Tailored collar matching reference photo"
+            else:
+                collar_type = "Clean neckline contour matching reference photo"
+
+        closure_type = cad_specs.get("closure_type")
+        if not closure_type:
+            if "double-breasted" in dt_lower:
+                closure_type = "Double-breasted button closure"
+            elif "single-breasted" in dt_lower:
+                closure_type = "Single-breasted button closure"
+            elif "button" in dt_lower or button_matches:
+                closure_type = f"Front button closure ({btn_desc})" if button_matches else "Front button closure"
+            elif "zipper" in dt_lower or "zip" in dt_lower:
+                closure_type = "Exposed metal zipper closure"
+            else:
+                closure_type = "Pull-on entry with no front closures or buttons"
+
+        sleeve_type = cad_specs.get("sleeve_and_cuff_type")
+        if not sleeve_type:
+            if "button" in dt_lower and has_blazer:
+                sleeve_type = "Long tailored set-in sleeves with buttoned cuff vents"
+            elif "sleeves:" in dt_lower:
+                for line in details_text.split("\n"):
+                    if line.lower().startswith("sleeves:"):
+                        sleeve_type = line.split(":", 1)[1].strip()
+                        break
+            if not sleeve_type:
+                sleeve_type = "Long set-in sleeves with clean finished cuffs"
+
+        hem_type = cad_specs.get("hem_and_silhouette_type")
+        if not hem_type:
+            if "peplum" in dt_lower:
+                hem_type = "Fitted waist with flared peplum hem"
+            elif "pencil" in dt_lower:
+                hem_type = "Straight knee-length pencil skirt with center back walking vent"
+            elif "silhouette:" in dt_lower:
+                for line in details_text.split("\n"):
+                    if line.lower().startswith("silhouette:"):
+                        hem_type = line.split(":", 1)[1].strip()
+                        break
+            if not hem_type:
+                hem_type = "Tailored silhouette matching reference photo"
+
+        specs_list = [
+            f"- TARGET PIECE(S): Draw ONLY {target_summary}. Front view on left, Back view on right.",
+        ]
+        if prohibited_items:
+            specs_list.append(f"- STRICTLY FORBIDDEN: Do NOT draw any {', '.join(prohibited_items)}. No unrequested outer jackets, skirts, pants, or layered garments.")
+
+        specs_list.extend([
+            f"- COLLAR / NECKLINE: {collar_type}",
+            f"- FRONT CLOSURE & HARDWARE: {closure_type}",
+            f"- POCKET ARCHITECTURE: {pocket_type}",
+            f"- SLEEVES & CUFFS: {sleeve_type}",
+            f"- SILHOUETTE & HEM: {hem_type}",
+            "- Symmetrical, perfectly proportioned apparel vector flats with crisp black line art on a pure white background."
+        ])
+
+        # Callouts strictly for features that exist
+        if cad_specs.get("callout_labels") and isinstance(cad_specs["callout_labels"], list) and len(cad_specs["callout_labels"]) >= 3:
+            callouts = [c.upper().strip() for c in cad_specs["callout_labels"]]
+        else:
+            callouts = ["FRONT VIEW", "BACK VIEW"]
+            if "turtleneck" in collar_type.lower():
+                callouts.append("TURTLENECK COLLAR")
+            elif "lapel" in collar_type.lower():
+                callouts.append("NOTCH LAPEL" if "peak" not in collar_type.lower() else "PEAK LAPEL")
+            elif "collar" in collar_type.lower():
+                callouts.append("COLLAR")
+            else:
+                callouts.append("NECKLINE")
+
+            callouts.extend(["SHOULDER SEAM", "SIDE SEAM"])
+
+            if "button" in closure_type.lower():
+                callouts.append("BUTTON CLOSURE")
+            if "no pocket" not in pocket_type.lower() and "none" not in pocket_type.lower():
+                callouts.append("POCKET")
+            if is_skirt_suit or has_skirt:
+                callouts.append("SKIRT WAISTBAND")
+            if has_trouser:
+                callouts.append("TROUSER WAISTBAND")
+            if "peplum" in hem_type.lower():
+                callouts.append("PEPLUM HEM")
+            callouts.append("HEM")
+
+        callouts_str = ", ".join(callouts)
+        ref_image = combined_image if os.path.exists(combined_image) else front_img
+
+        sketch_prompt = f"""Look at the reference garment photos carefully (showing both front and back views). Create a professional 2D fashion CAD vector technical flat sketch (Adobe Illustrator apparel specification style).
+
+TARGET: {target_summary} ({description})
+
+LAYOUT:
+{layout}
+
+CRITICAL SPECIFICATIONS (STRICTLY FROM REFERENCE PHOTO):
+{chr(10).join(specs_list)}
 
 Garment details from analysis:
-{details_text[:400]}
+{details_text}
 
 DRAWING RULES:
-- Draw ONLY the garment flat sketches + callout labels with leader lines
-- Do NOT draw accessories panels, button icons, thread spools, or label mockups
-- Do NOT draw any separate boxes showing accessories
-- LABEL PLACEMENT: SIDE SEAM → outer edge, SHOULDER → top, HEM → bottom, CUFF → wrist
-- Pure black line art on white background
-- ALL-CAPS callout labels with thin leader lines"""
+- 2D FLAT VECTOR CAD APPAREL SPEC SKETCHES ONLY (like Adobe Illustrator tech pack drawings).
+- Pure black line art on white background. NO gray shading, NO 3D rendering, NO realistic textures, NO mannequin, NO model figures.
+- Include clear construction details: seam lines, princess seams, waistband (if bottoms), hem folds, and dashed topstitching lines.
+- TEXT & SPELLING RULE: Any callout labels drawn MUST be chosen ONLY from: [{callouts_str}]. Leader lines must point accurately to the feature (SIDE SEAM → outer side edge, SHOULDER → top, HEM → bottom, CUFF → wrist). ALL TEXT MUST BE SPELLED 100% CORRECTLY IN ALL-CAPS. Absolutely NO typos, NO misspelled words, and NO garbled letters!
+- Do NOT draw accessories panels, button mockups, thread spools, or separate accessories boxes."""
 
-        generate_image(sketch_prompt, reference_image_path=front_img, output_path="assets/technical_sketch.png")
+        generate_image(sketch_prompt, reference_image_path=ref_image, output_path="assets/technical_sketch.png")
 
-        # Verify sketch
-        issues = verify_sketch_labels("assets/technical_sketch.png", [d.get("description", "")[:30] for d in visible_accessories[:5]])
+        # Verify sketch with multi-criteria QA auditor
+        issues = verify_sketch_labels(
+            "assets/technical_sketch.png",
+            callout_list=callouts,
+            garment_type=target_summary,
+            reference_image_path=ref_image,
+            expected_pieces=pieces or [target_summary]
+        )
         if issues:
             _report(progress_callback, "Sketch Verification", f"Issues: {issues[:100]}", "Regenerating...", 84)
-            generate_image(sketch_prompt + f"\nCORRECTION: {issues}", reference_image_path=front_img, output_path="assets/technical_sketch.png")
+            generate_image(sketch_prompt + f"\n\nCRITICAL FIXES REQUIRED FROM VERIFICATION AUDIT:\n{issues}", reference_image_path=ref_image, output_path="assets/technical_sketch.png")
 
         master["page_3"]["technical_sketch_img"] = "assets/technical_sketch.png"
         _report(progress_callback, "Technical Sketch", "Generated and verified", "", 85)
@@ -918,16 +1139,27 @@ DRAWING RULES:
         desc_lower = garment_type.lower()
         if has_vest and has_trouser:
             meas_prompt = f"Measurement diagram for {description}. Show ALL 3 pieces separately. Blazer measurements (G-J) + Trouser measurements (A-F). Legend on right."
-        elif has_skirt:
+        elif is_skirt_suit:
             meas_prompt = f"Measurement diagram for {description}. Show 2 separate flat garment sketches: Blazer and Skirt. Add measurement lines with letter labels. Blazer: G=Shoulder, H=Bust, I=Waist, J=Back Length. Skirt: A=Waist, B=Hip, C=Thigh, D=Skirt Length, E=Hem Width, F=Rise. Small text legend on right. Do NOT draw text boxes or panels on top of the garments. Keep it clean — just the garment outlines with measurement arrows and letter labels."
-        elif has_trouser and is_multi:
+        elif has_trouser and (is_multi or is_suit):
             meas_prompt = f"Measurement diagram for {description}. Show 2 pieces: Blazer (G-J) + Trouser (A-F). Legend on right. NO VEST."
         elif is_pant:
             meas_prompt = f"Measurement diagram for {description}. Pant measurements: A=Waist, B=Hip, C=Inseam, D=Outseam, E=Thigh, F=Leg opening."
+        elif is_skirt:
+            meas_prompt = f"Measurement diagram for {description}. Skirt measurements: A=Waist, B=Hip, C=Skirt Length, D=Hem Width."
         else:
-            meas_prompt = f"Measurement diagram for {description}. Measurements: A=Bust, B=Waist, C=Shoulder, D=Sleeve, E=Total length, F=Front length."
-
-        meas_prompt += " Black line art on white. Double-headed arrows with letter labels. Draw ONLY garment sketches with measurement lines and legend. Do NOT draw any accessories, buttons, thread, labels, or any items that are not measurement indicators."
+            meas_prompt = f"""Technical measurement flat sketch diagram for {description}.
+Front view and back view side-by-side on pure white background.
+Crisp vector-style black line art, no color, no shading, no gray smudges or artifacts on back view.
+Clear double-headed measurement arrows with letter labels:
+- A = Bust width (horizontal double-arrow across chest 1 inch below armholes)
+- B = Waist width (horizontal double-arrow across waist)
+- C = Shoulder width (horizontal double-arrow across shoulder points)
+- D = Sleeve length (double-arrow along sleeve from shoulder seam to cuff)
+- E = Body length / HPS to Hem (single vertical double-arrow from High Point Shoulder straight down to bottom hem)
+- F = Sweep / Bottom Hem width (horizontal double-arrow across bottom hem)
+Clean bottom legend: A Bust | B Waist | C Shoulder | D Sleeve | E Body length | F Sweep.
+Do NOT draw two competing vertical length arrows. Do NOT draw smudges, shading, or gray gradients on back view."""
         generate_image(meas_prompt,
                        reference_image_path=front_img, output_path="assets/measurement_diagram.png")
         _report(progress_callback, "Measurement Diagram", "Generated", "", 93)

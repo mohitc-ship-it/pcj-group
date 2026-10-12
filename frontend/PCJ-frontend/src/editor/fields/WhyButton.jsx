@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { HelpCircle, X, Loader2, Brain } from "lucide-react"
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ""
 
 export default function WhyButton({ pageId, fieldKey }) {
   const [open, setOpen] = useState(false)

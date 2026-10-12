@@ -211,6 +211,8 @@ export default function FormRenderer({ data, onChange, pageId, reloadPage }) {
               label={key}
               value={value}
               options={data.optional_image_urls || []}
+              frontUrl={data.front_image_url}
+              backUrl={data.back_image_url}
               pageId={pageId}
               fieldKey={key}
               onUpdated={reloadPage}

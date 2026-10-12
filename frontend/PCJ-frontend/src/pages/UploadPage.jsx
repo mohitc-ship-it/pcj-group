@@ -429,6 +429,7 @@ export default function UploadPage() {
                     onChange={(e) => setClaudeModel(e.target.value)}
                     className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 transition-all duration-200"
                   >
+                    <option value="claude-opus-4-6">Opus 4.6 — Maximum intelligence (~$0.75/pack)</option>
                     <option value="claude-sonnet-4-6">Sonnet 4.6 — Best quality (~$0.39/pack)</option>
                     <option value="claude-haiku-4-5">Haiku 4.5 — Fastest, cheapest (~$0.19/pack)</option>
                   </select>
