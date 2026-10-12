@@ -80,58 +80,28 @@
     {% endif %}
     <div class="pom-table-wrapper">
         {% if page_10.measurements and page_10.measurements|length > 0 %}
-        {% set first_row = page_10.measurements[0] %}
-        {% if first_row.point_of_measurement is defined %}
-        {# POM-based format (old style) #}
         <table class="pom-table">
             <thead>
                 <tr>
-                    <th>Point of Measurement</th>
-                    <th class="text-center" style="width:60px;">Code</th>
-                    <th>Description</th>
-                    <th class="text-center" style="width:110px;">Measurement (cm)</th>
-                    <th class="text-center" style="width:110px;">Tolerance (± cm)</th>
+                    <th class="text-center" style="width:48px;">Code</th>
+                    <th style="width:200px;">Point of Measurement</th>
+                    <th>How to Measure</th>
+                    <th class="text-center" style="width:130px;">Sample Size ({{ header.sample_size_1st or 'M' }})</th>
+                    <th class="text-center" style="width:100px;">Tolerance</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in page_10.measurements %}
                 <tr>
-                    <td>{{ item.point_of_measurement or '' }}</td>
-                    <td class="text-center">{{ item.code or '' }}</td>
-                    <td>{{ item.description or '' }}</td>
-                    <td class="text-center">{{ item.measurement_cm or '' }}</td>
-                    <td class="text-center">{{ item.tolerance_cm or '' }}</td>
+                    <td class="text-center" style="font-weight:700; font-size:13px;">{{ item.code or '' }}</td>
+                    <td style="font-weight:500;">{{ item.point_of_measurement or '' }}</td>
+                    <td style="color:#444; font-size:11px;">{{ item.how_to_measure or item.description or '' }}</td>
+                    <td class="text-center">{{ item.sample_size or item.measurement_cm or '' }}</td>
+                    <td class="text-center" style="color:#666;">{{ item.tolerance or item.tolerance_cm or '±1/2"' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        {# Size-based format (new style) #}
-        <table class="pom-table">
-            <thead>
-                <tr>
-                    <th>Size</th>
-                    {% for key in first_row.keys() %}
-                        {% if key not in ['size', 'justification', 'confidence', 'requires_confirmation'] %}
-                        <th class="text-center">{{ key | replace('_', ' ') | title }}</th>
-                        {% endif %}
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in page_10.measurements %}
-                <tr>
-                    <td class="text-center" style="font-weight:bold;">{{ row.size or '' }}</td>
-                    {% for key, val in row.items() %}
-                        {% if key not in ['size', 'justification', 'confidence', 'requires_confirmation'] %}
-                        <td class="text-center">{{ val if val is not none else '' }}</td>
-                        {% endif %}
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% endif %}
         {% else %}
         <p style="color:#999; font-size:12px; padding:20px;">No measurement data available.</p>
         {% endif %}

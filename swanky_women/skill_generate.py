@@ -759,6 +759,32 @@ Return JSON array, one object per size. Example:
 
     _report(progress_callback, "Measurements", f"{len(measurements)} sizes × {len(measurements[0].keys())-1} POMs", "", 70)
 
+    # ─── POM Table for Garment Measurements page (page_10) ───
+    pom_prompt = f"""Generate a Point of Measurement (POM) table for a {garment_type} ({category}).
+Sample size: {sample_size}. All measurements in INCHES for that sample size.
+
+Each row = ONE labeled measurement point on the garment diagram (use letter codes A, B, C...).
+Generate 8–14 points covering the key structural measurements of this garment type.
+
+Return JSON array ONLY:
+[{{"code": "A", "point_of_measurement": "Total Length", "how_to_measure": "From HPS straight down to hemline at CF", "sample_size": "28\\"", "tolerance": "±1/2\\""}}, ...]
+
+Garment vision: {vision_text[:400]}"""
+
+    pom_result, _ = claude_query(pom_prompt)
+    pom_measurements = []
+    try:
+        raw = pom_result.strip()
+        if raw.startswith("```"):
+            lines = raw.split("\n")
+            raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        pom_measurements = json.loads(raw)
+    except Exception:
+        pom_measurements = [
+            {"code": "A", "point_of_measurement": "Total Length", "how_to_measure": "HPS to hemline", "sample_size": "28\"", "tolerance": "±1/2\""},
+            {"code": "B", "point_of_measurement": "Chest Width", "how_to_measure": "1\" below armhole, straight across", "sample_size": "19\"", "tolerance": "±1/2\""},
+        ]
+
     # ─── STEP 9: Details text ───
     details_prompt = f"""Write garment details for a {garment_type} tech pack.
 Plain text, 6-8 lines max. Format:
@@ -805,8 +831,10 @@ NO markdown, NO bold, NO headers."""
 
     master["page_4"] = {"accessories": accessories}
     master["page_5"] = {"seams": seams}
-    master["page_6"] = {"measurement_image_url": "assets/measurement_diagram.png", "measurements": measurements}
-    master["page_10"] = master["page_6"]
+    # page_6 = Size Chart (all sizes, graded — NO diagram)
+    master["page_6"] = {"measurements": measurements}
+    # page_10 = Garment Measurements (diagram + POM table for sample size only)
+    master["page_10"] = {"measurement_image_url": "assets/measurement_diagram.png", "measurements": pom_measurements}
 
     master["page_7"] = {
         "fabrics": [{"description": fabric_name, "color": f"PANTONE {primary_color.get('pantone_tcx', '')}", "position": ""}],
