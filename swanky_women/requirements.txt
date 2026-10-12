@@ -2,17 +2,17 @@ pypdf==5.9.0
 # HTML templating
 Jinja2==3.1.4
 # HTML to PDF rendering
-# WeasyPrint 60.2 — does NOT use pydyf (avoids PDF.__init__ constructor bug in 61.x)
+# WeasyPrint 60.2 + pydyf pinned to 0.8.0
+# Root cause: latest pydyf changed PDF.__init__(self, version, identifier) → PDF.__init__(self)
+# WeasyPrint calls pydyf.PDF(version, identifier) — breaks with pydyf > 0.8.0
 WeasyPrint==60.2
-# Pinned deps compatible with WeasyPrint 60.2 exactly
+pydyf==0.8.0
 cffi==1.17.1
 tinycss2==1.3.0
 cssselect2==0.7.0
 Pyphen==0.14.0
 Pillow==10.4.0
 fonttools==4.53.1
-# Explicitly exclude pydyf (only needed by WeasyPrint 61+, causes version conflict)
-pydyf==0.8.0
 fastapi
 uvicorn[standard]
 python-multipart
