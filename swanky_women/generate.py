@@ -139,11 +139,9 @@ def generatePdf():
 
         HTML(
             string=html,
-            base_url=str(BASE_DIR)
-        ).write_pdf(
-            output_path,
+            base_url=str(BASE_DIR),
             presentational_hints=True
-        )
+        ).write_pdf(output_path)
 
         generated_pdfs.append(output_path)
         print(f"✅ Generated {output_name}")
