@@ -64,8 +64,12 @@ function AddImageCard({ onFile }) {
 function FormField({ label, id, value, onChange, placeholder, required = false }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-semibold text-white/60 uppercase tracking-widest">
-        {label}{required && <span className="text-violet-400 ml-1">*</span>}
+      <label htmlFor={id} className="text-xs font-semibold text-white/60 uppercase tracking-widest flex items-center gap-1.5">
+        {label}
+        {required
+          ? <span className="text-violet-400">*</span>
+          : <span className="text-white/25 font-normal normal-case tracking-normal text-[10px]">(Optional)</span>
+        }
       </label>
       <input
         id={id}
@@ -385,7 +389,7 @@ export default function UploadPage() {
                 </div>
                 {/* Wear Category */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="wearCategory" className="text-xs font-semibold text-white/60 uppercase tracking-widest">Wear Category</label>
+                  <label htmlFor="wearCategory" className="text-xs font-semibold text-white/60 uppercase tracking-widest flex items-center gap-1.5">Wear Category <span className="text-white/25 font-normal normal-case tracking-normal text-[10px]">(Optional)</span></label>
                   <select
                     id="wearCategory"
                     value={wearCategory}
@@ -410,7 +414,7 @@ export default function UploadPage() {
                   <FormField id="sampleSize" label="Sample Size" value={sampleSize} onChange={setSampleSize} placeholder="e.g. M" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="notes" className="text-xs font-semibold text-white/60 uppercase tracking-widest">Additional Notes</label>
+                  <label htmlFor="notes" className="text-xs font-semibold text-white/60 uppercase tracking-widest flex items-center gap-1.5">Additional Notes <span className="text-white/25 font-normal normal-case tracking-normal text-[10px]">(Optional)</span></label>
                   <textarea
                     id="notes"
                     value={notes}
@@ -423,7 +427,7 @@ export default function UploadPage() {
 
                 {/* AI Model Selector */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-white/60 uppercase tracking-widest">AI Model</label>
+                  <label className="text-xs font-semibold text-white/60 uppercase tracking-widest flex items-center gap-1.5">AI Model <span className="text-white/25 font-normal normal-case tracking-normal text-[10px]">(Optional)</span></label>
                   <select
                     value={claudeModel}
                     onChange={(e) => setClaudeModel(e.target.value)}

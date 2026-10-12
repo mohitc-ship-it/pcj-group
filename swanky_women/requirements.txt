@@ -29,3 +29,6 @@ opencv-python
 
 # Environment
 python-dotenv
+
+# JSON repair (handles malformed LLM JSON output)
+json-repair
