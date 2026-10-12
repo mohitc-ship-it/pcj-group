@@ -177,7 +177,7 @@ def normalize_asset_urls(obj):
             asset_path = obj[obj.index("assets/"):]
             import time
             timestamp = int(time.time())
-            return f"http://localhost:8000/{asset_path}?t={timestamp}"
+            return f"{BASE_URL}/{asset_path}?t={timestamp}"
         return obj
 
     else:
@@ -203,7 +203,7 @@ def get_page_draft(page_id: str):
         if os.path.exists(assets_dir):
             for f in sorted(os.listdir(assets_dir)):
                 if (f.startswith("detail_crop_") or f.startswith("ai_detail_")) and f.endswith(".png"):
-                    existing_crops.append(f"assets/{f}")
+                    existing_crops.append(f"{BASE_URL}/assets/{f}")
         current_opts = page_data.get("optional_image_urls", [])
         page_data["optional_image_urls"] = list(dict.fromkeys(current_opts + existing_crops))
 
