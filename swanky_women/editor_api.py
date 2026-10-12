@@ -768,7 +768,18 @@ async def start_generation(
             status_code=400
         )
 
+    # Clean up previous generation files to keep disk usage minimal
+    import shutil
+    if os.path.exists(ASSETS_DIR):
+        shutil.rmtree(ASSETS_DIR)
     os.makedirs(ASSETS_DIR, exist_ok=True)
+    # Remove previous PDF and draft
+    for _f in ["Tech_Pack.pdf", str(DRAFT_FILE)]:
+        try:
+            if os.path.exists(_f):
+                os.remove(_f)
+        except Exception:
+            pass
 
     # Save all uploaded images as image_0.png, image_1.png, ...
     # Name first two consistently so pipeline auto-detects front/back
